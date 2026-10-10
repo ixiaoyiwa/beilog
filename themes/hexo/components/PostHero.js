@@ -4,6 +4,7 @@ import { siteConfig } from '@/lib/config'
 import { useGlobal } from '@/lib/global'
 import { formatDateFmt } from '@/lib/utils/formatDate'
 import SmartLink from '@/components/SmartLink'
+import { getCategoryUrl } from '@/lib/utils/category' // ✨ 新增：引入首页用的同一个工具函数
 import { useEffect, useRef, useState } from 'react'
 
 const PlayIcon = ({ size = 12 }) => (
@@ -28,10 +29,6 @@ const PauseIcon = ({ size = 12 }) => (
   </svg>
 )
 
-/**
- * iOS 风格菊花加载图标：8 个点围成一圈，依次亮起
- * 不依赖任何外部动画类，完全自写，保证会转
- */
 const LoadingIcon = ({ size = 14 }) => {
   const dots = 8
   const radius = 9
@@ -108,7 +105,8 @@ const extractEpisodeNumber = (slug) => {
 }
 
 export default function PostHero({ post, siteInfo }) {
-  const { fullWidth } = useGlobal()
+  // ✨ 从 useGlobal 中额外解构出 NOTION_CONFIG，这是 getCategoryUrl 需要的参数
+  const { fullWidth, NOTION_CONFIG } = useGlobal()
 
   const [isPlaying, setIsPlaying] = useState(false)
   const [isCurrentSrc, setIsCurrentSrc] = useState(false)
@@ -250,7 +248,8 @@ export default function PostHero({ post, siteInfo }) {
 
                   {post.category && (
                     <SmartLink
-                      href={`/category/${post.category}`}
+                      // ✨ 这里完美替换成了和首页相同的工具函数
+                      href={getCategoryUrl(post.category, NOTION_CONFIG)}
                       passHref
                       legacyBehavior>
                       <span className='hero-meta-link font-bold'>
