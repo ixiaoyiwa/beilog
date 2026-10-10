@@ -126,7 +126,11 @@ Slug.propTypes = {
 export async function getStaticPaths() {
   return getStaticPathsBase({
     from: 'slug-paths',
-    filterFn: row => checkSlugHasNoSlash(row),
+    // 过滤掉动态路由中与主题静态页面重名的 slug，防止纯静态导出时路径冲突
+    filterFn: row =>
+      checkSlugHasNoSlash(row) &&
+      row.slug !== 'friends' &&
+      row.slug !== 'episodes',
     mapPageToParams: row => ({ params: { prefix: row.slug } })
   })
 }
