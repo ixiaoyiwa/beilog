@@ -124,15 +124,19 @@ Slug.propTypes = {
 }
 
 export async function getStaticPaths() {
-  return getStaticPathsBase({
+  // 1. 先获取所有路径，忽略原有的 filterFn，因为它可能被底层逻辑忽略
+  const result = await getStaticPathsBase({
     from: 'slug-paths',
-    // 过滤掉动态路由中与主题静态页面重名的 slug，防止纯静态导出时路径冲突
-    filterFn: row =>
-      checkSlugHasNoSlash(row) &&
-      row.slug !== 'friends' &&
-      row.slug !== 'episodes',
     mapPageToParams: row => ({ params: { prefix: row.slug } })
   })
+
+  // 2. 强制过滤掉与主题静态页面冲突的 slug，彻底解决纯静态导出时的路径冲突
+  const filteredPaths = result.paths.filter(
+    p => p.params.prefix !== 'friends' && p.params.prefix !== 'episodes'
+  )
+
+  // 3. 返回过滤后的最终结果
+  return { paths: filteredPaths, fallback: result.fallback }
 }
 
 export async function getStaticProps({ params: { prefix }, locale }) {
