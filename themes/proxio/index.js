@@ -24,6 +24,8 @@ import CONFIG from './config'
 import { Style } from './style'
 // import { MadeWithButton } from './components/MadeWithButton'
 import Comment from '@/components/Comment'
+import Catalog from './components/Catalog'
+import MobileCatalog from './components/MobileCatalog'
 import replaceSearchResult from '@/components/Mark'
 import ShareBar from '@/components/ShareBar'
 import DashboardBody from '@/components/ui/dashboard/DashboardBody'
@@ -183,7 +185,15 @@ const LayoutSlug = props => {
             <Banner title={post?.title} description={post?.summary} />
             <div className='container grow'>
                 <div className='flex flex-wrap justify-center -mx-4'>
-                    <div id='container-inner' className='w-full p-4'>
+                    <div
+                        id='container-inner'
+                        className={
+                            'w-full p-4' +
+                            (siteConfig('PROXIO_POST_CATALOG_ENABLE', false, CONFIG) &&
+                            post?.toc?.length > 0
+                                ? ' xl:w-[calc(100%-16rem)]'
+                                : '')
+                        }>
                         {lock && <ArticleLock validPassword={validPassword} />}
 
                         {!lock && post && (
@@ -194,8 +204,25 @@ const LayoutSlug = props => {
                             </div>
                         )}
                     </div>
+                    {/* 桌面端侧边栏目录（默认关闭，PROXIO_POST_CATALOG_ENABLE 开启；仅 xl 及以上显示） */}
+                    {siteConfig('PROXIO_POST_CATALOG_ENABLE', false, CONFIG) && post?.toc?.length > 0 && (
+                        <aside
+                            id='proxio-post-catalog'
+                            className='hidden xl:block xl:flex-shrink-0 xl:w-60 p-4'
+                            style={{ position: 'sticky', top: '6rem', alignSelf: 'flex-start' }}>
+                            <div
+                                className='max-h-[calc(100vh-8rem)] overflow-y-auto'
+                                style={{ position: 'relative' }}>
+                                <Catalog post={post} />
+                            </div>
+                        </aside>
+                    )}
                 </div>
             </div>
+            {/* 移动端悬浮目录入口（PROXIO_POST_CATALOG_ENABLE 开启时） */}
+            {siteConfig('PROXIO_POST_CATALOG_ENABLE', false, CONFIG) && (
+                <MobileCatalog post={post} />
+            )}
         </>
     )
 }
