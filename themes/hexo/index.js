@@ -328,15 +328,31 @@ const LayoutPostList = props => {
       postsPerPage
     )
 
+    // 新增：计算全站最大的期数（提取 slug 中的数字）
+    const maxSlug =
+      posts.length > 0
+        ? Math.max(
+            0,
+            ...posts.map(p => {
+              const match = String(
+                p.slug || ''
+              ).match(/(\d+)(?!.*\d)/)
+              return match ? parseInt(match[1], 10) : 0
+            })
+          )
+        : 0
+
     return (
       <div>
         <SlotBar {...props} />
 
         <div className='space-y-6 px-2'>
-          {homePosts.map(post => (
+          {homePosts.map((post, index) => (
             <BlogPostCard
               key={post.id}
               post={post}
+              index={index}
+              maxSlug={maxSlug}
               showSummary={showSummary}
               siteInfo={siteInfo}
             />
