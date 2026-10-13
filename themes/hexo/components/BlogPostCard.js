@@ -17,8 +17,22 @@ const parseExt = (ext) => {
   return null
 }
 
-const BlogPostCard = ({ index, post, showSummary, siteInfo }) => {
+const BlogPostCard = ({ index, post, showSummary, siteInfo, maxSlug }) => {
   const router = useRouter()
+  
+  // 新增：严格判断是否在首页，计算置顶和最新
+  const isHomePage = router.route === '/'
+  const isPinned = isHomePage && post?.type === 'Post' && index < 3
+  
+  let isLatest = false
+  if (isHomePage && post?.type === 'Post') {
+    const match = String(post.slug || '').match(/(\d+)(?!.*\d)/)
+    const currentSlugNum = match ? parseInt(match[1], 10) : 0
+    if (currentSlugNum > 0 && currentSlugNum === maxSlug) {
+      isLatest = true
+    }
+  }
+
   const showPreview =
     siteConfig('HEXO_POST_LIST_PREVIEW', null, CONFIG) && post.blockMap
   if (post && !post.pageCoverThumbnail && siteConfig('HEXO_POST_LIST_COVER_DEFAULT', null, CONFIG)) {
@@ -71,6 +85,8 @@ const BlogPostCard = ({ index, post, showSummary, siteInfo }) => {
         <BlogPostCardInfo
           index={index}
           post={post}
+          isPinned={isPinned}
+          isLatest={isLatest}
           showPageCover={showPageCover}
           showPreview={showPreview}
           showSummary={showSummary}
