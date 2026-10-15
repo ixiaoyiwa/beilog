@@ -20,7 +20,7 @@ export default function SlotBar(props) {
 
   // 分类 Tab 列表（带图标和数量）
   const categoryTabs = [
-    { id: 'Letters', name: '展信安', icon: 'far fa-folder-open', count: 23 }, // 注意：这里可以写死，也可以从 props 读，为了简单先写死，后续可以改
+    { id: 'Letters', name: '展信安', icon: 'far fa-folder-open', count: 23 },
     { id: 'Musings', name: '碎碎念', icon: 'far fa-folder-open', count: 328 },
     { id: 'Talks', name: '慢漫聊', icon: 'far fa-folder-open', count: 6 }
   ]
@@ -66,8 +66,9 @@ export default function SlotBar(props) {
     const introText = introMap[category]
 
     return (
-      <div className={`px-5 py-1 ${introText ? 'mb-6' : 'mb-2'}`}>
-        {/* 分类切换 Tab 栏（高级样式，图标+名称+数量） */}
+      // 左侧无内边距，与下方卡片和左侧红线对齐
+      <div className={`pl-0 pr-5 py-1 ${introText ? 'mb-6' : 'mb-2'}`}>
+        {/* 分类切换 Tab 栏 */}
         <div className="flex flex-wrap gap-3 mb-5">
           {categoryTabs.map(tab => {
             const isActive = category === tab.id || category === tab.name
@@ -75,13 +76,15 @@ export default function SlotBar(props) {
               <SmartLink
                 key={tab.id}
                 href={`/category/${tab.id}`}
-                className={`flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg transition-all duration-300 cursor-pointer whitespace-nowrap shadow-sm
+                // 文字与图标放大到 text-base (16px)
+                className={`flex items-center gap-1.5 px-4 py-2 text-base rounded-lg transition-all duration-300 cursor-pointer whitespace-nowrap shadow-sm
                   ${isActive
-                    ? 'bg-black text-white dark:bg-white dark:text-black shadow-md font-medium'
-                    : 'bg-white text-gray-600 dark:bg-gray-800 dark:text-gray-300 hover:bg-[var(--theme-color)] hover:text-white hover:shadow-md'
+                    ? 'bg-[#3A4A7A] text-white shadow-md font-medium'
+                    : 'bg-white text-gray-600 dark:bg-gray-800 dark:text-gray-300 hover:bg-[#3A4A7A] hover:text-white hover:shadow-md'
                   }`}
               >
-                <i className={`${tab.icon} text-xs`} />
+                {/* 选中时使用展开文件夹图标，未选中时使用闭合文件夹图标 */}
+                <i className={`${isActive ? 'fa-folder-open' : 'fa-folder'} text-xs`} />
                 <span>{tab.name}</span>
                 <span className={`text-[10px] ${isActive ? 'opacity-80' : 'opacity-60'}`}>({tab.count})</span>
               </SmartLink>
@@ -89,7 +92,7 @@ export default function SlotBar(props) {
           })}
         </div>
 
-        {/* 简介保留，去除重复的标题行 */}
+        {/* 简介文字 */}
         {introText && (
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 leading-relaxed break-words">
             {introText}
