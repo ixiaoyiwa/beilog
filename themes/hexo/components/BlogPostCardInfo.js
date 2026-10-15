@@ -80,9 +80,7 @@ export const BlogPostCardInfo = ({
                   className='menu-link cursor-pointer hover:text-indigo-700 dark:hover:text-indigo-400 transform'>
                   E{episodeNumber}
                 </SmartLink>
-                <span className='mx-1.5 text-gray-300 dark:text-gray-700'>
-                  &nbsp;
-                </span>
+                <span className='mr-1.5'></span>
               </>
             )}
 
