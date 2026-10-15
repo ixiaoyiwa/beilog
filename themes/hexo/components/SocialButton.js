@@ -189,7 +189,7 @@ const SocialButton = () => {
           </a>
         )}
 
-        {/* ⚠️ 微信挪到了第三个位置（即原来的赞赏位置） */}
+        {/* ⚠️ 微信 */}
         {CONTACT_WEHCHAT_PUBLIC && (
           <button
             onMouseEnter={openPopover}
@@ -214,13 +214,15 @@ const SocialButton = () => {
           </button>
         )}
 
-        {/* ⚠️ 赞赏挪到了第四个位置（即原来的微信位置） */}
+        {/* ⭐ 修改点：赞赏 */}
         <a
           target='_blank'
           rel='noreferrer'
           title={'赞赏'}
           href='https://na.885111.xyz/sponsor'>
-          <i className='transform hover:scale-125 duration-150 fas fa-hand-holding-heart dark:hover:text-indigo-400 hover:text-indigo-600' />
+          {/* 将原来的 far fa-hand-holding-heart 换成了标准的实心爱心 fas fa-heart，
+              并去掉了多余的样式，使其大小与旁边图标完全一致 */}
+          <i className='transform hover:scale-125 duration-150 fas fa-heart dark:hover:text-indigo-400 hover:text-indigo-600' />
         </a>
       </div>
     </div>
