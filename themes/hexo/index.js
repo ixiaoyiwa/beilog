@@ -205,12 +205,12 @@ const LayoutPostList = props => {
     // 辅助函数：按时间倒序（最新在前）
     const sortByDateDesc = (a, b) => getDateVal(b) - getDateVal(a)
 
-    // 1. 过滤并全量按时间倒序
+    // 1. 过滤并全量按时间倒序 (兼容 Featured 大小写)
     const validPosts = posts.filter(p => p?.type === 'Post').sort(sortByDateDesc)
 
     // 2. 分组筛选
-    const pinnedList = validPosts.filter(p => String(p.Featured || '').includes('置顶'))
-    const featuredList = validPosts.filter(p => String(p.Featured || '').includes('精选'))
+    const pinnedList = validPosts.filter(p => String(p.Featured || p.featured || '').includes('置顶'))
+    const featuredList = validPosts.filter(p => String(p.Featured || p.featured || '').includes('精选'))
 
     // 3. 名额约束处理
     // 置顶：最多 1 条（取发布时间最新的）
@@ -285,4 +285,234 @@ const LayoutPostList = props => {
   )
 }
 
-// ... 后面的 LayoutSearch, LayoutArchive 等保持完全不变 ...
+const LayoutSearch = props => {
+  const { keyword } = props
+  const router = useRouter()
+  const currentSearch = keyword || router?.query?.s
+
+  useEffect(() => {
+    if (currentSearch) {
+      replaceSearchResult({
+        doms: document.getElementsByClassName('replace'),
+        search: keyword,
+        target: {
+          element: 'span',
+          className: 'text-red-500 border-b border-dashed'
+        }
+      })
+    }
+  })
+
+  return (
+    <div>
+      {!currentSearch ? (
+        <SearchNav {...props} />
+      ) : (
+        <div id='posts-wrapper'>
+          {' '}
+          {siteConfig('POST_LIST_STYLE') === 'page' ? (
+            <BlogPostListPage {...props} />
+          ) : (
+            <BlogPostListScroll {...props} />
+          )}{' '}
+        </div>
+      )}
+    </div>
+  )
+}
+
+const LayoutArchive = props => {
+  const { archivePosts } = props
+
+  return (
+    <div>
+      <Card className='w-full'>
+        <div className='mb-10 pb-20 bg-white md:p-12 p-3 min-h-full dark:bg-hexo-black-gray'>
+          {Object.keys(archivePosts).map(archiveTitle => (
+            <BlogPostArchive
+              key={archiveTitle}
+              posts={archivePosts[archiveTitle]}
+              archiveTitle={archiveTitle}
+            />
+          ))}
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+const LayoutEpisodes = props => {
+  return <EpisodesPage {...props} />
+}
+
+const LayoutFriends = props => {
+  return <FriendsPage {...props} />
+}
+
+const LayoutSlug = props => {
+  const { post, lock, validPassword } = props
+  const router = useRouter()
+
+  const waiting404 = siteConfig('POST_WAITING_TIME_FOR_404') * 1000
+
+  useEffect(() => {
+    if (!post) {
+      setTimeout(
+        () => {
+          if (isBrowser) {
+            const article = document.querySelector('#article-wrapper #notion-article')
+            if (!article) {
+              router.push('/404').then(() => {
+                console.warn('找不到页面', router.asPath)
+              })
+            }
+          }
+        },
+        waiting404
+      )
+    }
+  }, [post])
+
+  let hasAudioField = !!post?.audio
+
+  if (!hasAudioField && post?.ext) {
+    const raw = typeof post.ext === 'string' ? post.ext.trim() : ''
+    if (raw && raw.startsWith('http')) {
+      hasAudioField = true
+    }
+  }
+
+  return (
+    <>
+      <div className='w-full lg:hover:shadow lg:border rounded-t-xl lg:rounded-xl lg:px-2 lg:py-4 bg-white dark:bg-hexo-black-gray dark:border-black article'>
+        {lock && <ArticleLock validPassword={validPassword} />}
+
+        {!lock && post && (
+          <div className='overflow-x-auto flex-grow mx-auto md:w-full md:px-5 '>
+            <article id='article-wrapper' className='subpixel-antialiased overflow-y-hidden'>
+              <section className='px-5 justify-center mx-auto max-w-2xl lg:max-w-full'>
+                {!hasAudioField && <NotionAudioEnhancer post={post} />}
+                {post && <NotionPage post={post} />}
+                {post && <TimestampLinker post={post} />}
+              </section>
+
+              <ShareBar post={post} />
+
+              {post?.type === 'Post' && (
+                <>
+                  <ArticleCopyright {...props} />
+                  <ArticleRecommend {...props} />
+                  <ArticleAdjacent {...props} />
+                </>
+              )}
+            </article>
+
+            <div className='pt-4 border-dashed'></div>
+
+            <div className='duration-200 overflow-x-auto bg-white dark:bg-hexo-black-gray px-3'>
+              <Comment frontMatter={post} />
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  )
+}
+
+const Layout404 = props => {
+  const router = useRouter()
+  const { locale } = useGlobal()
+
+  useEffect(() => {
+    setTimeout(() => {
+      if (isBrowser) {
+        const article = document.querySelector('#article-wrapper #notion-article')
+        if (!article) {
+          router.push('/').then(() => {})
+        }
+      }
+    }, 3000)
+  })
+
+  return (
+    <>
+      <div className='text-black w-full h-screen text-center justify-center content-center items-center flex flex-col'>
+        <div className='dark:text-gray-200'>
+          <h2 className='inline-block border-r-2 border-gray-600 mr-2 px-3 py-2 align-top'>404</h2>
+          <div className='inline-block text-left h-32 leading-10 items-center'>
+            <h2 className='m-0 p-0'>{locale.COMMON.NOT_FOUND}</h2>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
+const LayoutCategoryIndex = props => {
+  const { categoryOptions } = props
+  const { locale, NOTION_CONFIG } = useGlobal()
+
+  return (
+    <div className='mx-2 md:mx-0'>
+      <Card className='w-full'>
+        <div className='dark:text-gray-200 mb-5 mx-3'>
+          <i className='mr-4 fa-solid fa-layer-group' /> {locale.COMMON.CATEGORY}:
+        </div>
+
+        <div id='category-list' className='duration-200 flex flex-wrap mx-8'>
+          {categoryOptions?.map(category => {
+            return (
+              <SmartLink
+                key={category.name}
+                href={getCategoryUrl(category.name, NOTION_CONFIG)}
+                passHref
+                legacyBehavior>
+                <div className={' duration-300 dark:hover:text-white px-5 cursor-pointer py-2 hover:text-indigo-400'}>
+                  <i className='mr-4 fas fa-folder' /> {category.name}({category.count})
+                </div>
+              </SmartLink>
+            )
+          })}
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+const LayoutTagIndex = props => {
+  const { tagOptions } = props
+  const { locale } = useGlobal()
+
+  return (
+    <div className='mx-2 md:mx-0'>
+      <Card className='w-full'>
+        <div className='dark:text-gray-200 mb-5 ml-4'>
+          <i className='mr-4 fas fa-users' /> {locale.COMMON.TAGS}:
+        </div>
+
+        <div id='tags-list' className='duration-200 flex flex-wrap ml-8'>
+          {tagOptions.map(tag => (
+            <div key={tag.name} className='p-2'>
+              <TagItemMini key={tag.name} tag={tag} />
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+export {
+  Layout404,
+  LayoutArchive,
+  LayoutBase,
+  LayoutCategoryIndex,
+  LayoutIndex,
+  LayoutPostList,
+  LayoutSearch,
+  LayoutSlug,
+  LayoutTagIndex,
+  LayoutEpisodes,
+  LayoutFriends,
+  CONFIG as THEME_CONFIG
+}
