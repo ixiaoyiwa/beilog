@@ -90,6 +90,7 @@ export async function getStaticProps({ locale }) {
 
         const role = p['身份']?.select?.name || ''
         const title = p['头衔']?.select?.name || ''
+        const titleColor = p['头衔']?.select?.color || 'gray' // 新增：提取头衔颜色
         const status = p['状态']?.select?.name || ''
 
         let weibo = p['微博']?.url || ''
@@ -108,6 +109,7 @@ export async function getStaticProps({ locale }) {
           avatar,
           role,
           title,
+          color: titleColor, // 新增：返回头衔颜色
           status,
           weibo,
           order
@@ -122,7 +124,7 @@ export async function getStaticProps({ locale }) {
   }
 
   props.friends = friends
-  props.tagOptions = props.tagOptions || [] // 确保传递 tagOptions
+  props.tagOptions = props.tagOptions || []
 
   delete props.allPages
 
