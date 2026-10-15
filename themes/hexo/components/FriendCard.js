@@ -4,6 +4,7 @@ import { siteConfig } from '@/lib/config'
 
 const FriendCard = ({ member }) => {
   const isOnline = member.status === '在馆'
+  const isUnknown = member.status === '未知' || !member.status
   const [imgFailed, setImgFailed] = useState(false)
 
   const fallbackAvatar = siteConfig('HOME_BANNER_IMAGE') || ''
@@ -34,7 +35,7 @@ const FriendCard = ({ member }) => {
         <span
           className='absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full border-2 border-[var(--hexo-color-card)]'
           style={{
-            backgroundColor: isOnline ? '#22c55e' : '#9ca3af'
+            backgroundColor: isOnline ? '#22c55e' : isUnknown ? '#eab308' : '#9ca3af'
           }}
         />
       </SmartLink>
