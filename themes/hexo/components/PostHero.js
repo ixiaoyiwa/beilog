@@ -248,7 +248,7 @@ export default function PostHero({ post, siteInfo }) {
                       href={getCategoryUrl(post.category, NOTION_CONFIG)}
                       passHref
                       legacyBehavior>
-                      <span className='hero-meta-link font-bold'>
+                      <span className='hero-meta-link'>
                         {post.category}
                       </span>
                     </SmartLink>
