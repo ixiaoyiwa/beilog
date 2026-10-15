@@ -18,11 +18,11 @@ export default function SlotBar(props) {
     'Talks': '我们聊的，可能是正上头的新鲜事，也可能是绕不开的困惑和迷茫。不急着下结论，也不用非得有意义。要是刚好有一句触动到你，就够了。'
   }
 
-  // 分类 Tab 列表（以后新增栏目，在这里加一行即可，无需改动其他逻辑）
+  // 分类 Tab 列表（带图标和数量）
   const categoryTabs = [
-    { id: 'Letters', name: '展信安' },
-    { id: 'Musings', name: '碎碎念' },
-    { id: 'Talks', name: '慢漫聊' }
+    { id: 'Letters', name: '展信安', icon: 'far fa-folder-open', count: 23 }, // 注意：这里可以写死，也可以从 props 读，为了简单先写死，后续可以改
+    { id: 'Musings', name: '碎碎念', icon: 'far fa-folder-open', count: 328 },
+    { id: 'Talks', name: '慢漫聊', icon: 'far fa-folder-open', count: 6 }
   ]
 
   // Notion 颜色映射
@@ -40,7 +40,6 @@ export default function SlotBar(props) {
   }
 
   if (tag) {
-    // 查找当前 tag 对应的朋友数据
     const friendData = friends.find(f => f.name === tag)
     const title = friendData?.title
     const titleColor = colorMap[friendData?.color] || colorMap.default
@@ -68,32 +67,31 @@ export default function SlotBar(props) {
 
     return (
       <div className={`px-5 py-1 ${introText ? 'mb-6' : 'mb-2'}`}>
-        {/* 新增：分类切换 Tab 栏 */}
-        <div className="flex flex-wrap gap-3 mb-4">
+        {/* 分类切换 Tab 栏（高级样式，图标+名称+数量） */}
+        <div className="flex flex-wrap gap-3 mb-5">
           {categoryTabs.map(tab => {
             const isActive = category === tab.id || category === tab.name
             return (
               <SmartLink
                 key={tab.id}
                 href={`/category/${tab.id}`}
-                className={`px-4 py-1.5 text-sm rounded-lg transition-colors duration-200 cursor-pointer whitespace-nowrap
+                className={`flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg transition-all duration-300 cursor-pointer whitespace-nowrap shadow-sm
                   ${isActive
-                    ? 'bg-[var(--theme-color)] text-white font-medium shadow-sm'
-                    : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300 hover:bg-[var(--theme-color)] hover:text-white'
+                    ? 'bg-black text-white dark:bg-white dark:text-black shadow-md font-medium'
+                    : 'bg-white text-gray-600 dark:bg-gray-800 dark:text-gray-300 hover:bg-[var(--theme-color)] hover:text-white hover:shadow-md'
                   }`}
               >
-                {tab.name}
+                <i className={`${tab.icon} text-xs`} />
+                <span>{tab.name}</span>
+                <span className={`text-[10px] ${isActive ? 'opacity-80' : 'opacity-60'}`}>({tab.count})</span>
               </SmartLink>
             )
           })}
         </div>
 
-        {/* 原有：分类标题和简介，完全保留 */}
-        <div className="cursor-pointer text-lg font-light hover:text-indigo-700 dark:hover:text-indigo-400 transform dark:text-white">
-          <i className="mr-1 far fa-folder-open" />  {category}
-        </div>
+        {/* 简介保留，去除重复的标题行 */}
         {introText && (
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 leading-relaxed break-words">
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 leading-relaxed break-words">
             {introText}
           </p>
         )}
