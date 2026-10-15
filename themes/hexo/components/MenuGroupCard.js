@@ -21,7 +21,7 @@ const MenuGroupCard = props => {
     },
     {
       name: locale.COMMON.CATEGORY,
-      href: '/category',
+      href: '/category/Letters', // <--- 此处已修改，原来为 '/category'，现在直接跳转到展信安
       slot: categorySlot,
       show: siteConfig('HEXO_MENU_CATEGORY', null, CONFIG)
     },
