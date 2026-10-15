@@ -66,8 +66,8 @@ export default function SlotBar(props) {
     const introText = introMap[category]
 
     return (
-      // 左侧无内边距，与下方卡片和左侧红线对齐
-      <div className={`pl-0 pr-5 py-1 ${introText ? 'mb-6' : 'mb-2'}`}>
+      // 修复：将 pl-0 改回 px-4，让左侧与红线及下方卡片对齐，避免超出
+      <div className={`px-4 py-1 ${introText ? 'mb-6' : 'mb-2'}`}>
         {/* 分类切换 Tab 栏 */}
         <div className="flex flex-wrap gap-3 mb-5">
           {categoryTabs.map(tab => {
@@ -76,15 +76,15 @@ export default function SlotBar(props) {
               <SmartLink
                 key={tab.id}
                 href={`/category/${tab.id}`}
-                // 文字与图标放大到 text-base (16px)
-                className={`flex items-center gap-1.5 px-4 py-2 text-base rounded-lg transition-all duration-300 cursor-pointer whitespace-nowrap shadow-sm
+                // 修复：字号回到上一版的 text-sm (14px)，保证协调
+                className={`flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg transition-all duration-300 cursor-pointer whitespace-nowrap shadow-sm
                   ${isActive
                     ? 'bg-[#3A4A7A] text-white shadow-md font-medium'
                     : 'bg-white text-gray-600 dark:bg-gray-800 dark:text-gray-300 hover:bg-[#3A4A7A] hover:text-white hover:shadow-md'
                   }`}
               >
-                {/* 选中时使用展开文件夹图标，未选中时使用闭合文件夹图标 */}
-                <i className={`${isActive ? 'fa-folder-open' : 'fa-folder'} text-xs`} />
+                {/* 修复：补全 FontAwesome 前缀 'far'，解决图标不显示的问题 */}
+                <i className={`${isActive ? 'far fa-folder-open' : 'far fa-folder'} text-xs`} />
                 <span>{tab.name}</span>
                 <span className={`text-[10px] ${isActive ? 'opacity-80' : 'opacity-60'}`}>({tab.count})</span>
               </SmartLink>
