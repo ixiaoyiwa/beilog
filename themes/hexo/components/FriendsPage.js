@@ -5,7 +5,6 @@ import FriendCard from './FriendCard'
 const ROLE_ORDER = ['守夜人', '夜谈人', '酿酒人', '调酒人']
 
 const FriendsPage = ({ post, friends = [], tagOptions = [] }) => {
-  // 合并数据：如果 tag 在 friends 里没有，就补齐
   const mergedMembers = [...friends]
 
   if (tagOptions && tagOptions.length > 0) {
@@ -49,7 +48,7 @@ const FriendsPage = ({ post, friends = [], tagOptions = [] }) => {
         )}
 
         {groups.length > 0 && (
-          <div className='mt-4'>
+          <div className='mt-2'>
             {groups.map(group => (
               <section key={group.role} className='mb-16 last:mb-0'>
                 <div className='mb-6 text-center'>
@@ -101,6 +100,17 @@ const FriendsPage = ({ post, friends = [], tagOptions = [] }) => {
             margin: 0 !important;
             padding: 0 !important;
             overflow: hidden !important;
+          }
+          
+          /* 新增：彻底清除内容块上下多余的间距，防止红框留白 */
+          .friends-notion-content {
+            min-height: 0 !important;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+          }
+          .friends-notion-content .notion-page-content > *:first-child {
+            margin-top: 0 !important;
+            padding-top: 0 !important;
           }
           .friends-notion-content .notion-page-content > *:last-child {
             margin-bottom: 0 !important;
