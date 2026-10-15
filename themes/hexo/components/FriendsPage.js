@@ -1,78 +1,9 @@
-import { useEffect, useRef } from 'react'
-import NotionPage from '@/components/NotionPage'
 import Comment from '@/components/Comment'
 import FriendCard from './FriendCard'
 
 const ROLE_ORDER = ['守夜人', '夜谈人', '酿酒人', '调酒人']
 
-const SHOW_NOTION_CONTENT = false
-
-const COLLECTION_SELECTOR = [
-  '[class*="notion-collection"]',
-  '[class*="notion-table"]',
-  '[class*="notion-board"]',
-  '[class*="notion-gallery"]',
-  '[class*="notion-list-collection"]'
-].join(',')
-
 const FriendsPage = ({ post, friends = [], tagOptions = [] }) => {
-  const contentRef = useRef(null)
-
-  useEffect(() => {
-    if (!SHOW_NOTION_CONTENT) return
-    const root = contentRef.current
-    if (!root) return
-
-    const isVisible = el => el.style.display !== 'none'
-
-    const cleanup = () => {
-      root.querySelectorAll('.notion-blank').forEach(el => {
-        el.style.display = 'none'
-      })
-      root.querySelectorAll('.notion-text').forEach(el => {
-        if (!el.textContent.trim() && !el.querySelector('img,video,audio,iframe')) {
-          el.style.display = 'none'
-        }
-      })
-
-      root.querySelectorAll(COLLECTION_SELECTOR).forEach(col => {
-        let target = col
-        while (target.parentElement && target.parentElement !== root) {
-          const parent = target.parentElement
-          const otherVisible = Array.from(parent.children).some(
-            c => c !== target && isVisible(c)
-          )
-          if (otherVisible) break
-          target = parent
-        }
-        target.style.display = 'none'
-      })
-
-      const hasMedia = Array.from(root.querySelectorAll('img,video,audio,iframe'))
-        .some(el => el.offsetParent !== null)
-      if (!root.innerText.trim() && !hasMedia) {
-        root.style.display = 'none'
-      } else {
-        root.style.display = ''
-      }
-    }
-
-    let raf = 0
-    const schedule = () => {
-      cancelAnimationFrame(raf)
-      raf = requestAnimationFrame(cleanup)
-    }
-
-    schedule()
-    const observer = new MutationObserver(schedule)
-    observer.observe(root, { childList: true, subtree: true })
-
-    return () => {
-      cancelAnimationFrame(raf)
-      observer.disconnect()
-    }
-  }, [post])
-
   const mergedMembers = [...friends]
 
   if (tagOptions && tagOptions.length > 0) {
@@ -107,15 +38,11 @@ const FriendsPage = ({ post, friends = [], tagOptions = [] }) => {
   })
 
   return (
-    <div className='w-full lg:hover:shadow lg:border rounded-t-xl lg:rounded-xl lg:px-2 lg:py-4 bg-white dark:bg-hexo-black-gray dark:border-black article'>
+    // ⭐ 修改点：将原 lg:py-4 改为 lg:pt-10 lg:pb-4。
+    // 顶部加上了 40px 的内边距，刚好空出一行，不再拥挤。
+    <div className='w-full lg:hover:shadow lg:border rounded-t-xl lg:rounded-xl lg:px-2 lg:pt-10 lg:pb-4 bg-white dark:bg-hexo-black-gray dark:border-black article'>
       <div className='w-full md:px-5 px-2'>
-        {post && SHOW_NOTION_CONTENT && (
-          // ⭐ 修复：把 -mt-10 改成 mt-8，解决上面太挤的问题
-          <div ref={contentRef} className='friends-notion-content mt-8'>
-            <NotionPage post={post} />
-          </div>
-        )}
-
+        
         {groups.length > 0 && (
           <div className='mt-2'>
             {groups.map(group => (
@@ -145,24 +72,6 @@ const FriendsPage = ({ post, friends = [], tagOptions = [] }) => {
             <Comment frontMatter={post} />
           </div>
         )}
-
-        <style jsx global>{`
-          .friends-notion-content .notion-page,
-          .friends-notion-content .notion-page-content,
-          .friends-notion-content .notion-page-content-inner,
-          .friends-notion-content .notion-page-no-cover {
-            margin-top: 0 !important;
-            padding-top: 0 !important;
-            padding-bottom: 0 !important;
-            min-height: 0 !important;
-          }
-          .friends-notion-content [class*='notion-collection'],
-          .friends-notion-content [class*='notion-table'],
-          .friends-notion-content [class*='notion-board'],
-          .friends-notion-content [class*='notion-gallery'] {
-            display: none !important;
-          }
-        `}</style>
       </div>
     </div>
   )
