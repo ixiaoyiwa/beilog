@@ -31,7 +31,6 @@ export async function getStaticProps({
   )
 
   const canonicalSlug = getCategorySlug(category, props.NOTION_CONFIG)
-
   const incomingSlug = decodeURIComponent(String(categoryParam || ''))
 
   if (incomingSlug !== canonicalSlug) {
@@ -49,9 +48,18 @@ export async function getStaticProps({
   props.posts = props.allPages
     ?.filter(page => page.type === 'Post' && page.status === 'Published')
     .filter(post => post && post.category && post.category.includes(category))
+
+  // ⭐ 新增：分类页面按时间由新到旧排序（只作用于当前页面的 props.posts）
+  props.posts.sort((a, b) => {
+    const dateA = new Date(a.date?.start_date || a.date || 0).getTime()
+    const dateB = new Date(b.date?.start_date || b.date || 0).getTime()
+    return dateB - dateA // 降序：最新的在最前面
+  })
+
   // 处理文章页数
   props.postCount = props.posts.length
   const POSTS_PER_PAGE = siteConfig('POSTS_PER_PAGE', 12, props?.NOTION_CONFIG)
+  
   // 处理分页
   props.posts = props.posts.slice(
     POSTS_PER_PAGE * (page - 1),
