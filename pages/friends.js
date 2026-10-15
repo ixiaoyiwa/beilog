@@ -122,6 +122,8 @@ export async function getStaticProps({ locale }) {
   }
 
   props.friends = friends
+  props.tagOptions = props.tagOptions || [] // 确保传递 tagOptions
+
   delete props.allPages
 
   return {
