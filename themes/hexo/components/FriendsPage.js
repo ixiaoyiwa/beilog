@@ -1,10 +1,84 @@
+import { useEffect, useRef } from 'react'
 import NotionPage from '@/components/NotionPage'
 import Comment from '@/components/Comment'
 import FriendCard from './FriendCard'
 
 const ROLE_ORDER = ['守夜人', '夜谈人', '酿酒人', '调酒人']
 
+// false：不渲染 Notion 正文（页面里只有数据库时用这个，空白必定消失）
+// true ：渲染 Notion 正文，但用脚本隐藏数据库块和它的空外壳（页面里还有介绍文字时用这个）
+const SHOW_NOTION_CONTENT = false
+
+const COLLECTION_SELECTOR = [
+  '[class*="notion-collection"]',
+  '[class*="notion-table"]',
+  '[class*="notion-board"]',
+  '[class*="notion-gallery"]',
+  '[class*="notion-list-collection"]'
+].join(',')
+
 const FriendsPage = ({ post, friends = [], tagOptions = [] }) => {
+  const contentRef = useRef(null)
+
+  useEffect(() => {
+    if (!SHOW_NOTION_CONTENT) return
+    const root = contentRef.current
+    if (!root) return
+
+    const isVisible = el => el.style.display !== 'none'
+
+    const cleanup = () => {
+      // 1. 先隐藏空白块
+      root.querySelectorAll('.notion-blank').forEach(el => {
+        el.style.display = 'none'
+      })
+      root.querySelectorAll('.notion-text').forEach(el => {
+        if (!el.textContent.trim() && !el.querySelector('img,video,audio,iframe')) {
+          el.style.display = 'none'
+        }
+      })
+
+      // 2. 隐藏数据库块，并向上把"只装着它的外壳"一起隐藏
+      root.querySelectorAll(COLLECTION_SELECTOR).forEach(col => {
+        let target = col
+        while (target.parentElement && target.parentElement !== root) {
+          const parent = target.parentElement
+          const otherVisible = Array.from(parent.children).some(
+            c => c !== target && isVisible(c)
+          )
+          if (otherVisible) break
+          target = parent
+        }
+        target.style.display = 'none'
+      })
+
+      // 3. 如果整个容器已经没有可见内容，直接收起容器
+      const hasMedia = Array.from(root.querySelectorAll('img,video,audio,iframe'))
+        .some(el => el.offsetParent !== null)
+      if (!root.innerText.trim() && !hasMedia) {
+        root.style.display = 'none'
+      } else {
+        root.style.display = ''
+      }
+    }
+
+    let raf = 0
+    const schedule = () => {
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(cleanup)
+    }
+
+    schedule()
+    // Notion 内容可能是异步渲染出来的，监听后续变化
+    const observer = new MutationObserver(schedule)
+    observer.observe(root, { childList: true, subtree: true })
+
+    return () => {
+      cancelAnimationFrame(raf)
+      observer.disconnect()
+    }
+  }, [post])
+
   const mergedMembers = [...friends]
 
   if (tagOptions && tagOptions.length > 0) {
@@ -41,10 +115,8 @@ const FriendsPage = ({ post, friends = [], tagOptions = [] }) => {
   return (
     <div className='w-full lg:hover:shadow lg:border rounded-t-xl lg:rounded-xl lg:px-2 lg:py-4 bg-white dark:bg-hexo-black-gray dark:border-black article'>
       <div className='w-full md:px-5 px-2'>
-        {post && (
-          // 注意这里：加上了 -mt-10，强行把整个内容往上拉，切掉空白！
-          // 如果觉得拉得还不够，就把 -mt-10 改成 -mt-16 或 -mt-20
-          <div className='friends-notion-content -mt-10'> 
+        {post && SHOW_NOTION_CONTENT && (
+          <div ref={contentRef} className='friends-notion-content'>
             <NotionPage post={post} />
           </div>
         )}
@@ -80,60 +152,20 @@ const FriendsPage = ({ post, friends = [], tagOptions = [] }) => {
         )}
 
         <style jsx global>{`
-          /* 1. 强力隐藏，绝对不占一点空间 */
-          .friends-notion-content .notion-collection,
-          .friends-notion-content .notion-collection-view,
-          .friends-notion-content .notion-collection-view-tabs-content,
-          .friends-notion-content .notion-collection_view-block,
-          .friends-notion-content .notion-table,
-          .friends-notion-content .notion-board,
-          .friends-notion-content .notion-gallery,
+          .friends-notion-content .notion-page,
+          .friends-notion-content .notion-page-content,
+          .friends-notion-content .notion-page-content-inner,
+          .friends-notion-content .notion-page-no-cover {
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            min-height: 0 !important;
+          }
           .friends-notion-content [class*='notion-collection'],
           .friends-notion-content [class*='notion-table'],
           .friends-notion-content [class*='notion-board'],
           .friends-notion-content [class*='notion-gallery'] {
             display: none !important;
-            visibility: hidden !important;
-            height: 0 !important;
-            min-height: 0 !important;
-            max-height: 0 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            overflow: hidden !important;
-            border: 0 !important;
-          }
-
-          /* 2. 清除父容器的内外边距 */
-          .friends-notion-content .notion-page-content > *:has([class*='notion-collection']),
-          .friends-notion-content .notion-page-content > *:has([class*='notion-table']),
-          .friends-notion-content .notion-page-content > *:has([class*='notion-board']),
-          .friends-notion-content .notion-page-content > *:has([class*='notion-gallery']) {
-            display: none !important;
-            height: 0 !important;
-            min-height: 0 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-
-          /* 3. 清理最外层 */
-          .friends-notion-content {
-            margin-top: 0 !important;
-            margin-bottom: 0 !important;
-            padding-top: 0 !important;
-            padding-bottom: 0 !important;
-          }
-          
-          .friends-notion-content .notion-page-content {
-            margin-top: 0 !important;
-            padding-top: 0 !important;
-          }
-
-          /* 4. 清理空块 */
-          .friends-notion-content .notion-page-content > div:empty {
-            display: none !important;
-            height: 0 !important;
-            margin: 0 !important;
-            padding: 0 !important;
           }
         `}</style>
       </div>
