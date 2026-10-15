@@ -4,62 +4,72 @@ import { useRouter } from 'next/router'
 /**
  * 数字翻页插件
  * @param page 当前页码
- * @param showNext 是否有下一页
+ * @param totalPage 总页码
  * @returns {JSX.Element}
  * @constructor
  */
 const PaginationNumber = ({ page, totalPage }) => {
   const router = useRouter()
-  const currentPage = +page
-  const showNext = page < totalPage
+  const currentPage = Number(page) || 1
+  const totalPages = Number(totalPage) || 1
+  const showPrev = currentPage > 1
+  const showNext = currentPage < totalPages
   const pagePrefix = router.asPath
     .split('?')[0]
     .replace(/\/page\/[1-9]\d*/, '')
     .replace(/\/$/, '')
     .replace('.html', '')
-  const pages = generatePages(pagePrefix, page, currentPage, totalPage)
+  const pages = generatePages(pagePrefix, currentPage, totalPages)
 
   return (
     <div className='mt-10 mb-5 flex justify-center items-end font-medium text-indigo-400 duration-500 py-3 space-x-2'>
       {/* 上一页 */}
-      <SmartLink
-        href={{
-          pathname:
-            currentPage === 2
-              ? `${pagePrefix}/`
-              : `${pagePrefix}/page/${currentPage - 1}`,
-          query: router.query.s ? { s: router.query.s } : {}
-        }}
-        rel='prev'
-        className={`${currentPage === 1 ? 'invisible' : 'block'} pb-0.5 hover:bg-indigo-400 hover:text-white w-6 text-center cursor-pointer duration-200 hover:font-bold`}>
-        <i className='fas fa-angle-left' />
-      </SmartLink>
+      {showPrev ? (
+        <SmartLink
+          href={{
+            pathname:
+              currentPage === 2
+                ? `${pagePrefix}/`
+                : `${pagePrefix}/page/${currentPage - 1}`,
+            query: router.query.s ? { s: router.query.s } : {}
+          }}
+          rel='prev'
+          className='pb-0.5 hover:bg-indigo-400 hover:text-white w-6 text-center cursor-pointer duration-200 hover:font-bold'>
+          <i className='fas fa-angle-left' />
+        </SmartLink>
+      ) : (
+        <div className='w-6' aria-hidden='true' />
+      )}
 
       {pages}
 
       {/* 下一页 */}
-      <SmartLink
-        href={{
-          pathname: `${pagePrefix}/page/${currentPage + 1}`,
-          query: router.query.s ? { s: router.query.s } : {}
-        }}
-        rel='next'
-        className={`${+showNext ? 'block' : 'invisible'} pb-0.5 hover:bg-indigo-400 hover:text-white w-6 text-center cursor-pointer duration-200 hover:font-bold`}>
-        <i className='fas fa-angle-right' />
-      </SmartLink>
+      {showNext ? (
+        <SmartLink
+          href={{
+            pathname: `${pagePrefix}/page/${currentPage + 1}`,
+            query: router.query.s ? { s: router.query.s } : {}
+          }}
+          rel='next'
+          className='pb-0.5 hover:bg-indigo-400 hover:text-white w-6 text-center cursor-pointer duration-200 hover:font-bold'>
+          <i className='fas fa-angle-right' />
+        </SmartLink>
+      ) : (
+        <div className='w-6' aria-hidden='true' />
+      )}
     </div>
   )
 }
 
 /**
- * 获取页码
- * @param {*} page
- * @param {*} currentPage
- * @param {*} pagePrefix
+ * 获取页码元素
+ * @param {*} page 页码
+ * @param {*} currentPage 当前页码
+ * @param {*} pagePrefix 路径前缀
  * @returns
  */
 function getPageElement(page, currentPage, pagePrefix) {
-  const selected = page + '' === currentPage + ''
+  const selected = Number(page) === Number(currentPage)
   return (
     <SmartLink
       href={page === 1 ? `${pagePrefix}/` : `${pagePrefix}/page/${page}`}
@@ -78,15 +88,15 @@ function getPageElement(page, currentPage, pagePrefix) {
   )
 }
 
-function generatePages(pagePrefix, page, currentPage, totalPage) {
+function generatePages(pagePrefix, currentPage, totalPage) {
   const pages = []
   const groupCount = 7 // 最多显示页签数
   if (totalPage <= groupCount) {
     for (let i = 1; i <= totalPage; i++) {
-      pages.push(getPageElement(i, page, pagePrefix))
+      pages.push(getPageElement(i, currentPage, pagePrefix))
     }
   } else {
-    pages.push(getPageElement(1, page, pagePrefix))
+    pages.push(getPageElement(1, currentPage, pagePrefix))
     const dynamicGroupCount = groupCount - 2
     let startPage = currentPage - 2
     if (startPage <= 1) {
@@ -101,7 +111,7 @@ function generatePages(pagePrefix, page, currentPage, totalPage) {
 
     for (let i = 0; i < dynamicGroupCount; i++) {
       if (startPage + i < totalPage) {
-        pages.push(getPageElement(startPage + i, page, pagePrefix))
+        pages.push(getPageElement(startPage + i, currentPage, pagePrefix))
       }
     }
 
@@ -109,8 +119,9 @@ function generatePages(pagePrefix, page, currentPage, totalPage) {
       pages.push(<div key={-2}>... </div>)
     }
 
-    pages.push(getPageElement(totalPage, page, pagePrefix))
+    pages.push(getPageElement(totalPage, currentPage, pagePrefix))
   }
   return pages
 }
+
 export default PaginationNumber

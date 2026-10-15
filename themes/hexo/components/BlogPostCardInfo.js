@@ -2,34 +2,72 @@ import NotionIcon from '@/components/NotionIcon'
 import NotionPage from '@/components/NotionPage'
 import TwikooCommentCount from '@/components/TwikooCommentCount'
 import { siteConfig } from '@/lib/config'
-import { formatDateFmt } from '@/lib/utils/formatDate'
+import { useGlobal } from '@/lib/global'
+import { getCategoryUrl } from '@/lib/utils/category'
 import SmartLink from '@/components/SmartLink'
-import TagItemMini from './TagItemMini'
 
-/**
- * 博客列表的文字内容
- * @param {*} param0
- * @returns
- */
+const SUMMARY_MAX = 68
+
+const truncateSummary = text => {
+  if (!text) return ''
+  const clean = text.replace(/\s+/g, ' ').trim()
+  if (clean.length <= SUMMARY_MAX) return clean
+  return clean.slice(0, SUMMARY_MAX).trim() + '...'
+}
+
+const extractEpisodeNumber = slug => {
+  if (!slug) return ''
+  const match = String(slug).match(/(\d+)(?!.*\d)/)
+  return match ? match[1] : ''
+}
+
 export const BlogPostCardInfo = ({
   post,
   showPreview,
   showPageCover,
-  showSummary
+  showSummary,
+  featuredType = null // 接收注入的标识：'pinned' | 'featured' | 'latest' | null
 }) => {
+  const { NOTION_CONFIG } = useGlobal()
+
+  const guests = post?.tagItems || []
+  const visibleGuests = guests.slice(0, 3)
+  const extraCount = guests.length - 3
+
+  const episodeNumber = extractEpisodeNumber(post?.slug)
+
   return (
     <article
-      className={`flex flex-col justify-between lg:p-6 p-4 lg:px-8 px-6 ${showPageCover && !showPreview ? 'md:w-7/12 w-full md:max-h-60' : 'w-full'}`}>
+      className={`flex flex-col justify-between lg:p-6 p-4 lg:px-8 px-6 ${showPageCover && !showPreview ? 'md:w-[62%] w-full md:max-h-60' : 'w-full'}`}>
       <div>
         <header>
           <h2>
-            {/* 标题 */}
             <SmartLink
               href={post?.href}
               passHref
               className={`line-clamp-2 replace cursor-pointer text-2xl ${
                 showPreview ? 'text-center' : ''
               } leading-tight font-bold text-gray-600 dark:text-gray-100 hover:text-indigo-700 dark:hover:text-indigo-400`}>
+              
+              {/* 首页专属标识渲染：置顶（灰色） */}
+              {featuredType === 'pinned' && (
+                <span className='inline-block px-1.5 py-0.5 text-[10px] font-medium rounded mr-1.5 align-middle bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200'>
+                  置顶
+                </span>
+              )}
+              {/* 首页专属标识渲染：精选（浅紫色） */}
+              {featuredType === 'featured' && (
+                <span className='inline-block px-1.5 py-0.5 text-[10px] font-medium rounded mr-1.5 align-middle bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300'>
+                  精选
+                </span>
+              )}
+              {/* 首页专属标识渲染：最新（绿色） */}
+              {featuredType === 'latest' && (
+                <span className='inline-block px-1.5 py-0.5 text-[10px] font-medium rounded mr-1.5 align-middle bg-green-100 text-green-700 dark:bg-green-900/60 dark:text-green-300'>
+                  最新
+                </span>
+              )}
+
               {siteConfig('POST_TITLE_ICON') && (
                 <NotionIcon icon={post.pageIcon} />
               )}
@@ -37,73 +75,92 @@ export const BlogPostCardInfo = ({
             </SmartLink>
           </h2>
 
-          {/* 分类 */}
-          {post?.category && (
-            <div
-              className={`flex mt-2 items-center ${
-                showPreview ? 'justify-center' : 'justify-start'
-              } flex-wrap dark:text-gray-500 text-gray-400 `}>
-              <SmartLink
-                href={`/category/${post.category}`}
-                passHref
-                className='cursor-pointer font-light text-sm menu-link hover:text-indigo-700 dark:hover:text-indigo-400 transform'>
-                <i className='mr-1 far fa-folder' />
-                {post.category}
-              </SmartLink>
+          <div
+            className={`flex mt-2 mb-1 items-center ${
+              showPreview ? 'justify-center' : 'justify-start'
+            } flex-wrap gap-y-1 text-sm dark:text-gray-500 text-gray-400`}>
+            {episodeNumber && (
+              <>
+                <SmartLink
+                  href={post?.href}
+                  passHref
+                  className='font-normal menu-link cursor-pointer hover:text-indigo-700 dark:hover:text-indigo-400 transform'>
+                  E{episodeNumber}
+                </SmartLink>
+                <span className='mr-1.5'></span>
+              </>
+            )}
 
-              <TwikooCommentCount
-                className='text-sm hover:text-indigo-700 dark:hover:text-indigo-400'
-                post={post}
-              />
-            </div>
-          )}
+            {post?.category && (
+              <>
+                <SmartLink
+                  href={getCategoryUrl(post.category, NOTION_CONFIG)}
+                  passHref
+                  className='font-normal cursor-pointer menu-link hover:text-indigo-700 dark:hover:text-indigo-400 transform'>
+                  {post.category}
+                </SmartLink>
+                <span className='mx-1.5 text-gray-300 dark:text-gray-700'>
+                  /
+                </span>
+              </>
+            )}
+
+            <span className='font-light'>
+              {post?.publishDay || post.date}
+            </span>
+
+            {visibleGuests.length > 0 && (
+              <>
+                <span className='mx-1.5 text-gray-300 dark:text-gray-700'>
+                  /
+                </span>
+                <div className='flex flex-wrap items-center gap-x-2'>
+                  {visibleGuests.map(tag => (
+                    <SmartLink
+                      key={tag.name}
+                      href={`/tag/${encodeURIComponent(tag.name)}`}
+                      passHref
+                      legacyBehavior>
+                      <span className='font-light menu-link cursor-pointer hover:text-indigo-700 dark:hover:text-indigo-400 transform whitespace-nowrap'>
+                        {tag.name}
+                      </span>
+                    </SmartLink>
+                  ))}
+                  {extraCount > 0 && (
+                    <span className='font-light whitespace-nowrap'>
+                      +{extraCount}
+                    </span>
+                  )}
+                </div>
+              </>
+            )}
+
+            <TwikooCommentCount
+              className='ml-2 hover:text-indigo-700 dark:hover:text-indigo-400'
+              post={post}
+            />
+          </div>
         </header>
 
-        {/* 摘要 */}
         {(!showPreview || showSummary) && !post.results && (
-          <main className='line-clamp-2 replace my-3 text-gray-700  dark:text-gray-300 text-md font-normal'>
-            {post.summary}
+          <main className='line-clamp-3 replace my-4 text-gray-700 dark:text-gray-300 text-md font-normal leading-relaxed'>
+            {truncateSummary(post.summary)}
           </main>
         )}
 
-        {/* 搜索结果 */}
         {post.results && (
-          <p className='line-clamp-2 mt-4 text-gray-700 dark:text-gray-300 text-sm font-light'>
+          <p className='line-clamp-3 mt-4 text-gray-700 dark:text-gray-300 text-sm font-light leading-relaxed'>
             {post.results.map((r, index) => (
               <span key={index}>{r}</span>
             ))}
           </p>
         )}
 
-        {/* 预览 */}
         {showPreview && (
           <div className='overflow-ellipsis truncate'>
             <NotionPage post={post} />
           </div>
         )}
-      </div>
-
-      <div>
-        {/* 日期标签 */}
-        <div className='text-gray-400 justify-between flex'>
-          {/* 日期 */}
-          <SmartLink
-            href={`/archive#${formatDateFmt(post?.publishDate, 'yyyy-MM')}`}
-            passHref
-            className='font-light menu-link cursor-pointer text-sm leading-4 mr-3'>
-            <i className='far fa-calendar-alt mr-1' />
-            {post?.publishDay || post.lastEditedDay}
-          </SmartLink>
-
-          <div className='md:flex-nowrap flex-wrap md:justify-start inline-block'>
-            <div>
-              {' '}
-              {post.tagItems?.map(tag => (
-                <TagItemMini key={tag.name} tag={tag} />
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
     </article>
   )

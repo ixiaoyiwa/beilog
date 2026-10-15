@@ -6,3 +6,11 @@
 .fa-info:before {
     content: "\f05a";
 }
+
+/* 全局去除链接悬停下划线 */
+a:hover,
+a:focus,
+.hover\:underline:hover,
+.hover\:underline:focus {
+    text-decoration: none !important;
+}

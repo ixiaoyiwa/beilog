@@ -5,6 +5,7 @@ import ShareBar from '@/components/ShareBar'
 import { siteConfig } from '@/lib/config'
 import { useGlobal } from '@/lib/global'
 import { isBrowser } from '@/lib/utils'
+import { getCategoryUrl } from '@/lib/utils/category'
 import { Transition } from '@headlessui/react'
 import dynamic from 'next/dynamic'
 import SmartLink from '@/components/SmartLink'
@@ -15,15 +16,16 @@ import ArticleCopyright from './components/ArticleCopyright'
 import { ArticleLock } from './components/ArticleLock'
 import ArticleRecommend from './components/ArticleRecommend'
 import BlogPostArchive from './components/BlogPostArchive'
+import BlogPostCard from './components/BlogPostCard'
 import BlogPostListPage from './components/BlogPostListPage'
 import BlogPostListScroll from './components/BlogPostListScroll'
 import ButtonJumpToComment from './components/ButtonJumpToComment'
-import ButtonRandomPostMini from './components/ButtonRandomPostMini'
 import Card from './components/Card'
 import Footer from './components/Footer'
 import Header from './components/Header'
 import Hero from './components/Hero'
 import PostHero from './components/PostHero'
+import PageHero from './components/PageHero'
 import RightFloatArea from './components/RightFloatArea'
 import SearchNav from './components/SearchNav'
 import SideRight from './components/SideRight'
@@ -32,6 +34,11 @@ import TagItemMini from './components/TagItemMini'
 import TocDrawer from './components/TocDrawer'
 import TocDrawerButton from './components/TocDrawerButton'
 import ArticleSwitchPlaceholder from './components/ArticleSwitchPlaceholder'
+import NotionAudioEnhancer from './components/NotionAudioEnhancer'
+import GlobalAudioPlayer from './components/GlobalAudioPlayer'
+import EpisodesPage from './components/EpisodesPage'
+import FriendsPage from './components/FriendsPage'
+import TimestampLinker from './components/TimestampLinker'
 import CONFIG from './config'
 import { Style } from './style'
 
@@ -40,41 +47,64 @@ const AlgoliaSearchModal = dynamic(
   { ssr: false }
 )
 
-// 主题全局状态
 const ThemeGlobalHexo = createContext()
+
 export const useHexoGlobal = () => useContext(ThemeGlobalHexo)
 
-/**
- * 基础布局 采用左右两侧布局，移动端使用顶部导航栏
- * @param props
- * @returns {JSX.Element}
- * @constructor
- */
 const LayoutBase = props => {
   const { post, children, slotTop, className } = props
-  const { onLoading, fullWidth } = useGlobal()
+  const { onLoading, fullWidth: globalFullWidth } = useGlobal()
+  const fullWidth = globalFullWidth || props.fullWidth
+  const hideSidebar = !!props.hideSidebar
   const router = useRouter()
-  const showRandomButton = siteConfig('HEXO_MENU_RANDOM', false, CONFIG)
-  const isArticleSlugPage = router.pathname === '/[prefix]/[slug]'
-  const hexoArticleRouteLoading = siteConfig(
-    'HEXO_ARTICLE_ROUTE_LOADING',
-    true,
-    CONFIG
-  )
-  const showArticleSwitchPlaceholder =
-    hexoArticleRouteLoading && isArticleSlugPage && onLoading
 
-  const headerSlot = post ? (
-    <PostHero {...props} />
-  ) : router.route === '/' &&
-    siteConfig('HEXO_HOME_BANNER_ENABLE', null, CONFIG) ? (
-    <Hero {...props} />
-  ) : null
+  const isArticleSlugPage = router.pathname === '/[prefix]/[slug]'
+  const isEpisodesPage = router.route === '/episodes' || router.route === '/episodes/page/[page]'
+
+  const hexoArticleRouteLoading = siteConfig('HEXO_ARTICLE_ROUTE_LOADING', true, CONFIG)
+  const showArticleSwitchPlaceholder = hexoArticleRouteLoading && isArticleSlugPage && onLoading
+
+  const findEpisodesMenuItem = menus => {
+    if (!Array.isArray(menus)) return null
+    for (const item of menus) {
+      if (!item) continue
+      const href = String(item.href || '').replace(/\/+$/, '')
+      const slug = String(item.slug || '').replace(/^\/+|\/+$/g, '')
+      if (href === '/episodes' || slug === 'episodes') return item
+      if (Array.isArray(item.subMenus)) {
+        const found = findEpisodesMenuItem(item.subMenus)
+        if (found) return found
+      }
+    }
+    return null
+  }
+
+  const episodesMenuItem = isEpisodesPage ? findEpisodesMenuItem(props.customMenu) : null
+  const episodesHeroPost = isEpisodesPage
+    ? {
+        type: 'Page',
+        title: episodesMenuItem?.title || episodesMenuItem?.name || '节目',
+        pageCover: props?.siteInfo?.pageCover,
+        pageIcon: episodesMenuItem?.icon || null
+      }
+    : null
+
+  const headerSlot =
+    post?.type === 'Post' ? (
+      <PostHero {...props} />
+    ) : post ? (
+      <PageHero post={post} siteInfo={props.siteInfo} />
+    ) : episodesHeroPost ? (
+      <PageHero post={episodesHeroPost} siteInfo={props.siteInfo} />
+    ) : router.route === '/' && siteConfig('HEXO_HOME_BANNER_ENABLE', null, CONFIG) ? (
+      <Hero {...props} />
+    ) : null
+
+  const isHomeWithHero = router.route === '/' && siteConfig('HEXO_HOME_BANNER_ENABLE', null, CONFIG)
 
   const drawerRight = useRef(null)
   const tocRef = isBrowser ? document.getElementById('article-wrapper') : null
 
-  // 悬浮按钮内容
   const floatSlot = (
     <>
       {post?.toc?.length > 1 && (
@@ -86,25 +116,19 @@ const LayoutBase = props => {
           />
         </div>
       )}
-      {post && <ButtonJumpToComment post={post} />}
-      {showRandomButton && <ButtonRandomPostMini {...props} />}
+      {post && <ButtonJumpToComment />}
     </>
   )
 
-  // Algolia搜索框
   const searchModal = useRef(null)
+  const hasPageHero = !!post || isEpisodesPage
+  const mainTopPadding = hasPageHero ? 'pt-0' : isHomeWithHero ? 'pt-8' : 'pt-24'
 
   return (
     <ThemeGlobalHexo.Provider value={{ searchModal }}>
-      <div
-        id='theme-hexo'
-        className={`${siteConfig('FONT_STYLE')} dark:bg-black scroll-smooth`}>
+      <div id='theme-hexo' className={`${siteConfig('FONT_STYLE')} dark:bg-black scroll-smooth`}>
         <Style />
-
-        {/* 顶部导航 */}
         <Header {...props} />
-
-        {/* 顶部嵌入 */}
         <Transition
           show={!onLoading}
           appear={true}
@@ -117,21 +141,16 @@ const LayoutBase = props => {
           unmount={false}>
           {headerSlot}
         </Transition>
-
-        {/* 主区块 */}
         <main
           id='wrapper'
-          className={`${siteConfig('HEXO_HOME_BANNER_ENABLE', null, CONFIG) ? 'pt-0' : 'pt-16'} bg-hexo-background-gray dark:bg-black w-full md:px-8 lg:px-24 min-h-screen relative`}>
+          className={`${mainTopPadding} bg-hexo-background-gray dark:bg-black w-full md:px-8 lg:px-24 min-h-screen relative`}>
           <div
             id='container-inner'
             className={
-              (JSON.parse(siteConfig('LAYOUT_SIDEBAR_REVERSE'))
-                ? 'flex-row-reverse'
-                : '') +
+              (JSON.parse(siteConfig('LAYOUT_SIDEBAR_REVERSE')) ? 'flex-row-reverse' : '') +
               ' w-full mx-auto lg:flex lg:space-x-4 justify-center relative z-10'
             }>
-            <div
-              className={`${className || ''} w-full ${fullWidth ? '' : 'max-w-4xl'} h-full overflow-hidden`}>
+            <div className={`${className || ''} w-full ${fullWidth ? '' : 'max-w-4xl'} h-full overflow-hidden`}>
               {showArticleSwitchPlaceholder ? (
                 <ArticleSwitchPlaceholder />
               ) : (
@@ -145,54 +164,65 @@ const LayoutBase = props => {
                   leaveFrom='opacity-100 translate-y-0'
                   leaveTo='opacity-0 -translate-y-16'
                   unmount={false}>
-                  {/* 主区上部嵌入 */}
                   {slotTop}
-
                   {children}
                 </Transition>
               )}
             </div>
-
-            {/* 右侧栏 */}
-            <SideRight {...props} />
+            {!hideSidebar && <SideRight {...props} />}
           </div>
         </main>
-
         <div className='block lg:hidden'>
           <TocDrawer post={post} cRef={drawerRight} targetRef={tocRef} />
         </div>
-
-        {/* 悬浮菜单 */}
         <RightFloatArea floatSlot={floatSlot} />
-
-        {/* 全文搜索 */}
         <AlgoliaSearchModal cRef={searchModal} {...props} />
-
-        {/* 页脚 */}
+        <GlobalAudioPlayer />
         <Footer title={siteConfig('TITLE')} />
       </div>
     </ThemeGlobalHexo.Provider>
   )
 }
 
-/**
- * 首页
- * 是一个博客列表，嵌入一个Hero大图
- * @param {*} props
- * @returns
- */
 const LayoutIndex = props => {
-  return <LayoutPostList {...props} className='pt-8' />
+  return <LayoutPostList {...props} />
 }
 
-/**
- * 博客列表
- * @param {*} props
- * @returns
- */
 const LayoutPostList = props => {
+  const router = useRouter()
+  const isHomePage = router.route === '/'
+  const { posts = [], siteInfo } = props
+
+  const showSummary = siteConfig('HEXO_POST_LIST_SUMMARY', null, CONFIG)
+
+  if (isHomePage) {
+    return (
+      <div>
+        <SlotBar {...props} />
+        <div className='space-y-6 px-2'>
+          {posts.map((post, index) => (
+            <BlogPostCard
+              key={post.id}
+              post={post}
+              index={index}
+              showSummary={showSummary}
+              siteInfo={siteInfo}
+            />
+          ))}
+        </div>
+        <div className='mt-8 mb-4 text-center'>
+          <SmartLink
+            href='/episodes'
+            className='inline-block px-6 py-2 text-sm font-semibold rounded-lg border-2 transition-colors border-[var(--theme-color)] text-[var(--theme-color)] hover:bg-[var(--theme-color)] hover:text-white'>
+            查看更多节目 ···
+          </SmartLink>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className='pt-8'>
+    <div>
       <SlotBar {...props} />
       {siteConfig('POST_LIST_STYLE') === 'page' ? (
         <BlogPostListPage {...props} />
@@ -203,11 +233,6 @@ const LayoutPostList = props => {
   )
 }
 
-/**
- * 搜索
- * @param {*} props
- * @returns
- */
 const LayoutSearch = props => {
   const { keyword } = props
   const router = useRouter()
@@ -227,7 +252,7 @@ const LayoutSearch = props => {
   })
 
   return (
-    <div className='pt-8'>
+    <div>
       {!currentSearch ? (
         <SearchNav {...props} />
       ) : (
@@ -244,15 +269,10 @@ const LayoutSearch = props => {
   )
 }
 
-/**
- * 归档
- * @param {*} props
- * @returns
- */
 const LayoutArchive = props => {
   const { archivePosts } = props
   return (
-    <div className='pt-8'>
+    <div>
       <Card className='w-full'>
         <div className='mb-10 pb-20 bg-white md:p-12 p-3 min-h-full dark:bg-hexo-black-gray'>
           {Object.keys(archivePosts).map(archiveTitle => (
@@ -268,17 +288,21 @@ const LayoutArchive = props => {
   )
 }
 
-/**
- * 文章详情
- * @param {*} props
- * @returns
- */
+const LayoutEpisodes = props => {
+  return <EpisodesPage {...props} />
+}
+
+const LayoutFriends = props => {
+  return <FriendsPage {...props} />
+}
+
 const LayoutSlug = props => {
   const { post, lock, validPassword } = props
   const router = useRouter()
+
   const waiting404 = siteConfig('POST_WAITING_TIME_FOR_404') * 1000
+
   useEffect(() => {
-    // 404
     if (!post) {
       setTimeout(
         () => {
@@ -295,6 +319,16 @@ const LayoutSlug = props => {
       )
     }
   }, [post])
+
+  let hasAudioField = !!post?.audio
+
+  if (!hasAudioField && post?.ext) {
+    const raw = typeof post.ext === 'string' ? post.ext.trim() : ''
+    if (raw && raw.startsWith('http')) {
+      hasAudioField = true
+    }
+  }
+
   return (
     <>
       <div className='w-full lg:hover:shadow lg:border rounded-t-xl lg:rounded-xl lg:px-2 lg:py-4 bg-white dark:bg-hexo-black-gray dark:border-black article'>
@@ -302,16 +336,18 @@ const LayoutSlug = props => {
 
         {!lock && post && (
           <div className='overflow-x-auto flex-grow mx-auto md:w-full md:px-5 '>
-            <article
-              id='article-wrapper'
-              className='subpixel-antialiased overflow-y-hidden'>
-              {/* Notion文章主体 */}
+            <article id='article-wrapper' className='subpixel-antialiased overflow-y-hidden'>
               <section className='px-5 justify-center mx-auto max-w-2xl lg:max-w-full'>
+                {!hasAudioField && <NotionAudioEnhancer post={post} />}
                 {post && <NotionPage post={post} />}
+                {post && <TimestampLinker post={post} />}
               </section>
 
-              {/* 分享 */}
-              <ShareBar post={post} />
+              {/* ⭐ 修改点：在分享栏上方强制加一个 mt-8 的间距 */}
+              <div className='mt-8'>
+                <ShareBar post={post} />
+              </div>
+
               {post?.type === 'Post' && (
                 <>
                   <ArticleCopyright {...props} />
@@ -323,7 +359,6 @@ const LayoutSlug = props => {
 
             <div className='pt-4 border-dashed'></div>
 
-            {/* 评论互动 */}
             <div className='duration-200 overflow-x-auto bg-white dark:bg-hexo-black-gray px-3'>
               <Comment frontMatter={post} />
             </div>
@@ -334,34 +369,26 @@ const LayoutSlug = props => {
   )
 }
 
-/**
- * 404
- * @param {*} props
- * @returns
- */
 const Layout404 = props => {
   const router = useRouter()
   const { locale } = useGlobal()
+
   useEffect(() => {
-    // 延时3秒如果加载失败就返回首页
     setTimeout(() => {
       if (isBrowser) {
         const article = document.querySelector('#article-wrapper #notion-article')
         if (!article) {
-          router.push('/').then(() => {
-            // console.log('找不到页面', router.asPath)
-          })
+          router.push('/').then(() => {})
         }
       }
     }, 3000)
   })
+
   return (
     <>
       <div className='text-black w-full h-screen text-center justify-center content-center items-center flex flex-col'>
         <div className='dark:text-gray-200'>
-          <h2 className='inline-block border-r-2 border-gray-600 mr-2 px-3 py-2 align-top'>
-            404
-          </h2>
+          <h2 className='inline-block border-r-2 border-gray-600 mr-2 px-3 py-2 align-top'>404</h2>
           <div className='inline-block text-left h-32 leading-10 items-center'>
             <h2 className='m-0 p-0'>{locale.COMMON.NOT_FOUND}</h2>
           </div>
@@ -371,34 +398,27 @@ const Layout404 = props => {
   )
 }
 
-/**
- * 分类列表
- * @param {*} props
- * @returns
- */
 const LayoutCategoryIndex = props => {
   const { categoryOptions } = props
-  const { locale } = useGlobal()
+  const { locale, NOTION_CONFIG } = useGlobal()
+
   return (
-    <div className='mt-8'>
-      <Card className='w-full min-h-screen'>
+    <div className='mx-2 md:mx-0'>
+      <Card className='w-full'>
         <div className='dark:text-gray-200 mb-5 mx-3'>
-          <i className='mr-4 fas fa-th' /> {locale.COMMON.CATEGORY}:
+          <i className='mr-4 fa-solid fa-layer-group' /> {locale.COMMON.CATEGORY}:
         </div>
+
         <div id='category-list' className='duration-200 flex flex-wrap mx-8'>
           {categoryOptions?.map(category => {
             return (
               <SmartLink
                 key={category.name}
-                href={`/category/${category.name}`}
+                href={getCategoryUrl(category.name, NOTION_CONFIG)}
                 passHref
                 legacyBehavior>
-                <div
-                  className={
-                    ' duration-300 dark:hover:text-white px-5 cursor-pointer py-2 hover:text-indigo-400'
-                  }>
-                  <i className='mr-4 fas fa-folder' /> {category.name}(
-                  {category.count})
+                <div className={' duration-300 dark:hover:text-white px-5 cursor-pointer py-2 hover:text-indigo-400'}>
+                  <i className='mr-4 fas fa-folder' /> {category.name}({category.count})
                 </div>
               </SmartLink>
             )
@@ -409,20 +429,17 @@ const LayoutCategoryIndex = props => {
   )
 }
 
-/**
- * 标签列表
- * @param {*} props
- * @returns
- */
 const LayoutTagIndex = props => {
   const { tagOptions } = props
   const { locale } = useGlobal()
+
   return (
-    <div className='mt-8'>
+    <div className='mx-2 md:mx-0'>
       <Card className='w-full'>
         <div className='dark:text-gray-200 mb-5 ml-4'>
-          <i className='mr-4 fas fa-tag' /> {locale.COMMON.TAGS}:
+          <i className='mr-4 fas fa-users' /> {locale.COMMON.TAGS}:
         </div>
+
         <div id='tags-list' className='duration-200 flex flex-wrap ml-8'>
           {tagOptions.map(tag => (
             <div key={tag.name} className='p-2'>
@@ -445,5 +462,7 @@ export {
   LayoutSearch,
   LayoutSlug,
   LayoutTagIndex,
+  LayoutEpisodes,
+  LayoutFriends,
   CONFIG as THEME_CONFIG
 }

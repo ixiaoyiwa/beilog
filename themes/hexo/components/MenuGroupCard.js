@@ -15,19 +15,19 @@ const MenuGroupCard = props => {
   const links = [
     {
       name: locale.COMMON.ARTICLE,
-      href: '/archive',
+      href: '/episodes', // <--- 此处已修改，原来为 '/archive'
       slot: archiveSlot,
       show: siteConfig('HEXO_MENU_ARCHIVE', null, CONFIG)
     },
     {
       name: locale.COMMON.CATEGORY,
-      href: '/category',
+      href: '/category/Letters', // <--- 此处已修改，原来为 '/category'，现在直接跳转到展信安
       slot: categorySlot,
       show: siteConfig('HEXO_MENU_CATEGORY', null, CONFIG)
     },
     {
       name: locale.COMMON.TAGS,
-      href: '/tag',
+      href: '/friends', // <--- 此处已修改，原来为 '/tag'
       slot: tagSlot,
       show: siteConfig('HEXO_MENU_TAG', null, CONFIG)
     }

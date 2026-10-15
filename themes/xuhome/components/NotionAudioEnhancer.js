@@ -1,33 +1,35 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import AudioPlayer from './AudioPlayer'
+import { siteConfig } from '@/lib/config'
 
 const enhanceAudio = () => {
   const containers = document.querySelectorAll('#notion-article .notion-audio')
   const players = []
-
   containers.forEach(container => {
     const nativeAudio = container.querySelector('audio')
     const src = nativeAudio?.getAttribute('src')
     if (!src) return
-
     const originalDisplay = nativeAudio.style.display
     nativeAudio.style.display = 'none'
     const mount = document.createElement('div')
     container.appendChild(mount)
     players.push({ mount, nativeAudio, originalDisplay, src })
   })
-
   return players
 }
 
 export default function NotionAudioEnhancer({ post }) {
   const [players, setPlayers] = useState([])
 
+  // 封面图：优先用文章封面，没有就用站点默认封面
+  const cover = post?.pageCoverThumbnail || post?.pageCover || siteConfig('HEXO_POST_LIST_COVER_DEFAULT')
+
   useEffect(() => {
     if (typeof window === 'undefined') return
     const enhanced = enhanceAudio()
     setPlayers(enhanced)
+
     return () =>
       enhanced.forEach(({ mount, nativeAudio, originalDisplay }) => {
         mount.remove()
@@ -38,7 +40,7 @@ export default function NotionAudioEnhancer({ post }) {
   return (
     <>
       {players.map(({ mount, src }) =>
-        createPortal(<AudioPlayer src={src} />, mount)
+        createPortal(<AudioPlayer src={src} cover={cover} />, mount)
       )}
     </>
   )

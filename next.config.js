@@ -260,6 +260,11 @@ const nextConfig = {
           source: '/feed',
           destination: '/rss/feed.xml',
           permanent: true
+        },
+        {
+          source: '/episode',
+          destination: '/episodes',
+          permanent: true
         }
       ]
     },

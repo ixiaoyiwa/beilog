@@ -2,7 +2,6 @@ import { useGlobal } from '@/lib/global'
 import throttle from 'lodash.throttle'
 import { uuidToId } from 'notion-utils'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import Progress from './Progress'
 
 /**
  * 目录导航组件
@@ -64,18 +63,16 @@ const Catalog = ({ toc }) => {
   }
 
   return (
-    <div className='px-3 py-1'>
+    // 整体向左上移动，去掉多余内边距
+    <div className='px-1 pt-1'>
       <div className='w-full'>
         <i className='mr-1 fas fa-stream' />
         {locale.COMMON.TABLE_OF_CONTENTS}
       </div>
-      <div className='w-full py-3'>
-        <Progress />
-      </div>
       <div
-        className='overflow-y-auto max-h-36 lg:max-h-96 overscroll-none scroll-hidden'
+        className='overflow-y-auto max-h-36 lg:max-h-96 overscroll-none scroll-hidden mt-1'
         ref={tRef}>
-        <nav className='h-full  text-black'>
+        <nav className='h-full text-black'>
           {toc.map(tocItem => {
             const id = uuidToId(tocItem.id)
             tocIds.push(id)
@@ -83,14 +80,23 @@ const Catalog = ({ toc }) => {
               <a
                 key={id}
                 href={`#${id}`}
-                className={`${activeSection === id && 'dark:border-white border-indigo-800 text-indigo-800 font-bold'} hover:font-semibold border-l pl-4 block hover:text-indigo-800 border-lduration-300 transform dark:text-indigo-400 dark:border-indigo-400
-        notion-table-of-contents-item-indent-level-${tocItem.indentLevel} catalog-item `}>
+                // 去掉了原本的 border-l 和 pl-4，保持其余交互样式
+                className={`${
+                  activeSection === id
+                    ? 'text-indigo-800 font-bold dark:text-white'
+                    : ''
+                } hover:font-semibold block hover:text-indigo-800 duration-300 transform dark:text-indigo-400 notion-table-of-contents-item-indent-level-${tocItem.indentLevel} catalog-item`}>
                 <span
                   style={{
                     display: 'inline-block',
+                    // 这一行必须保留，这是层级缩进的关键
                     marginLeft: tocItem.indentLevel * 16
                   }}
-                  className={`truncate ${activeSection === id ? ' font-bold text-indigo-800 dark:text-white underline' : ''}`}>
+                  className={`truncate ${
+                    activeSection === id
+                      ? ' font-bold text-indigo-800 dark:text-white underline'
+                      : ''
+                  }`}>
                   {tocItem.text}
                 </span>
               </a>

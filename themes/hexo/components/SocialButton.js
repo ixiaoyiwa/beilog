@@ -188,6 +188,8 @@ const SocialButton = () => {
             />{' '}
           </a>
         )}
+
+        {/* ⚠️ 微信 */}
         {CONTACT_WEHCHAT_PUBLIC && (
           <button
             onMouseEnter={openPopover}
@@ -211,6 +213,17 @@ const SocialButton = () => {
             </div>
           </button>
         )}
+
+        {/* ⭐ 修改点：赞赏 */}
+        <a
+          target='_blank'
+          rel='noreferrer'
+          title={'赞赏'}
+          href='https://na.885111.xyz/sponsor'>
+          {/* 将原来的 far fa-hand-holding-heart 换成了标准的实心爱心 fas fa-heart，
+              并去掉了多余的样式，使其大小与旁边图标完全一致 */}
+          <i className='transform hover:scale-125 duration-150 fas fa-heart dark:hover:text-indigo-400 hover:text-indigo-600' />
+        </a>
       </div>
     </div>
   )

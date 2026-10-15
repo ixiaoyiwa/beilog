@@ -88,22 +88,23 @@ const Style = () => {
         color: var(--hexo-color-text-secondary);
       }
 
-      /*  菜单下划线动画 */
+      /*  菜单下划线动画（已关闭） */
       #theme-hexo .menu-link {
         text-decoration: none;
-        background-image: linear-gradient(
-          var(--theme-color),
-          var(--theme-color)
-        );
-        background-repeat: no-repeat;
-        background-position: bottom center;
-        background-size: 0 2px;
-        transition: background-size 100ms ease-in-out;
       }
 
       #theme-hexo .menu-link:hover {
-        background-size: 100% 2px;
         color: var(--theme-color);
+      }
+
+      /* 全站禁止一切悬停下划线（含 Tailwind hover:underline） */
+      #theme-hexo a:hover,
+      #theme-hexo a:focus,
+      #theme-hexo a:active,
+      #theme-hexo .hover\:underline:hover {
+        text-decoration: none !important;
+        background-image: none !important;
+        background-size: 0 !important;
       }
 
       /* 文章列表中标题行悬浮时的文字颜色 */
@@ -294,6 +295,36 @@ const Style = () => {
         scrollbar-width: thin;
         scrollbar-color: var(--theme-color) transparent;
       }
+
+      /* ===== 新增：时间戳按钮样式 ===== */
+      .hexo-timestamp-btn {
+        display: inline;
+        padding: 0 2px;
+        margin: 0 1px;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        font-variant-numeric: tabular-nums;
+        cursor: pointer;
+        text-decoration: underline;
+        text-decoration-thickness: 1px;
+        text-underline-offset: 3px;
+        text-decoration-color: currentColor;
+        border-radius: 3px;
+        transition: background-color .18s ease;
+      }
+      .hexo-timestamp-btn:hover {
+        background-color: color-mix(in srgb, var(--theme-color) 12%, transparent);
+      }
+      .hexo-timestamp-btn:active {
+        background-color: color-mix(in srgb, var(--theme-color) 20%, transparent);
+      }
+      .hexo-timestamp-btn:focus-visible {
+        outline: 2px solid color-mix(in srgb, var(--theme-color) 55%, transparent);
+        outline-offset: 2px;
+      }
+      /* ===== 新增结束 ===== */
 
       ${themeConsoleStyle('hexo', CONFIG)}
 
