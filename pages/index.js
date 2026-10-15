@@ -15,10 +15,8 @@ import { checkDataFromAlgolia } from '@/lib/plugins/algolia'
 import pLimit from 'p-limit'
 import { adapterNotionBlockMap } from '@/lib/utils/notion.util'
 
-// 首页展示的文章数量
 const HOME_POST_COUNT = 6
 
-// 把各种可能的 Notion 字段格式统一转成文本
 const toText = v => {
   if (!v) return ''
   if (typeof v === 'string') return v
@@ -27,7 +25,6 @@ const toText = v => {
   return String(v)
 }
 
-// 这些字段不参与"兜底扫描"，避免把标题、分类里的"精选"误判成标记
 const SCAN_SKIP_KEYS = [
   'id', 'title', 'summary', 'slug', 'category', 'tags', 'type', 'status',
   'password', 'icon', 'pageIcon', 'pageCover', 'pageCoverThumbnail',
@@ -44,7 +41,6 @@ const getFeaturedText = post => {
       post.ext?.featured
   )
   if (direct) return direct
-  // 兜底：某个顶层字段的值恰好就是 置顶 / 精选
   for (const key of Object.keys(post)) {
     if (SCAN_SKIP_KEYS.includes(key)) continue
     const s = toText(post[key]).trim()
@@ -58,9 +54,6 @@ const getTime = p =>
   new Date(p?.publishDay || p?.date?.start_date || p?.date || 0).getTime() ||
   0
 
-/**
- * 首页选文：1 置顶 + 最多 3 精选 + 1 最新 + 普通文章补齐
- */
 const pickHomePosts = (posts = [], size = HOME_POST_COUNT) => {
   const byDate = [...posts].sort((a, b) => getTime(b) - getTime(a))
 
@@ -86,17 +79,11 @@ const pickHomePosts = (posts = [], size = HOME_POST_COUNT) => {
   ].slice(0, size)
 }
 
-/**
- * 首页布局
- */
 const Index = props => {
   const theme = siteConfig('THEME', BLOG.THEME, props.NOTION_CONFIG)
   return <DynamicLayout theme={theme} layoutName='LayoutIndex' {...props} />
 }
 
-/**
- * SSG 获取数据
- */
 export async function getStaticProps(req) {
   const { locale } = req
   const from = 'index'
@@ -110,7 +97,7 @@ export async function getStaticProps(req) {
     page => page.type === 'Post' && page.status === 'Published'
   ) || []
 
-  // ====== 调试日志：在 Cloudflare 构建日志里搜索 FEATURED_DEBUG ======
+  // 调试日志
   const marked = publishedPosts.filter(p => getFeaturedText(p))
   console.log(
     'FEATURED_DEBUG 已发布文章数:', publishedPosts.length,
@@ -123,12 +110,26 @@ export async function getStaticProps(req) {
   marked.slice(0, 10).forEach(p =>
     console.log('FEATURED_DEBUG 命中:', p.title, '=>', getFeaturedText(p))
   )
-  // =================================================================
 
-  // 首页：只保留最终要展示的几篇，其余不传给前端
-  props.posts = pickHomePosts(publishedPosts, HOME_POST_COUNT)
+  // ⭐ 修复：1. 先存标记，2. 清理，3. 恢复标记，4. 选文打标签
+  const featuredMap = new Map()
+  publishedPosts.forEach(p => {
+    const text = getFeaturedText(p)
+    if (text) featuredMap.set(p.id, text)
+  })
 
-  // 预览文章内容
+  let cleanedPosts = publishedPosts
+  if (!POST_LIST_PREVIEW) {
+    cleanedPosts = cleanPostSummaries(publishedPosts)
+  }
+
+  cleanedPosts.forEach(p => {
+    const text = featuredMap.get(p.id)
+    if (text) p.Featured = text // 把字段塞回去，让 pickHomePosts 能认出来
+  })
+
+  props.posts = pickHomePosts(cleanedPosts, HOME_POST_COUNT)
+
   if (POST_LIST_PREVIEW) {
     const previewLimit = pLimit(
       siteConfig('POST_PREVIEW_CONCURRENCY', 5, props?.NOTION_CONFIG)
@@ -162,9 +163,7 @@ export async function getStaticProps(req) {
     }
   }
 
-  if (!POST_LIST_PREVIEW) {
-    props.posts = cleanPostSummaries(props.posts)
-  }
+  // ⭐ 极其重要：这里不能再清理 props.posts 了，否则刚打上的标签又没了！
   props.latestPosts = cleanPostSummaries(props.latestPosts)
 
   delete props.allPages
