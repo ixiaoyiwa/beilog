@@ -235,7 +235,7 @@ export default function PostHero({ post, siteInfo }) {
                   {post.title}
                 </div>
 
-                <div className='flex flex-wrap items-center gap-x-3 gap-y-1 mb-6 text-sm font-light text-white/70'>
+                <div className='flex flex-wrap items-center gap-x-1.5 gap-y-1 mb-6 text-sm font-light text-white/70'>
                   {episodeNumber && (
                     <span className='whitespace-nowrap text-white/70'>
                       E{episodeNumber}
