@@ -27,7 +27,7 @@ const MenuGroupCard = props => {
     },
     {
       name: locale.COMMON.TAGS,
-      href: '/tag',
+      href: '/friends', // <--- 此处已修改，原来为 '/tag'
       slot: tagSlot,
       show: siteConfig('HEXO_MENU_TAG', null, CONFIG)
     }
