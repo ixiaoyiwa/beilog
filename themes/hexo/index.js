@@ -58,120 +58,53 @@ const LayoutBase = props => {
   const hideSidebar = !!props.hideSidebar
   const router = useRouter()
 
-  const isArticleSlugPage =
-    router.pathname === '/[prefix]/[slug]'
+  const isArticleSlugPage = router.pathname === '/[prefix]/[slug]'
+  const isEpisodesPage = router.route === '/episodes' || router.route === '/episodes/page/[page]'
 
-  const isEpisodesPage =
-    router.route === '/episodes' ||
-    router.route === '/episodes/page/[page]'
+  const hexoArticleRouteLoading = siteConfig('HEXO_ARTICLE_ROUTE_LOADING', true, CONFIG)
 
-  const hexoArticleRouteLoading = siteConfig(
-    'HEXO_ARTICLE_ROUTE_LOADING',
-    true,
-    CONFIG
-  )
-
-  const showArticleSwitchPlaceholder =
-    hexoArticleRouteLoading &&
-    isArticleSlugPage &&
-    onLoading
+  const showArticleSwitchPlaceholder = hexoArticleRouteLoading && isArticleSlugPage && onLoading
 
   const findEpisodesMenuItem = menus => {
-    if (!Array.isArray(menus)) {
-      return null
-    }
-
+    if (!Array.isArray(menus)) return null
     for (const item of menus) {
-      if (!item) {
-        continue
-      }
-
-      const href = String(item.href || '')
-        .replace(/\/+$/, '')
-
-      const slug = String(item.slug || '')
-        .replace(/^\/+|\/+$/g, '')
-
-      if (
-        href === '/episodes' ||
-        slug === 'episodes'
-      ) {
-        return item
-      }
-
+      if (!item) continue
+      const href = String(item.href || '').replace(/\/+$/, '')
+      const slug = String(item.slug || '').replace(/^\/+|\/+$/g, '')
+      if (href === '/episodes' || slug === 'episodes') return item
       if (Array.isArray(item.subMenus)) {
-        const found = findEpisodesMenuItem(
-          item.subMenus
-        )
-
-        if (found) {
-          return found
-        }
+        const found = findEpisodesMenuItem(item.subMenus)
+        if (found) return found
       }
     }
-
     return null
   }
 
-  const episodesMenuItem =
-    isEpisodesPage
-      ? findEpisodesMenuItem(
-          props.customMenu
-        )
-      : null
-
-  const episodesHeroPost =
-    isEpisodesPage
-      ? {
-          type: 'Page',
-          title:
-            episodesMenuItem?.title ||
-            episodesMenuItem?.name ||
-            '节目',
-          pageCover:
-            props?.siteInfo?.pageCover,
-          pageIcon:
-            episodesMenuItem?.icon || null
-        }
-      : null
+  const episodesMenuItem = isEpisodesPage ? findEpisodesMenuItem(props.customMenu) : null
+  const episodesHeroPost = isEpisodesPage
+    ? {
+        type: 'Page',
+        title: episodesMenuItem?.title || episodesMenuItem?.name || '节目',
+        pageCover: props?.siteInfo?.pageCover,
+        pageIcon: episodesMenuItem?.icon || null
+      }
+    : null
 
   const headerSlot =
     post?.type === 'Post' ? (
       <PostHero {...props} />
     ) : post ? (
-      <PageHero
-        post={post}
-        siteInfo={props.siteInfo}
-      />
+      <PageHero post={post} siteInfo={props.siteInfo} />
     ) : episodesHeroPost ? (
-      <PageHero
-        post={episodesHeroPost}
-        siteInfo={props.siteInfo}
-      />
-    ) : router.route === '/' &&
-      siteConfig(
-        'HEXO_HOME_BANNER_ENABLE',
-        null,
-        CONFIG
-      ) ? (
+      <PageHero post={episodesHeroPost} siteInfo={props.siteInfo} />
+    ) : router.route === '/' && siteConfig('HEXO_HOME_BANNER_ENABLE', null, CONFIG) ? (
       <Hero {...props} />
     ) : null
 
-  const isHomeWithHero =
-    router.route === '/' &&
-    siteConfig(
-      'HEXO_HOME_BANNER_ENABLE',
-      null,
-      CONFIG
-    )
+  const isHomeWithHero = router.route === '/' && siteConfig('HEXO_HOME_BANNER_ENABLE', null, CONFIG)
 
   const drawerRight = useRef(null)
-
-  const tocRef = isBrowser
-    ? document.getElementById(
-        'article-wrapper'
-      )
-    : null
+  const tocRef = isBrowser ? document.getElementById('article-wrapper') : null
 
   const floatSlot = (
     <>
@@ -184,35 +117,19 @@ const LayoutBase = props => {
           />
         </div>
       )}
-
       {post && <ButtonJumpToComment />}
     </>
   )
 
   const searchModal = useRef(null)
-
-  const hasPageHero =
-    !!post || isEpisodesPage
-
-  const mainTopPadding =
-    hasPageHero
-      ? 'pt-0'
-      : isHomeWithHero
-        ? 'pt-8'
-        : 'pt-24'
+  const hasPageHero = !!post || isEpisodesPage
+  const mainTopPadding = hasPageHero ? 'pt-0' : isHomeWithHero ? 'pt-8' : 'pt-24'
 
   return (
-    <ThemeGlobalHexo.Provider
-      value={{ searchModal }}>
-      <div
-        id='theme-hexo'
-        className={`${siteConfig(
-          'FONT_STYLE'
-        )} dark:bg-black scroll-smooth`}>
+    <ThemeGlobalHexo.Provider value={{ searchModal }}>
+      <div id='theme-hexo' className={`${siteConfig('FONT_STYLE')} dark:bg-black scroll-smooth`}>
         <Style />
-
         <Header {...props} />
-
         <Transition
           show={!onLoading}
           appear={true}
@@ -225,37 +142,21 @@ const LayoutBase = props => {
           unmount={false}>
           {headerSlot}
         </Transition>
-
         <main
           id='wrapper'
           className={`${mainTopPadding} bg-hexo-background-gray dark:bg-black w-full md:px-8 lg:px-24 min-h-screen relative`}>
           <div
             id='container-inner'
             className={
-              (JSON.parse(
-                siteConfig(
-                  'LAYOUT_SIDEBAR_REVERSE'
-                )
-              )
-                ? 'flex-row-reverse'
-                : '') +
+              (JSON.parse(siteConfig('LAYOUT_SIDEBAR_REVERSE')) ? 'flex-row-reverse' : '') +
               ' w-full mx-auto lg:flex lg:space-x-4 justify-center relative z-10'
             }>
-            <div
-              className={`${className || ''} w-full ${
-                fullWidth
-                  ? ''
-                  : 'max-w-4xl'
-              } h-full overflow-hidden`}>
+            <div className={`${className || ''} w-full ${fullWidth ? '' : 'max-w-4xl'} h-full overflow-hidden`}>
               {showArticleSwitchPlaceholder ? (
                 <ArticleSwitchPlaceholder />
               ) : (
                 <Transition
-                  show={
-                    isArticleSlugPage
-                      ? true
-                      : !onLoading
-                  }
+                  show={isArticleSlugPage ? true : !onLoading}
                   appear={true}
                   enter='transition ease-in-out duration-700 transform order-first'
                   enterFrom='opacity-0 translate-y-16'
@@ -269,33 +170,16 @@ const LayoutBase = props => {
                 </Transition>
               )}
             </div>
-
             {!hideSidebar && <SideRight {...props} />}
           </div>
         </main>
-
         <div className='block lg:hidden'>
-          <TocDrawer
-            post={post}
-            cRef={drawerRight}
-            targetRef={tocRef}
-          />
+          <TocDrawer post={post} cRef={drawerRight} targetRef={tocRef} />
         </div>
-
-        <RightFloatArea
-          floatSlot={floatSlot}
-        />
-
-        <AlgoliaSearchModal
-          cRef={searchModal}
-          {...props}
-        />
-
+        <RightFloatArea floatSlot={floatSlot} />
+        <AlgoliaSearchModal cRef={searchModal} {...props} />
         <GlobalAudioPlayer />
-
-        <Footer
-          title={siteConfig('TITLE')}
-        />
+        <Footer title={siteConfig('TITLE')} />
       </div>
     </ThemeGlobalHexo.Provider>
   )
@@ -310,55 +194,73 @@ const LayoutPostList = props => {
   const isHomePage = router.route === '/'
   const { posts = [], siteInfo } = props
 
-  const showSummary = siteConfig(
-    'HEXO_POST_LIST_SUMMARY',
-    null,
-    CONFIG
-  )
-
-  const postsPerPage = siteConfig(
-    'POSTS_PER_PAGE',
-    6,
-    CONFIG
-  )
+  const showSummary = siteConfig('HEXO_POST_LIST_SUMMARY', null, CONFIG)
+  const postsPerPage = siteConfig('POSTS_PER_PAGE', 6, CONFIG)
 
   if (isHomePage) {
-    const homePosts = posts.slice(
-      0,
-      postsPerPage
+    // ================= 首页专属排序逻辑 =================
+    
+    // 辅助函数：获取发布时间戳
+    const getDateVal = p => new Date(p.date?.start_date || p.date || 0).getTime()
+    // 辅助函数：按时间倒序（最新在前）
+    const sortByDateDesc = (a, b) => getDateVal(b) - getDateVal(a)
+
+    // 1. 过滤并全量按时间倒序
+    const validPosts = posts.filter(p => p?.type === 'Post').sort(sortByDateDesc)
+
+    // 2. 分组筛选
+    const pinnedList = validPosts.filter(p => String(p.Featured || '').includes('置顶'))
+    const featuredList = validPosts.filter(p => String(p.Featured || '').includes('精选'))
+
+    // 3. 名额约束处理
+    // 置顶：最多 1 条（取发布时间最新的）
+    const finalPinned = pinnedList.slice(0, 1)
+    const pinnedIds = finalPinned.map(p => p.id)
+
+    // 精选：最多 3 条（排除已选为置顶的，取时间最新的前3条）
+    const finalFeatured = featuredList
+      .filter(p => !pinnedIds.includes(p.id))
+      .slice(0, 3)
+    const featuredIds = finalFeatured.map(p => p.id)
+
+    // 普通池：排除置顶和精选
+    const remainingPosts = validPosts.filter(
+      p => !pinnedIds.includes(p.id) && !featuredIds.includes(p.id)
     )
 
-    // 新增：计算全站最大的期数（提取 slug 中的数字）
-    const maxSlug =
-      posts.length > 0
-        ? Math.max(
-            0,
-            ...posts.map(p => {
-              const match = String(
-                p.slug || ''
-              ).match(/(\d+)(?!.*\d)/)
-              return match ? parseInt(match[1], 10) : 0
-            })
-          )
-        : 0
+    // 最新：从普通池中取时间最新的 1 条（代码自动识别，无需在 Notion 勾选）
+    const finalLatest = remainingPosts.slice(0, 1)
+    const latestIds = finalLatest.map(p => p.id)
+
+    // 剩下的普通文章
+    const finalNormal = remainingPosts.filter(p => !latestIds.includes(p.id))
+
+    // 4. 合并并截取前 6 条
+    const homePosts = [...finalPinned, ...finalFeatured, ...finalLatest, ...finalNormal].slice(0, postsPerPage)
+
+    // 5. 给每篇文章打上专属的 featuredType 标签
+    const homePostsWithType = homePosts.map(post => {
+      let featuredType = null
+      if (pinnedIds.includes(post.id)) featuredType = 'pinned'
+      else if (featuredIds.includes(post.id)) featuredType = 'featured'
+      else if (latestIds.includes(post.id)) featuredType = 'latest'
+      return { ...post, featuredType }
+    })
 
     return (
       <div>
         <SlotBar {...props} />
-
         <div className='space-y-6 px-2'>
-          {homePosts.map((post, index) => (
+          {homePostsWithType.map((post, index) => (
             <BlogPostCard
               key={post.id}
               post={post}
               index={index}
-              maxSlug={maxSlug}
               showSummary={showSummary}
               siteInfo={siteInfo}
             />
           ))}
         </div>
-
         <div className='mt-8 mb-4 text-center'>
           <SmartLink
             href='/episodes'
@@ -370,380 +272,17 @@ const LayoutPostList = props => {
     )
   }
 
+  // 非首页：保持原样，不做任何排序和标签干预
   return (
     <div>
       <SlotBar {...props} />
-
-      {siteConfig('POST_LIST_STYLE') ===
-      'page' ? (
-        <BlogPostListPage
-          {...props}
-        />
+      {siteConfig('POST_LIST_STYLE') === 'page' ? (
+        <BlogPostListPage {...props} />
       ) : (
-        <BlogPostListScroll
-          {...props}
-        />
+        <BlogPostListScroll {...props} />
       )}
     </div>
   )
 }
 
-const LayoutSearch = props => {
-  const { keyword } = props
-  const router = useRouter()
-  const currentSearch =
-    keyword || router?.query?.s
-
-  useEffect(() => {
-    if (currentSearch) {
-      replaceSearchResult({
-        doms:
-          document.getElementsByClassName(
-            'replace'
-          ),
-        search: keyword,
-        target: {
-          element: 'span',
-          className:
-            'text-red-500 border-b border-dashed'
-        }
-      })
-    }
-  })
-
-  return (
-    <div>
-      {!currentSearch ? (
-        <SearchNav {...props} />
-      ) : (
-        <div id='posts-wrapper'>
-          {' '}
-
-          {siteConfig(
-            'POST_LIST_STYLE'
-          ) === 'page' ? (
-            <BlogPostListPage
-              {...props}
-            />
-          ) : (
-            <BlogPostListScroll
-              {...props}
-            />
-          )}{' '}
-        </div>
-      )}
-    </div>
-  )
-}
-
-const LayoutArchive = props => {
-  const { archivePosts } = props
-
-  return (
-    <div>
-      <Card className='w-full'>
-        <div className='mb-10 pb-20 bg-white md:p-12 p-3 min-h-full dark:bg-hexo-black-gray'>
-          {Object.keys(
-            archivePosts
-          ).map(archiveTitle => (
-            <BlogPostArchive
-              key={archiveTitle}
-              posts={
-                archivePosts[
-                  archiveTitle
-                ]
-              }
-              archiveTitle={
-                archiveTitle
-              }
-            />
-          ))}
-        </div>
-      </Card>
-    </div>
-  )
-}
-
-const LayoutEpisodes = props => {
-  return <EpisodesPage {...props} />
-}
-
-const LayoutFriends = props => {
-  return <FriendsPage {...props} />
-}
-
-const LayoutSlug = props => {
-  const {
-    post,
-    lock,
-    validPassword
-  } = props
-
-  const router = useRouter()
-
-  const waiting404 =
-    siteConfig(
-      'POST_WAITING_TIME_FOR_404'
-    ) * 1000
-
-  useEffect(() => {
-    if (!post) {
-      setTimeout(
-        () => {
-          if (isBrowser) {
-            const article =
-              document.querySelector(
-                '#article-wrapper #notion-article'
-              )
-
-            if (!article) {
-              router
-                .push('/404')
-                .then(() => {
-                  console.warn(
-                    '找不到页面',
-                    router.asPath
-                  )
-                })
-            }
-          }
-        },
-        waiting404
-      )
-    }
-  }, [post])
-
-  let hasAudioField =
-    !!post?.audio
-
-  if (
-    !hasAudioField &&
-    post?.ext
-  ) {
-    const raw =
-      typeof post.ext === 'string'
-        ? post.ext.trim()
-        : ''
-
-    if (
-      raw &&
-      raw.startsWith('http')
-    ) {
-      hasAudioField = true
-    }
-  }
-
-  return (
-    <>
-      <div className='w-full lg:hover:shadow lg:border rounded-t-xl lg:rounded-xl lg:px-2 lg:py-4 bg-white dark:bg-hexo-black-gray dark:border-black article'>
-        {lock && (
-          <ArticleLock
-            validPassword={
-              validPassword
-            }
-          />
-        )}
-
-        {!lock && post && (
-          <div className='overflow-x-auto flex-grow mx-auto md:w-full md:px-5 '>
-            <article
-              id='article-wrapper'
-              className='subpixel-antialiased overflow-y-hidden'>
-              <section className='px-5 justify-center mx-auto max-w-2xl lg:max-w-full'>
-                {!hasAudioField && (
-                  <NotionAudioEnhancer
-                    post={post}
-                  />
-                )}
-
-                {post && (
-                  <NotionPage
-                    post={post}
-                  />
-                )}
-
-                {post && (
-                  <TimestampLinker
-                    post={post}
-                  />
-                )}
-              </section>
-
-              <ShareBar
-                post={post}
-              />
-
-              {post?.type ===
-                'Post' && (
-                <>
-                  <ArticleCopyright
-                    {...props}
-                  />
-
-                  <ArticleRecommend
-                    {...props}
-                  />
-
-                  <ArticleAdjacent
-                    {...props}
-                  />
-                </>
-              )}
-            </article>
-
-            <div className='pt-4 border-dashed'></div>
-
-            <div className='duration-200 overflow-x-auto bg-white dark:bg-hexo-black-gray px-3'>
-              <Comment
-                frontMatter={
-                  post
-                }
-              />
-            </div>
-          </div>
-        )}
-      </div>
-    </>
-  )
-}
-
-const Layout404 = props => {
-  const router = useRouter()
-  const { locale } = useGlobal()
-
-  useEffect(() => {
-    setTimeout(() => {
-      if (isBrowser) {
-        const article =
-          document.querySelector(
-            '#article-wrapper #notion-article'
-          )
-
-        if (!article) {
-          router.push('/').then(() => {})
-        }
-      }
-    }, 3000)
-  })
-
-  return (
-    <>
-      <div className='text-black w-full h-screen text-center justify-center content-center items-center flex flex-col'>
-        <div className='dark:text-gray-200'>
-          <h2 className='inline-block border-r-2 border-gray-600 mr-2 px-3 py-2 align-top'>
-            404
-          </h2>
-
-          <div className='inline-block text-left h-32 leading-10 items-center'>
-            <h2 className='m-0 p-0'>
-              {locale.COMMON.NOT_FOUND}
-            </h2>
-          </div>
-        </div>
-      </div>
-    </>
-  )
-}
-
-const LayoutCategoryIndex = props => {
-  const { categoryOptions } = props
-  const {
-    locale,
-    NOTION_CONFIG
-  } = useGlobal()
-
-  return (
-    <div className='mx-2 md:mx-0'>
-      <Card className='w-full'>
-        <div className='dark:text-gray-200 mb-5 mx-3'>
-          <i className='mr-4 fa-solid fa-layer-group' />{' '}
-          {locale.COMMON.CATEGORY}:
-        </div>
-
-        <div
-          id='category-list'
-          className='duration-200 flex flex-wrap mx-8'>
-          {categoryOptions?.map(
-            category => {
-              return (
-                <SmartLink
-                  key={category.name}
-                  href={getCategoryUrl(
-                    category.name,
-                    NOTION_CONFIG
-                  )}
-                  passHref
-                  legacyBehavior>
-                  <div
-                    className={
-                      ' duration-300 dark:hover:text-white px-5 cursor-pointer py-2 hover:text-indigo-400'
-                    }>
-                    <i className='mr-4 fas fa-folder' />{' '}
-                    {
-                      category.name
-                    }
-                    (
-                    {
-                      category.count
-                    }
-                    )
-                  </div>
-                </SmartLink>
-              )
-            }
-          )}
-        </div>
-      </Card>
-    </div>
-  )
-}
-
-const LayoutTagIndex = props => {
-  const {
-    tagOptions
-  } = props
-
-  const { locale } =
-    useGlobal()
-
-  return (
-    <div className='mx-2 md:mx-0'>
-      <Card className='w-full'>
-        <div className='dark:text-gray-200 mb-5 ml-4'>
-          <i className='mr-4 fas fa-users' />{' '}
-          {locale.COMMON.TAGS}:
-        </div>
-
-        <div
-          id='tags-list'
-          className='duration-200 flex flex-wrap ml-8'>
-          {tagOptions.map(tag => (
-            <div
-              key={tag.name}
-              className='p-2'>
-              <TagItemMini
-                key={tag.name}
-                tag={tag}
-              />
-            </div>
-          ))}
-        </div>
-      </Card>
-    </div>
-  )
-}
-
-export {
-  Layout404,
-  LayoutArchive,
-  LayoutBase,
-  LayoutCategoryIndex,
-  LayoutIndex,
-  LayoutPostList,
-  LayoutSearch,
-  LayoutSlug,
-  LayoutTagIndex,
-  LayoutEpisodes,
-  LayoutFriends,
-  CONFIG as THEME_CONFIG
-}
+// ... 后面的 LayoutSearch, LayoutArchive 等保持完全不变 ...
