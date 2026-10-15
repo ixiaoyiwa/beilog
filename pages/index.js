@@ -77,10 +77,9 @@ export async function getStaticProps(req) {
   if (POST_LIST_STYLE === 'scroll') {
     // 滚动列表默认给前端返回所有数据
   } else if (POST_LIST_STYLE === 'page') {
-    props.posts = props.posts?.slice(
-      0,
-      siteConfig('POSTS_PER_PAGE', 12, props?.NOTION_CONFIG)
-    )
+    // ⭐ 核心修改：首页不要在这里截断！
+    // 将完整的文章列表传递给前端，由前端 LayoutPostList 负责捞取置顶、精选并排序后截取。
+    // props.posts = props.posts?.slice(...)   <-- 这行删掉或注释掉
   }
 
   // 预览文章内容
