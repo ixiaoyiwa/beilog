@@ -20,7 +20,7 @@ const parseExt = (ext) => {
 const BlogPostCard = ({ index, post, showSummary, siteInfo }) => {
   const router = useRouter()
   
-  // 直接从 post 上读取我们在 LayoutPostList 里注入的 featuredType
+  // 直接从 post 上读取服务端注入的 featuredType
   const featuredType = post?.featuredType || null
 
   const showPreview = siteConfig('HEXO_POST_LIST_PREVIEW', null, CONFIG) && post.blockMap
