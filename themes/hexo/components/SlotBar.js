@@ -60,7 +60,7 @@ export default function SlotBar(props) {
     const introText = introMap[category]
 
     return (
-      <div className="px-5 py-1 mb-2">
+      <div className={`px-5 py-1 ${introText ? 'mb-6' : 'mb-2'}`}>
         <div className="cursor-pointer text-lg font-light hover:text-indigo-700 dark:hover:text-indigo-400 transform dark:text-white">
           <i className="mr-1 far fa-folder-open" />  {category}
         </div>
