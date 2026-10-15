@@ -33,7 +33,7 @@ export const MenuListSide = props => {
     {
       icon: 'fas fa-tag',
       name: locale.COMMON.TAGS,
-      href: '/tag',
+      href: '/friends',
       show: siteConfig('HEXO_MENU_TAG', null, CONFIG)
     }
   ]
