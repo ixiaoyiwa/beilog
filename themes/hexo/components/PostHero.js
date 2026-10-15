@@ -237,13 +237,9 @@ export default function PostHero({ post, siteInfo }) {
 
                 <div className='flex flex-wrap items-center gap-x-3 gap-y-1 mb-6 text-sm font-light text-white/70'>
                   {episodeNumber && (
-                    <>
-                      <span className='whitespace-nowrap text-white/70'>
-                        E{episodeNumber}
-                      </span>
-
-                      <span className='text-white/30'>·</span>
-                    </>
+                    <span className='whitespace-nowrap text-white/70'>
+                      E{episodeNumber}
+                    </span>
                   )}
 
                   {post.category && (
