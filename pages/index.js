@@ -33,22 +33,7 @@ export async function getStaticProps(req) {
   const { locale } = req
   const from = 'index'
   const props = await fetchGlobalAllData({ from, locale })
-  if (process.env.NODE_ENV === 'development') {
-    const configTheme = BLOG.THEME
-    const notionTheme = props?.NOTION_CONFIG?.THEME || null
-    const finalTheme = siteConfig('THEME', BLOG.THEME, props?.NOTION_CONFIG)
-    const source = notionTheme ? 'notion:config' : 'blog/env:config'
-    console.log(
-      '[ThemeResolver][server-static-props]',
-      JSON.stringify({
-        route: '/',
-        configTheme,
-        notionTheme,
-        finalTheme,
-        source
-      })
-    )
-  }
+  
   const POST_PREVIEW_LINES = siteConfig(
     'POST_PREVIEW_LINES',
     8,
@@ -77,9 +62,12 @@ export async function getStaticProps(req) {
   if (POST_LIST_STYLE === 'scroll') {
     // 滚动列表默认给前端返回所有数据
   } else if (POST_LIST_STYLE === 'page') {
-    // ⭐ 核心修改：首页不要在这里截断！
+    // ⭐ 核心修改：首页坚决不要在这里截断！
     // 将完整的文章列表传递给前端，由前端 LayoutPostList 负责捞取置顶、精选并排序后截取。
-    // props.posts = props.posts?.slice(...)   <-- 这行删掉或注释掉
+    // props.posts = props.posts?.slice(
+    //   0,
+    //   siteConfig('POSTS_PER_PAGE', 12, props?.NOTION_CONFIG)
+    // )
   }
 
   // 预览文章内容
@@ -121,8 +109,6 @@ export async function getStaticProps(req) {
       generateRedirectJson(props)
     }
   }
-
-  // 生成全文索引 - 仅在 yarn build 时执行 && process.env.npm_lifecycle_event === 'build'
 
   if (!POST_LIST_PREVIEW) {
     props.posts = cleanPostSummaries(props.posts)
