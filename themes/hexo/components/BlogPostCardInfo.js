@@ -89,7 +89,7 @@ export const BlogPostCardInfo = ({
                 <SmartLink
                   href={getCategoryUrl(post.category, NOTION_CONFIG)}
                   passHref
-                  className='cursor-pointer font-bold menu-link hover:text-indigo-700 dark:hover:text-indigo-400 transform'>
+                  className='cursor-pointer menu-link hover:text-indigo-700 dark:hover:text-indigo-400 transform'>
                   {post.category}
                 </SmartLink>
                 <span className='mx-1.5 text-gray-300 dark:text-gray-700'>
