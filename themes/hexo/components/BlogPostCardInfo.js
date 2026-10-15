@@ -26,8 +26,7 @@ export const BlogPostCardInfo = ({
   showPreview,
   showPageCover,
   showSummary,
-  isPinned = false,
-  isLatest = false
+  featuredType = null // 接收注入的标识：'pinned' | 'featured' | 'latest' | null
 }) => {
   const { NOTION_CONFIG } = useGlobal()
 
@@ -49,18 +48,26 @@ export const BlogPostCardInfo = ({
               className={`line-clamp-2 replace cursor-pointer text-2xl ${
                 showPreview ? 'text-center' : ''
               } leading-tight font-bold text-gray-600 dark:text-gray-100 hover:text-indigo-700 dark:hover:text-indigo-400`}>
-              {/* 新增：置顶标签 */}
-              {isPinned && (
+              
+              {/* 首页专属标识渲染：置顶（灰色） */}
+              {featuredType === 'pinned' && (
                 <span className='inline-block px-1.5 py-0.5 text-[10px] font-medium rounded mr-1.5 align-middle bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200'>
                   置顶
                 </span>
               )}
-              {/* 新增：最新标签 */}
-              {isLatest && (
+              {/* 首页专属标识渲染：精选（浅紫色） */}
+              {featuredType === 'featured' && (
+                <span className='inline-block px-1.5 py-0.5 text-[10px] font-medium rounded mr-1.5 align-middle bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300'>
+                  精选
+                </span>
+              )}
+              {/* 首页专属标识渲染：最新（绿色） */}
+              {featuredType === 'latest' && (
                 <span className='inline-block px-1.5 py-0.5 text-[10px] font-medium rounded mr-1.5 align-middle bg-green-100 text-green-700 dark:bg-green-900/60 dark:text-green-300'>
                   最新
                 </span>
               )}
+
               {siteConfig('POST_TITLE_ICON') && (
                 <NotionIcon icon={post.pageIcon} />
               )}
