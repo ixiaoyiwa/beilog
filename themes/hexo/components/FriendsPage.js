@@ -42,7 +42,9 @@ const FriendsPage = ({ post, friends = [], tagOptions = [] }) => {
     <div className='w-full lg:hover:shadow lg:border rounded-t-xl lg:rounded-xl lg:px-2 lg:py-4 bg-white dark:bg-hexo-black-gray dark:border-black article'>
       <div className='w-full md:px-5 px-2'>
         {post && (
-          <div className='friends-notion-content'>
+          // 注意这里：加上了 -mt-10，强行把整个内容往上拉，切掉空白！
+          // 如果觉得拉得还不够，就把 -mt-10 改成 -mt-16 或 -mt-20
+          <div className='friends-notion-content -mt-10'> 
             <NotionPage post={post} />
           </div>
         )}
@@ -78,6 +80,7 @@ const FriendsPage = ({ post, friends = [], tagOptions = [] }) => {
         )}
 
         <style jsx global>{`
+          /* 1. 强力隐藏，绝对不占一点空间 */
           .friends-notion-content .notion-collection,
           .friends-notion-content .notion-collection-view,
           .friends-notion-content .notion-collection-view-tabs-content,
@@ -90,36 +93,47 @@ const FriendsPage = ({ post, friends = [], tagOptions = [] }) => {
           .friends-notion-content [class*='notion-board'],
           .friends-notion-content [class*='notion-gallery'] {
             display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            min-height: 0 !important;
+            max-height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+            border: 0 !important;
           }
+
+          /* 2. 清除父容器的内外边距 */
           .friends-notion-content .notion-page-content > *:has([class*='notion-collection']),
           .friends-notion-content .notion-page-content > *:has([class*='notion-table']),
           .friends-notion-content .notion-page-content > *:has([class*='notion-board']),
           .friends-notion-content .notion-page-content > *:has([class*='notion-gallery']) {
             display: none !important;
             height: 0 !important;
+            min-height: 0 !important;
             margin: 0 !important;
             padding: 0 !important;
-            overflow: hidden !important;
           }
-          
-          /* 新增：彻底清除内容块上下多余的间距，防止红框留白 */
+
+          /* 3. 清理最外层 */
           .friends-notion-content {
-            min-height: 0 !important;
             margin-top: 0 !important;
             margin-bottom: 0 !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
           }
-          .friends-notion-content .notion-page-content > *:first-child {
+          
+          .friends-notion-content .notion-page-content {
             margin-top: 0 !important;
             padding-top: 0 !important;
           }
-          .friends-notion-content .notion-page-content > *:last-child {
-            margin-bottom: 0 !important;
-            padding-bottom: 0 !important;
-          }
-          .friends-notion-content > div,
-          .friends-notion-content .notion-page {
-            margin-bottom: 0 !important;
-            padding-bottom: 0 !important;
+
+          /* 4. 清理空块 */
+          .friends-notion-content .notion-page-content > div:empty {
+            display: none !important;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
           }
         `}</style>
       </div>
