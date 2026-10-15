@@ -105,7 +105,6 @@ export const BlogPostCardInfo = ({
               </>
             )}
 
-            {/* 纯文本，不跳转，无悬停变色 */}
             <span className='font-light'>
               {post?.publishDay || post.date}
             </span>
