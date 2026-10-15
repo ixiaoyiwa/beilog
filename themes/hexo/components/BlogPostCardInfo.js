@@ -81,7 +81,7 @@ export const BlogPostCardInfo = ({
                   E{episodeNumber}
                 </SmartLink>
                 <span className='mx-1.5 text-gray-300 dark:text-gray-700'>
-                  ·
+                  &nbsp;
                 </span>
               </>
             )}
