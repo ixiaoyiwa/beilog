@@ -4,10 +4,27 @@ import FriendCard from './FriendCard'
 
 const ROLE_ORDER = ['守夜人', '夜谈人', '酿酒人', '调酒人']
 
-const FriendsPage = ({ post, friends = [] }) => {
+const FriendsPage = ({ post, friends = [], tagOptions = [] }) => {
+  // 合并数据：如果 tag 在 friends 里没有，就补齐
+  const mergedMembers = [...friends]
+
+  if (tagOptions && tagOptions.length > 0) {
+    tagOptions.forEach(tag => {
+      if (!mergedMembers.some(f => f.name === tag.name)) {
+        mergedMembers.push({
+          id: `missing-${tag.name}`,
+          name: tag.name,
+          role: '调酒人',
+          status: '未知'
+        })
+      }
+    })
+  }
+
   const groups = []
   const groupMap = {}
-  ;(friends || []).forEach(f => {
+
+  mergedMembers.forEach(f => {
     const role = f.role || '其他'
     if (!groupMap[role]) {
       groupMap[role] = { role, members: [] }
@@ -25,14 +42,12 @@ const FriendsPage = ({ post, friends = [] }) => {
   return (
     <div className='w-full lg:hover:shadow lg:border rounded-t-xl lg:rounded-xl lg:px-2 lg:py-4 bg-white dark:bg-hexo-black-gray dark:border-black article'>
       <div className='w-full md:px-5 px-2'>
-        {/* Notion 正文 */}
         {post && (
           <div className='friends-notion-content'>
             <NotionPage post={post} />
           </div>
         )}
 
-        {/* 卡片分组 */}
         {groups.length > 0 && (
           <div className='mt-4'>
             {groups.map(group => (
@@ -49,7 +64,7 @@ const FriendsPage = ({ post, friends = [] }) => {
 
                 <div className='grid grid-cols-3 lg:grid-cols-6 gap-2'>
                   {group.members.map(member => (
-                    <FriendCard key={member.id} member={member} />
+                    <FriendCard key={member.id || member.name} member={member} />
                   ))}
                 </div>
               </section>
@@ -57,16 +72,13 @@ const FriendsPage = ({ post, friends = [] }) => {
           </div>
         )}
 
-        {/* 评论区 */}
         {post && (
           <div className='mt-10 duration-200 overflow-x-auto px-3'>
             <Comment frontMatter={post} />
           </div>
         )}
 
-        {/* 隐藏 Notion 数据库块 + 清除它所有占位 */}
         <style jsx global>{`
-          /* 1. 直接隐藏数据库块本身 */
           .friends-notion-content .notion-collection,
           .friends-notion-content .notion-collection-view,
           .friends-notion-content .notion-collection-view-tabs-content,
@@ -80,8 +92,6 @@ const FriendsPage = ({ post, friends = [] }) => {
           .friends-notion-content [class*='notion-gallery'] {
             display: none !important;
           }
-
-          /* 2. 隐藏"包含数据库块的外层容器"，并清除它的所有占位 */
           .friends-notion-content .notion-page-content > *:has([class*='notion-collection']),
           .friends-notion-content .notion-page-content > *:has([class*='notion-table']),
           .friends-notion-content .notion-page-content > *:has([class*='notion-board']),
@@ -92,14 +102,10 @@ const FriendsPage = ({ post, friends = [] }) => {
             padding: 0 !important;
             overflow: hidden !important;
           }
-
-          /* 3. Notion 正文最后一块的下边距清掉，防止留尾 */
           .friends-notion-content .notion-page-content > *:last-child {
             margin-bottom: 0 !important;
             padding-bottom: 0 !important;
           }
-
-          /* 4. NotionPage 外层容器本身的下边距清掉 */
           .friends-notion-content > div,
           .friends-notion-content .notion-page {
             margin-bottom: 0 !important;
