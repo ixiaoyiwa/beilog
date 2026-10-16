@@ -118,19 +118,19 @@ jobs:
             echo "### 体积分析"
             echo "#### out 下各目录体积"
             echo '~~~'
-            du -sh out/* 2>/dev/null | sort -rh | head -12
+            du -sh out/* 2>/dev/null | sort -rh | head -12 || true
             echo '~~~'
             echo "#### _next 下各目录体积"
             echo '~~~'
-            du -sh out/_next/* 2>/dev/null | sort -rh | head
+            du -sh out/_next/* 2>/dev/null | sort -rh | head || true
             echo '~~~'
             echo "#### 按文件类型统计"
             echo '~~~'
-            find out -type f -printf '%s %f\n' | awk '{n=split($2,a,"."); e=(n>1)?a[n]:"(无扩展名)"; s[e]+=$1; c[e]++} END{for(e in s) printf "%9.1f MB %6d 个  .%s\n", s[e]/1048576, c[e], e}' | sort -rn | head -8
+            find out -type f -printf '%s %f\n' | awk '{n=split($2,a,"."); e=(n>1)?a[n]:"(无扩展名)"; s[e]+=$1; c[e]++} END{for(e in s) printf "%9.1f MB %6d 个  .%s\n", s[e]/1048576, c[e], e}' | sort -rn | head -8 || true
             echo '~~~'
             echo "#### 最大的 15 个文件"
             echo '~~~'
-            find out -type f -printf '%s %p\n' | sort -rn | head -15 | awk '{printf "%8.1f KB  %s\n", $1/1024, $2}'
+            find out -type f -printf '%s %p\n' | sort -rn | head -15 | awk '{printf "%8.1f KB  %s\n", $1/1024, $2}' || true
             echo '~~~'
             echo "#### public 目录体积"
             echo '~~~'
