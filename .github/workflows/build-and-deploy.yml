@@ -110,6 +110,66 @@ jobs:
           path: .next/cache/notion/data
           key: ${{ steps.part.outputs.prefix }}${{ github.run_id }}
 
+      # ========== 诊断步骤开始 ==========
+      - name: 体积分析（诊断用）
+        if: ${{ !cancelled() }}
+        run: |
+          {
+            echo "### 体积分析"
+            echo "#### out 下各目录体积"
+            echo '~~~'
+            du -sh out/* 2>/dev/null | sort -rh | head -12
+            echo '~~~'
+            echo "#### _next 下各目录体积"
+            echo '~~~'
+            du -sh out/_next/* 2>/dev/null | sort -rh | head
+            echo '~~~'
+            echo "#### 按文件类型统计"
+            echo '~~~'
+            find out -type f -printf '%s %f\n' | awk '{n=split($2,a,"."); e=(n>1)?a[n]:"(无扩展名)"; s[e]+=$1; c[e]++} END{for(e in s) printf "%9.1f MB %6d 个  .%s\n", s[e]/1048576, c[e], e}' | sort -rn | head -8
+            echo '~~~'
+            echo "#### 最大的 15 个文件"
+            echo '~~~'
+            find out -type f -printf '%s %p\n' | sort -rn | head -15 | awk '{printf "%8.1f KB  %s\n", $1/1024, $2}'
+            echo '~~~'
+            echo "#### public 目录体积"
+            echo '~~~'
+            du -sh public 2>/dev/null || true
+            echo '~~~'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 页面数据拆解（诊断用）
+        if: ${{ !cancelled() }}
+        run: |
+          node <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          const fs = require('fs'), path = require('path')
+          const files = []
+          const walk = d => fs.readdirSync(d, { withFileTypes: true }).forEach(e => {
+            const p = path.join(d, e.name)
+            if (e.isDirectory()) { if (e.name !== '_next') walk(p) }
+            else if (p.endsWith('.html')) files.push([p, fs.statSync(p).size])
+          })
+          walk('out')
+          files.sort((a, b) => b[1] - a[1])
+          const pick = [files[0], files[Math.floor(files.length / 2)]].filter(Boolean)
+          console.log('### 页面数据拆解')
+          console.log(`HTML 总数: ${files.length}，总体积: ${(files.reduce((s, f) => s + f[1], 0) / 1048576).toFixed(0)} MB`)
+          for (const [p, size] of pick) {
+            const html = fs.readFileSync(p, 'utf8')
+            const m = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/)
+            console.log(`\n**${p}**（${(size / 1024).toFixed(0)} KB）`)
+            if (!m) { console.log('没有 __NEXT_DATA__'); continue }
+            const pp = JSON.parse(m[1]).props?.pageProps || {}
+            const rows = Object.keys(pp)
+              .map(k => [k, Buffer.byteLength(JSON.stringify(pp[k]))])
+              .sort((a, b) => b[1] - a[1]).slice(0, 10)
+            console.log('~~~')
+            rows.forEach(([k, v]) => console.log(`${(v / 1024).toFixed(1).padStart(9)} KB  ${k}`))
+            console.log('~~~')
+          }
+          EOF
+      # ========== 诊断步骤结束 ==========
+
       - name: 检查产物
         run: |
           test -f out/index.html || { echo "::error::out/index.html 不存在"; exit 1; }
