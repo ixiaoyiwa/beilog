@@ -1,0 +1,104 @@
+name: r2-tools
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 要执行的操作
+        type: choice
+        options: [check, clear]
+        default: check
+      test_host:
+        description: （check 用）测试域名，如 pdtest.885111.xyz；留空则不测规则
+        type: string
+        default: ''
+      confirm:
+        description: （clear 用）输入 CLEAR 才会真的清空
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  r2:
+    runs-on: ubuntu-24.04
+    env:
+      RCLONE_CONFIG_R2_TYPE: s3
+      RCLONE_CONFIG_R2_PROVIDER: Cloudflare
+      RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      RCLONE_CONFIG_R2_ENDPOINT: https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+      RCLONE_CONFIG_R2_ACL: private
+      RCLONE_CONFIG_R2_NO_CHECK_BUCKET: "true"
+      BUCKET: ${{ secrets.R2_BUCKET }}
+    steps:
+      - name: 安装 rclone
+        run: curl -fsSL https://rclone.org/install.sh | sudo bash
+
+      - name: 检查读写权限（临时文件，用完即删）
+        if: ${{ inputs.action == 'check' }}
+        run: |
+          set -e
+          echo "桶内顶层内容（最多 10 项）:"
+          rclone lsf "R2:$BUCKET" --max-depth 1 | head -10 || true
+          echo ok > /tmp/probe.txt
+          rclone copyto /tmp/probe.txt "R2:$BUCKET/__probe/ping.txt"
+          test "$(rclone cat "R2:$BUCKET/__probe/ping.txt")" = "ok"
+          rclone deletefile "R2:$BUCKET/__probe/ping.txt"
+          echo "读、写、删除均正常"
+
+      - name: 测试重写规则（需要先配好测试域名和规则）
+        id: rules
+        if: ${{ inputs.action == 'check' && inputs.test_host != '' }}
+        env:
+          HOST: ${{ inputs.test_host }}
+        run: |
+          mkdir -p /tmp/p "/tmp/p/__probe-目录"
+          echo '<h1>hello</h1>' > /tmp/p/__probe-hello.html
+          echo '<h1>cn</h1>' > "/tmp/p/__probe-目录/测试.html"
+          paths="/__probe-hello /__probe-hello/"
+          paths="$paths $(python3 -c 'import urllib.parse; print(urllib.parse.quote("/__probe-目录/测试"))')"
+          if [ -z "$(rclone lsf "R2:$BUCKET" --max-depth 1 --include 'index.html')" ]; then
+            echo '<h1>home</h1>' > /tmp/p/index.html
+            echo made > /tmp/made_index
+            paths="/ $paths"
+          else
+            echo "桶里已有真实首页，跳过首页规则的测试"
+          fi
+          rclone copy /tmp/p "R2:$BUCKET" --header-upload "Content-Type: text/html; charset=utf-8"
+          sleep 5
+          fail=0
+          for p in $paths; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "https://$HOST$p" || true)
+            echo "$p -> $code"
+            [ "$code" = "200" ] || fail=1
+          done
+          echo "$fail" > /tmp/rules_fail
+
+      - name: 删除测试文件
+        if: ${{ always() && inputs.action == 'check' && inputs.test_host != '' }}
+        run: |
+          rclone deletefile "R2:$BUCKET/__probe-hello.html" || true
+          rclone purge "R2:$BUCKET/__probe-目录" || true
+          if [ -f /tmp/made_index ]; then rclone deletefile "R2:$BUCKET/index.html" || true; fi
+          echo "测试文件已删除"
+
+      - name: 规则测试结论
+        if: ${{ inputs.action == 'check' && inputs.test_host != '' }}
+        run: |
+          if [ "$(cat /tmp/rules_fail 2>/dev/null || echo 1)" != "0" ]; then
+            echo "::error::有测试地址没有返回 200，重写规则可能不对（中文路径失败就改用 Worker）"; exit 1
+          fi
+          echo "规则测试全部通过"
+
+      - name: 清空桶
+        if: ${{ inputs.action == 'clear' }}
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          if [ "$CONFIRM" != "CLEAR" ]; then
+            echo "::error::确认词不对：要清空请在 confirm 里输入 CLEAR"; exit 1
+          fi
+          rclone delete "R2:$BUCKET" --rmdirs --transfers 32 -v --stats-one-line
+          echo "清空后桶内对象数: $(rclone lsf "R2:$BUCKET" -R | wc -l)"
