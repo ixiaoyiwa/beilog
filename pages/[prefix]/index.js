@@ -15,12 +15,6 @@ import { isExport } from '@/lib/utils/buildMode'
 
 const isStaticExport = process.env.EXPORT === 'true'
 
-/**
- * 根据notion的slug访问页面
- * 只解析一级目录例如 /about
- * @param {*} props
- * @returns
- */
 const Slug = props => {
   const router = useRouter()
   const { locale } = useGlobal()
@@ -59,18 +53,23 @@ Slug.propTypes = {
 }
 
 export async function getStaticPaths() {
-  // 1. 先获取所有路径，忽略原有的 filterFn，因为它可能被底层逻辑忽略
   const result = await getStaticPathsBase({
     from: 'slug-paths',
+    filterFn: row => checkSlugHasNoSlash(row),
     mapPageToParams: row => ({ params: { prefix: row.slug } })
   })
 
-  // 2. 强制过滤掉与主题静态页面冲突的 slug，彻底解决纯静态导出时的路径冲突
-  const filteredPaths = result.paths.filter(
-    p => p.params.prefix !== 'friends' && p.params.prefix !== 'episodes'
-  )
+  const filteredPaths = result.paths.filter(p => {
+    const prefix = String(p?.params?.prefix ?? '')
+    const clean = prefix.startsWith('/') ? prefix.slice(1) : prefix
+    return (
+      clean !== '' &&
+      !clean.includes('/') &&
+      clean !== 'friends' &&
+      clean !== 'episodes'
+    )
+  })
 
-  // 3. 返回过滤后的最终结果
   return { paths: filteredPaths, fallback: result.fallback }
 }
 
