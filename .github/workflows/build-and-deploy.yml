@@ -2,20 +2,26 @@ name: build-and-deploy
 
 # ===== 使用说明 =====
 # 部署目标 = 仓库变量 DEPLOY_TARGET（留空等于 pages）：
-#   pages : 只部署到 Cloudflare Pages（默认）
-#   r2    : 只上传到 R2（Pages 超过 2 万文件后使用）
-#   both  : 两边都部署（演练用，让 R2 一直保持最新）
+#   pages : 只部署到 Cloudflare Pages（默认，平时就用这个）
+#   r2    : 只上传到 R2（Pages 超过文件数上限后使用）
+#   both  : 两边都部署（只在演练时临时使用）
+# 变量留空时，rclone 安装和 R2 上传步骤全部跳过：不会访问 R2，也不占用 R2 存储。
 # 第一次：不用设任何变量，直接 Run workflow。
-# 以后切到 r2：先完成手册步骤 9（规则 + both 演练），
-#   再把变量改成 r2，运行后按手册步骤 10 切域名。
+# Pages 文件数上限默认 20000，可用变量 PAGES_FILE_LIMIT 覆盖（Cloudflare 调整限制时改变量，不用改代码）。
+# 文件数达到上限的 80% 会警告并自动开一个 Issue；达到上限会报错并拒绝部署，线上保持上一版。
+# 以后切到 r2：先完成手册步骤 9（规则 + 演练），再把变量改成 r2，运行后按手册步骤 10 切域名。
 # 切换时不需要改这个文件。R2 需要额外的 Cloudflare 重写规则，Pages 不需要。
 #
-# ===== 防死循环设计 =====
-# 1. 构建失败或超时后，「保存缓存」步骤仍会执行（if: !cancelled()）。
-# 2. 缓存 key 每次不同（run_id），恢复时取最近一份（restore-keys）。
-# 3. 缓存名里带缓存相关代码的哈希：上游代码一变，自动换分区。
-# 4. 失败后自动续跑，总共最多 3 次尝试。
+# ===== 防死循环设计（缓存失效或中途失败时如何自愈）=====
+# 1. 进度一定会保存：构建失败或超时后，「保存缓存」步骤仍会执行（if: !cancelled()）。
+#    构建步骤上限 330 分钟，小于任务上限 360 分钟，给保存缓存留出时间。
+# 2. 缓存 key 每次不同（run_id），恢复时取最近一份（restore-keys）：
+#    下一次从上次的进度继续，不会从零开始。
+# 3. 缓存名里带缓存相关代码的哈希：合并上游后这些代码一变，
+#    自动换一个全新的缓存分区，不会误用旧格式缓存；冷启动最长可跑约 5.5 小时。
+# 4. 失败后自动续跑，总共最多 3 次尝试（最后一步）。配置错误和文件数超限不会重试。
 # 5. 想强制从零重来：Run workflow 时勾选 fresh_cache。
+# 局限：GitHub 整台回收运行机时，那一次的进度会丢（已保存的缓存不受影响）。
 
 on:
   push:
@@ -34,6 +40,7 @@ on:
 permissions:
   actions: write
   contents: read
+  issues: write
 
 concurrency:
   group: build-and-deploy
@@ -44,17 +51,21 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 360
     defaults:
       run:
         shell: bash
     steps:
       - name: 检查部署目标
+        id: target
         run: |
           case "$TARGET" in
             pages|r2|both) echo "部署目标: $TARGET" ;;
-            *) echo "::error::DEPLOY_TARGET 只能是 pages、r2、both 或留空，当前是: $TARGET"; exit 1 ;;
+            *)
+              echo "::error::DEPLOY_TARGET 只能是 pages、r2、both 或留空，当前是: $TARGET"
+              echo "no_retry=1" >> "$GITHUB_OUTPUT"
+              exit 1 ;;
           esac
 
       - uses: actions/checkout@v4
@@ -110,35 +121,37 @@ jobs:
           path: .next/cache/notion/data
           key: ${{ steps.part.outputs.prefix }}${{ github.run_id }}
 
-      # ========== 诊断步骤开始 ==========
-      - name: 体积分析（诊断用）
+      - name: 体积分析（诊断用，可长期保留）
         if: ${{ !cancelled() }}
         run: |
           {
             echo "### 体积分析"
             echo "#### out 下各目录体积"
             echo '~~~'
-            du -sh out/* 2>/dev/null | sort -rh | head -12 || true
+            du -sh out/* 2>/dev/null | sort -rh | head -12
             echo '~~~'
             echo "#### _next 下各目录体积"
             echo '~~~'
-            du -sh out/_next/* 2>/dev/null | sort -rh | head || true
+            du -sh out/_next/* 2>/dev/null | sort -rh | head
             echo '~~~'
             echo "#### 按文件类型统计"
             echo '~~~'
-            find out -type f -printf '%s %f\n' | awk '{n=split($2,a,"."); e=(n>1)?a[n]:"(无扩展名)"; s[e]+=$1; c[e]++} END{for(e in s) printf "%9.1f MB %6d 个  .%s\n", s[e]/1048576, c[e], e}' | sort -rn | head -8 || true
+            find out -type f -printf '%s %f\n' | awk '{n=split($2,a,"."); e=(n>1)?a[n]:"(无扩展名)"; s[e]+=$1; c[e]++} END{for(e in s) printf "%9.1f MB %6d 个  .%s\n", s[e]/1048576, c[e], e}' | sort -rn | head -8
             echo '~~~'
             echo "#### 最大的 15 个文件"
             echo '~~~'
-            find out -type f -printf '%s %p\n' | sort -rn | head -15 | awk '{printf "%8.1f KB  %s\n", $1/1024, $2}' || true
+            find out -type f -printf '%s %p\n' | sort -rn | head -15 | awk '{printf "%8.1f KB  %s\n", $1/1024, $2}'
             echo '~~~'
+            echo "#### 重复页面检查"
+            echo "- out/episode 目录页面数: $(ls out/episode 2>/dev/null | wc -l)"
+            echo "- 根目录 %2F 页面数（应为 0）: $(ls out | grep -c '%2F' || true)"
             echo "#### public 目录体积"
             echo '~~~'
             du -sh public 2>/dev/null || true
             echo '~~~'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: 页面数据拆解（诊断用）
+      - name: 页面数据拆解（诊断用，可长期保留）
         if: ${{ !cancelled() }}
         run: |
           node <<'EOF' >> "$GITHUB_STEP_SUMMARY"
@@ -168,33 +181,44 @@ jobs:
             console.log('~~~')
           }
           EOF
-      # ========== 诊断步骤结束 ==========
 
       - name: 检查产物
+        id: check
+        env:
+          PAGES_FILE_LIMIT: ${{ vars.PAGES_FILE_LIMIT || '20000' }}
         run: |
           test -f out/index.html || { echo "::error::out/index.html 不存在"; exit 1; }
           n=$(find out -type f | wc -l)
           size=$(du -sh out | cut -f1)
+          limit=$PAGES_FILE_LIMIT
+          warn_at=$((limit * 4 / 5))
           echo "out 文件数: $n，体积: $size"
           {
             echo "### 构建结果"
             echo "- 部署目标: $TARGET"
-            echo "- out 文件数: $n（Pages 上限 20000）"
+            echo "- out 文件数: $n（Pages 上限 $limit）"
             echo "- out 体积: $size"
           } >> "$GITHUB_STEP_SUMMARY"
           if [ "$n" -lt 2000 ]; then
             echo "::error::文件数异常偏少，拒绝部署，避免清空线上站点"; exit 1
           fi
-          if [ "$n" -ge 16000 ]; then
-            echo "::warning::文件数 $n 已逼近 Pages 上限 20000。切到 R2 的做法：先完成手册步骤 9（演练），再把变量 DEPLOY_TARGET 改成 r2，并按步骤 10 切域名"
+          if [ "$n" -ge "$warn_at" ]; then
+            echo "warn=1" >> "$GITHUB_OUTPUT"
+            echo "::warning::文件数 $n 已达到 Pages 上限 $limit 的 80%，请准备切换到 R2（手册步骤 9、10）"
+            echo "> ⚠️ 文件数 $n 已达到 Pages 上限 $limit 的 80%，请准备切换到 R2（手册步骤 9、10）" >> "$GITHUB_STEP_SUMMARY"
           fi
           if [ "$TARGET" != "r2" ]; then
-            if [ "$n" -ge 20000 ]; then
-              echo "::error::文件数超过 Pages 上限 20000。请先完成手册步骤 9，再把 DEPLOY_TARGET 改成 r2"; exit 1
+            if [ "$n" -ge "$limit" ]; then
+              echo "::error::文件数 $n 超过 Pages 上限 $limit，已拒绝部署。请先完成手册步骤 9，再把 DEPLOY_TARGET 改成 r2"
+              echo "> ❌ 文件数 $n 超过 Pages 上限 $limit，已拒绝部署，线上站点保持上一版。请按手册步骤 9、10 切到 R2" >> "$GITHUB_STEP_SUMMARY"
+              echo "no_retry=1" >> "$GITHUB_OUTPUT"
+              exit 1
             fi
             big=$(find out -type f -size +25M | wc -l)
             if [ "$big" -gt 0 ]; then
-              echo "::error::有 $big 个文件超过 25 MiB，Pages 不接受"; exit 1
+              echo "::error::有 $big 个文件超过 25 MiB，Pages 不接受"
+              echo "no_retry=1" >> "$GITHUB_OUTPUT"
+              exit 1
             fi
           fi
           f=$(grep -c '\[请求失败\]' build.log || true)
@@ -203,7 +227,17 @@ jobs:
             echo "::error::有文章抓取失败，拒绝部署。会自动续跑（缓存接着用）"; exit 1
           fi
 
-      # ---------- 链路 A：Cloudflare Pages ----------
+      - name: 文件数预警（自动开 Issue，只开一次）
+        if: ${{ steps.check.outputs.warn == '1' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title='Pages 文件数预警：请准备切换到 R2'
+          if ! gh issue list --state open --json title --jq '.[].title' | grep -qF "$title"; then
+            gh issue create --title "$title" --body "构建产物文件数已达到 Pages 上限的 80%。请按手册步骤 9、10 准备切换到 R2。" || echo "创建 Issue 失败（可能未开启 Issues），请留意构建摘要里的警告"
+          fi
+
+      # ---------- 链路 A：Cloudflare Pages（默认，正式站优先） ----------
       - name: 部署到 Cloudflare Pages
         if: ${{ env.TARGET == 'pages' || env.TARGET == 'both' }}
         uses: cloudflare/wrangler-action@v3
@@ -212,7 +246,7 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy out --project-name=${{ vars.PAGES_PROJECT }} --branch=main --commit-dirty=true
 
-      # ---------- 链路 B：Cloudflare R2 ----------
+      # ---------- 链路 B：Cloudflare R2（DEPLOY_TARGET 为 r2 或 both 时才执行） ----------
       - name: 安装 rclone
         if: ${{ env.TARGET == 'r2' || env.TARGET == 'both' }}
         run: curl -fsSL https://rclone.org/install.sh | sudo bash
@@ -230,10 +264,12 @@ jobs:
           BUCKET: ${{ secrets.R2_BUCKET }}
         run: |
           set -e
+          # 1) 带哈希的静态资源：永久缓存，只增不删
           rclone copy out/_next/static "R2:$BUCKET/_next/static" \
             --checksum --transfers 32 --checkers 32 \
             --header-upload "Cache-Control: public, max-age=31536000, immutable" \
             --stats-one-line -v
+          # 2) 其余文件：每次校验，并删除线上已不存在的文件
           rclone sync out "R2:$BUCKET" \
             --exclude "/_next/static/**" \
             --checksum --transfers 32 --checkers 32 \
@@ -242,7 +278,7 @@ jobs:
 
       # ---------- 失败时自动续跑 ----------
       - name: 失败时自动续跑（总共最多 3 次尝试）
-        if: ${{ failure() }}
+        if: ${{ failure() && steps.target.outputs.no_retry != '1' && steps.check.outputs.no_retry != '1' }}
         env:
           GH_TOKEN: ${{ github.token }}
           ATTEMPT: ${{ inputs.attempt || '1' }}
