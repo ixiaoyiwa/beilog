@@ -67,12 +67,28 @@ jobs:
             echo "桶里已有真实首页，跳过首页规则的测试"
           fi
           rclone copy /tmp/p "R2:$BUCKET" --header-upload "Content-Type: text/html; charset=utf-8"
+          echo "⏳ 等待 5 秒让规则生效..."
           sleep 5
+          
           fail=0
           for p in $paths; do
-            code=$(curl -s -o /dev/null -w '%{http_code}' "https://$HOST$p" || true)
-            echo "$p -> $code"
-            [ "$code" = "200" ] || fail=1
+            # 抓取状态码和页面内容
+            response=$(curl -sL -w "\nHTTP_STATUS:%{http_code}" "https://$HOST$p" || true)
+            code=$(echo "$response" | tail -n 1 | cut -d':' -f 2)
+            body=$(echo "$response" | sed '$d')
+            
+            echo "=================================================="
+            echo "测试路径: $p"
+            echo "HTTP状态码: $code"
+            
+            if [ "$code" != "200" ]; then
+              echo "❌ 访问失败！报错页面内容片段:"
+              echo "$body" | head -c 300
+              echo -e "\n... (截断)"
+              fail=1
+            else
+              echo "✅ 访问成功"
+            fi
           done
           echo "$fail" > /tmp/rules_fail
 
@@ -82,15 +98,16 @@ jobs:
           rclone deletefile "R2:$BUCKET/__probe-hello.html" || true
           rclone purge "R2:$BUCKET/__probe-目录" || true
           if [ -f /tmp/made_index ]; then rclone deletefile "R2:$BUCKET/index.html" || true; fi
-          echo "测试文件已删除"
+          echo "🧹 测试文件已清理"
 
       - name: 规则测试结论
         if: ${{ inputs.action == 'check' && inputs.test_host != '' }}
         run: |
           if [ "$(cat /tmp/rules_fail 2>/dev/null || echo 1)" != "0" ]; then
-            echo "::error::有测试地址没有返回 200，重写规则可能不对（中文路径失败就改用 Worker）"; exit 1
+            echo "::error::有测试地址没有返回 200，请查看上方的报错页面内容片段"
+            exit 1
           fi
-          echo "规则测试全部通过"
+          echo "🎉 规则测试全部通过"
 
       - name: 清空桶
         if: ${{ inputs.action == 'clear' }}
