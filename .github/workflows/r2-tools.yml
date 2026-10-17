@@ -72,8 +72,8 @@ jobs:
           
           fail=0
           for p in $paths; do
-            # 抓取状态码和页面内容
-            response=$(curl -sL -w "\nHTTP_STATUS:%{http_code}" "https://$HOST$p" || true)
+            # 伪装成浏览器抓取状态码和页面内容，绕过 Cloudflare 防火墙
+            response=$(curl -sL -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" -w "\nHTTP_STATUS:%{http_code}" "https://$HOST$p" || true)
             code=$(echo "$response" | tail -n 1 | cut -d':' -f 2)
             body=$(echo "$response" | sed '$d')
             
