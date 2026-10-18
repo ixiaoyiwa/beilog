@@ -31,9 +31,7 @@ CF_HEADERS = {
 
 def get_run_details(repo, run_id, extract_files=False, find_errors=False):
     url = f"https://api.github.com/repos/{repo}/actions/runs/{run_id}/logs"
-    # 必须允许重定向，因为GitHub会返回302跳转到临时下载地址
     r = requests.get(url, headers=GH_HEADERS, allow_redirects=True)
-    
     if r.status_code != 200:
         return None, [f"日志下载失败 (HTTP {r.status_code})"]
     
@@ -44,10 +42,13 @@ def get_run_details(repo, run_id, extract_files=False, find_errors=False):
         z = zipfile.ZipFile(io.BytesIO(r.content))
         for name in z.namelist():
             text = z.read(name).decode('utf-8', errors='ignore')
-            if extract_files and ("build-and-deploy" in name or "check" in name):
-                match = re.search(r"out 文件数:\s*(\d+)", text)
-                if match:
-                    file_count = int(match.group(1))
+            if extract_files:
+                # 增强匹配：支持多种文件数关键字格式
+                for pattern in [r"out 文件数[:：]\s*(\d+)", r"文件数[:：]\s*(\d+)", r"Total files[:：]\s*(\d+)"]:
+                    match = re.search(pattern, text)
+                    if match:
+                        file_count = int(match.group(1))
+                        break
             if find_errors:
                 for line in text.splitlines():
                     if any(keyword in line for keyword in ["ERROR", "Error", "error:", "Exception", "失败:", "错误:"]):
@@ -85,19 +86,33 @@ def get_cf_pages_usage():
     if not CF_TOKEN or not CF_ACCOUNT:
         return "未配置密钥"
     url = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT}/pages/projects/{CF_PAGES_PROJECT}/deployments"
-    r = requests.get(url, headers=CF_HEADERS, params={"env": "production", "per_page": 100})
-    if r.status_code == 200:
+    # 修复：per_page 最大值为 25，通过分页累计本月构建次数
+    page = 1
+    count = 0
+    current_month = datetime.now().month
+    while True:
+        r = requests.get(url, headers=CF_HEADERS, params={"env": "production", "page": page, "per_page": 25})
+        if r.status_code != 200:
+            error_msg = r.json().get("errors", [{}])[0].get("message", "未知错误")
+            return f"查询失败: {error_msg}"
         data = r.json().get("result", [])
-        current_month = datetime.now().month
-        count = sum(1 for d in data if datetime.fromisoformat(d["created_on"].replace("Z", "+00:00")).month == current_month)
-        return f"已用 {count} 次 / 500 次 ({count/500*100:.1f}%)"
-    error_msg = r.json().get("errors", [{}])[0].get("message", "未知错误")
-    return f"查询失败: {error_msg}"
+        if not data:
+            break
+        for d in data:
+            created = datetime.fromisoformat(d["created_on"].replace("Z", "+00:00"))
+            if created.month == current_month:
+                count += 1
+        page += 1
+        # 安全限制：最多查 10 页，防止无限循环
+        if page > 10:
+            break
+    return f"已用 {count} 次 / 500 次 ({count/500*100:.1f}%)"
 
 def get_cf_r2_usage():
     if not CF_TOKEN or not CF_ACCOUNT:
         return "未配置密钥"
     url = "https://api.cloudflare.com/client/v4/graphql"
+    # 修复：将 orderBy 从 date_DESC 改为 datetime_DESC
     query = """
     query getR2Usage($accountId: String!, $startDate: Time!, $endDate: Time!) {
       viewer {
@@ -105,7 +120,7 @@ def get_cf_r2_usage():
           r2StorageAdaptiveGroups(
             limit: 1,
             filter: { datetime_geq: $startDate, datetime_leq: $endDate },
-            orderBy: [date_DESC]
+            orderBy: [datetime_DESC]
           ) {
             max { payloadSize objectCount }
           }
@@ -124,7 +139,6 @@ def get_cf_r2_usage():
             data = r.json()
             if "errors" in data:
                 return f"查询错误: {data['errors'][0].get('message', '')}"
-            
             try:
                 groups = data["data"]["viewer"]["accounts"][0]["r2StorageAdaptiveGroups"]
                 if groups and groups[0]["max"]["payloadSize"] is not None:
@@ -133,7 +147,6 @@ def get_cf_r2_usage():
                     return f"已用 {gb:.2f} GB / 10 GB ({gb/10*100:.1f}%)"
             except (KeyError, IndexError, TypeError):
                 pass
-                
             return "已用 0.00 GB / 10 GB (0%) - 桶为空"
         return f"查询失败: HTTP {r.status_code}"
     except Exception as e:
@@ -160,7 +173,7 @@ def main():
             build_status = f"❌ [失败]({build_url})"
             _, errs = get_run_details(GITHUB_REPO, build_id, find_errors=True)
             err_msg = errs[-1] if errs else "未知错误"
-            build_status += f"\n   └ {err_msg[:100]}" 
+            build_status += f"\n   └ {err_msg[:100]}"
             file_count = None
     else:
         build_time, build_status, file_count, build_url = "未知", "未知", None, ""
