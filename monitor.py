@@ -121,7 +121,7 @@ def get_cf_r2_usage():
     if not CF_TOKEN or not CF_ACCOUNT:
         return "未配置密钥"
     url = "https://api.cloudflare.com/client/v4/graphql"
-    # 修复：存储分析使用 date (Date type)，而非 datetime (Time type)
+    # 修复：使用 date 字段（Date type）而非 datetime（Time type）
     query = """
     query getR2Usage($accountId: String!, $startDate: Date!, $endDate: Date!) {
       viewer {
@@ -234,9 +234,17 @@ def main():
 
     if file_count is not None:
         if file_count >= CRITICAL_THRESHOLD:
-            msg += "🚨 *【紧急】文件数超 80%！请立即迁移 R2。*"
+            msg += "🚨 *【紧急通知】文件数已超 80%！请立即迁移到 R2！*\n\n"
+            msg += "*【完整迁移操作步骤】*：\n"
+            msg += "1️⃣ *GitHub 修改变量*：进入仓库 Settings -> Secrets and variables -> Actions -> Variables，把 `DEPLOY_TARGET` 的值改为 `r2`。\n\n"
+            msg += "2️⃣ *CF 解除域名*：进入 Cloudflare 的旧 Pages 项目 -> Custom domains，移除你的正式域名。\n\n"
+            msg += "3️⃣ *CF 绑定 R2*：进入 R2 存储桶 -> Settings -> Custom Domains，添加你的正式域名。\n\n"
+            msg += "4️⃣ *CF 修改规则*：进入域名规则 (Rules -> Transform Rules -> Rewrite URL)，把三条规则里的测试域名改成正式域名。\n\n"
+            msg += "5️⃣ *CF 清除缓存*：去 CF 首页 -> 点击你的正式域名 -> 左侧菜单找 缓存 (Caching) -> 配置 (Configuration) -> 点击 清除所有内容 (Purge Everything)。\n\n"
+            msg += "⚠️ *务必确认第 5 步做完，否则用户可能看到旧页面！*"
         elif file_count >= WARN_THRESHOLD:
-            msg += "⚠️ *【预警】文件数超 70%，准备迁移。*"
+            msg += "⚠️ *【预警】文件数已超 70%，请开始准备迁移 R2。*\n"
+            msg += "当前无需立刻操作，但请提前熟悉上述 5 步操作流程。"
         else:
             msg += "✅ *系统运行良好，安心创作！*"
 
