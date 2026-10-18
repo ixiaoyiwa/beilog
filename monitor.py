@@ -31,7 +31,9 @@ CF_HEADERS = {
 
 def get_run_details(repo, run_id, extract_files=False, find_errors=False):
     url = f"https://api.github.com/repos/{repo}/actions/runs/{run_id}/logs"
+    # 重点修复：必须加 allow_redirects=True，GitHub 会 302 重定向到真实下载地址
     r = requests.get(url, headers=GH_HEADERS, allow_redirects=True)
+    
     if r.status_code != 200:
         return None, [f"日志下载失败 (HTTP {r.status_code})"]
     
@@ -43,7 +45,7 @@ def get_run_details(repo, run_id, extract_files=False, find_errors=False):
         for name in z.namelist():
             text = z.read(name).decode('utf-8', errors='ignore')
             if extract_files:
-                # 增强匹配：支持多种文件数关键字格式
+                # 增强解析：有些日志前缀会有特殊字符
                 for pattern in [r"out 文件数[:：]\s*(\d+)", r"文件数[:：]\s*(\d+)", r"Total files[:：]\s*(\d+)"]:
                     match = re.search(pattern, text)
                     if match:
@@ -86,33 +88,21 @@ def get_cf_pages_usage():
     if not CF_TOKEN or not CF_ACCOUNT:
         return "未配置密钥"
     url = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT}/pages/projects/{CF_PAGES_PROJECT}/deployments"
-    # 修复：per_page 最大值为 25，通过分页累计本月构建次数
-    page = 1
-    count = 0
-    current_month = datetime.now().month
-    while True:
-        r = requests.get(url, headers=CF_HEADERS, params={"env": "production", "page": page, "per_page": 25})
-        if r.status_code != 200:
-            error_msg = r.json().get("errors", [{}])[0].get("message", "未知错误")
-            return f"查询失败: {error_msg}"
+    # 重点修复：CF API 的 per_page 参数最大只允许 25，不能用 100
+    r = requests.get(url, headers=CF_HEADERS, params={"env": "production", "per_page": 25})
+    if r.status_code == 200:
         data = r.json().get("result", [])
-        if not data:
-            break
-        for d in data:
-            created = datetime.fromisoformat(d["created_on"].replace("Z", "+00:00"))
-            if created.month == current_month:
-                count += 1
-        page += 1
-        # 安全限制：最多查 10 页，防止无限循环
-        if page > 10:
-            break
-    return f"已用 {count} 次 / 500 次 ({count/500*100:.1f}%)"
+        current_month = datetime.now().month
+        count = sum(1 for d in data if datetime.fromisoformat(d["created_on"].replace("Z", "+00:00")).month == current_month)
+        return f"已用 {count} 次 / 500 次 ({count/500*100:.1f}%)"
+    error_msg = r.json().get("errors", [{}])[0].get("message", "未知错误")
+    return f"查询失败: {error_msg}"
 
 def get_cf_r2_usage():
     if not CF_TOKEN or not CF_ACCOUNT:
         return "未配置密钥"
     url = "https://api.cloudflare.com/client/v4/graphql"
-    # 修复：将 orderBy 从 date_DESC 改为 datetime_DESC
+    # 重点修复：R2 的 GraphQL 排序字段是 datetime_DESC，不是 date_DESC
     query = """
     query getR2Usage($accountId: String!, $startDate: Time!, $endDate: Time!) {
       viewer {
