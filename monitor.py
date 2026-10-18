@@ -29,16 +29,17 @@ CF_HEADERS = {
     "Content-Type": "application/json"
 }
 
+
 def get_run_details(repo, run_id, extract_files=False, find_errors=False):
     url = f"https://api.github.com/repos/{repo}/actions/runs/{run_id}/logs"
     r = requests.get(url, headers=GH_HEADERS, allow_redirects=True)
-    
+
     if r.status_code != 200:
         return None, [f"日志下载失败 (HTTP {r.status_code})"]
-    
+
     file_count = None
     errors = []
-    
+
     try:
         z = zipfile.ZipFile(io.BytesIO(r.content))
         for name in z.namelist():
@@ -56,8 +57,9 @@ def get_run_details(repo, run_id, extract_files=False, find_errors=False):
                             errors.append(line.strip())
     except Exception as e:
         errors.append(f"解析日志出错: {str(e)}")
-        
+
     return file_count, (errors[-2:] if errors else ["未找到错误关键字，请点击日志链接查看"])
+
 
 def get_latest_workflow(repo, workflow_file):
     url = f"https://api.github.com/repos/{repo}/actions/workflows/{workflow_file}/runs?per_page=1"
@@ -65,6 +67,7 @@ def get_latest_workflow(repo, workflow_file):
     if r.status_code == 200 and r.json().get("workflow_runs"):
         return r.json()["workflow_runs"][0]
     return None
+
 
 def get_github_actions_usage():
     since = (datetime.now(timezone.utc) - timedelta(days=30)).strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -78,20 +81,20 @@ def get_github_actions_usage():
                 try:
                     start_str = run["run_started_at"].replace("Z", "+00:00")
                     end_str = run["updated_at"].replace("Z", "+00:00")
-                    # 兼容 Python 3.10 的截断处理
                     if "." in start_str:
-                        start_str = start_str[:start_str.find('.')+7] + start_str[start_str.find('+')-1:]
+                        start_str = start_str[:start_str.find('.') + 7] + start_str[start_str.find('+') - 1:]
                     if "." in end_str:
-                        end_str = end_str[:end_str.find('.')+7] + end_str[end_str.find('+')-1:]
-                        
+                        end_str = end_str[:end_str.find('.') + 7] + end_str[end_str.find('+') - 1:]
+
                     start = datetime.fromisoformat(start_str)
                     end = datetime.fromisoformat(end_str)
                     total_seconds += (end - start).total_seconds()
                 except Exception:
                     pass
         minutes = int(total_seconds / 60)
-        return f"已用 {minutes} 分钟 / 2000 分钟 ({minutes/2000*100:.1f}%)"
+        return f"已用 {minutes} 分钟 / 2000 分钟 ({minutes / 2000 * 100:.1f}%)"
     return "获取失败"
+
 
 def get_cf_pages_usage():
     if not CF_TOKEN or not CF_ACCOUNT:
@@ -104,28 +107,29 @@ def get_cf_pages_usage():
         count = 0
         for d in data:
             try:
-                # 最稳妥的办法：直接按字符串截取月份 (YYYY-MM-DD...)
                 created_month = int(d["created_on"][5:7])
                 if created_month == current_month:
                     count += 1
             except Exception:
                 pass
-        return f"已用 {count} 次 / 500 次 ({count/500*100:.1f}%)"
+        return f"已用 {count} 次 / 500 次 ({count / 500 * 100:.1f}%)"
     error_msg = r.json().get("errors", [{}])[0].get("message", "未知错误")
     return f"查询失败: {error_msg}"
+
 
 def get_cf_r2_usage():
     if not CF_TOKEN or not CF_ACCOUNT:
         return "未配置密钥"
     url = "https://api.cloudflare.com/client/v4/graphql"
+    # 修复：存储分析使用 date (Date type)，而非 datetime (Time type)
     query = """
-    query getR2Usage($accountId: String!, $startDate: Time!, $endDate: Time!) {
+    query getR2Usage($accountId: String!, $startDate: Date!, $endDate: Date!) {
       viewer {
         accounts(filter: {accountTag: $accountId}) {
           r2StorageAdaptiveGroups(
             limit: 1,
-            filter: { datetime_geq: $startDate, datetime_leq: $endDate },
-            orderBy: [datetime_DESC]
+            filter: { date_geq: $startDate, date_leq: $endDate },
+            orderBy: [date_DESC]
           ) {
             max { payloadSize objectCount }
           }
@@ -133,10 +137,12 @@ def get_cf_r2_usage():
       }
     }
     """
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).strftime('%Y-%m-%d')
     variables = {
         "accountId": CF_ACCOUNT,
-        "startDate": (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(),
-        "endDate": datetime.now(timezone.utc).isoformat()
+        "startDate": yesterday,
+        "endDate": today
     }
     try:
         r = requests.post(url, headers=CF_HEADERS, json={"query": query, "variables": variables})
@@ -148,8 +154,8 @@ def get_cf_r2_usage():
                 groups = data["data"]["viewer"]["accounts"][0]["r2StorageAdaptiveGroups"]
                 if groups and groups[0]["max"]["payloadSize"] is not None:
                     payload_size = groups[0]["max"]["payloadSize"]
-                    gb = payload_size / (1024**3)
-                    return f"已用 {gb:.2f} GB / 10 GB ({gb/10*100:.1f}%)"
+                    gb = payload_size / (1024 ** 3)
+                    return f"已用 {gb:.2f} GB / 10 GB ({gb / 10 * 100:.1f}%)"
             except (KeyError, IndexError, TypeError):
                 pass
             return "已用 0.00 GB / 10 GB (0%) - 桶为空"
@@ -157,14 +163,16 @@ def get_cf_r2_usage():
     except Exception as e:
         return f"查询异常: {str(e)}"
 
+
 def send_message(text):
     url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
     payload = {"chat_id": TG_CHAT, "text": text, "parse_mode": "Markdown", "disable_web_page_preview": True}
     requests.post(url, json=payload)
 
+
 def main():
     date_str = datetime.now().strftime("%Y-%m-%d %H:%M")
-    
+
     build_run = get_latest_workflow(GITHUB_REPO, "build-and-deploy.yml")
     if build_run:
         build_id = build_run["id"]
@@ -210,7 +218,7 @@ def main():
     msg = f"📊 *播客站运行日报* ({date_str})\n\n"
     msg += f"🚀 *网站部署*: {build_status}\n   └ 时间: {build_time}\n"
     msg += f"📡 *RSS抓取*: {sync_status}\n   └ 时间: {sync_time}\n\n"
-    
+
     msg += f"📁 *Pages 文件数*:\n"
     if file_count is not None:
         percent = (file_count / PAGES_FILE_LIMIT) * 100
@@ -233,6 +241,7 @@ def main():
             msg += "✅ *系统运行良好，安心创作！*"
 
     send_message(msg)
+
 
 if __name__ == "__main__":
     main()
