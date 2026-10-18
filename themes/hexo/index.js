@@ -343,8 +343,8 @@ const LayoutSlug = props => {
                 {post && <TimestampLinker post={post} />}
               </section>
 
-              {/* ⭐ 修改点：在分享栏上方强制加一个 mt-8 的间距 */}
-              <div className='mt-8'>
+              {/* ⭐ 修改点：只有 Post 类型才应用 mt-8 的间距，Pages 不应用 */}
+              <div className={post?.type === 'Post' ? 'mt-8' : ''}>
                 <ShareBar post={post} />
               </div>
 
