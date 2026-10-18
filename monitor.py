@@ -31,7 +31,6 @@ CF_HEADERS = {
 
 def get_run_details(repo, run_id, extract_files=False, find_errors=False):
     url = f"https://api.github.com/repos/{repo}/actions/runs/{run_id}/logs"
-    # 重点修复：必须加 allow_redirects=True，GitHub 会 302 重定向到真实下载地址
     r = requests.get(url, headers=GH_HEADERS, allow_redirects=True)
     
     if r.status_code != 200:
@@ -45,7 +44,6 @@ def get_run_details(repo, run_id, extract_files=False, find_errors=False):
         for name in z.namelist():
             text = z.read(name).decode('utf-8', errors='ignore')
             if extract_files:
-                # 增强解析：有些日志前缀会有特殊字符
                 for pattern in [r"out 文件数[:：]\s*(\d+)", r"文件数[:：]\s*(\d+)", r"Total files[:：]\s*(\d+)"]:
                     match = re.search(pattern, text)
                     if match:
@@ -77,9 +75,20 @@ def get_github_actions_usage():
         total_seconds = 0
         for run in runs:
             if run["status"] == "completed" and run.get("run_started_at") and run.get("updated_at"):
-                start = datetime.fromisoformat(run["run_started_at"].replace("Z", "+00:00"))
-                end = datetime.fromisoformat(run["updated_at"].replace("Z", "+00:00"))
-                total_seconds += (end - start).total_seconds()
+                try:
+                    start_str = run["run_started_at"].replace("Z", "+00:00")
+                    end_str = run["updated_at"].replace("Z", "+00:00")
+                    # 兼容 Python 3.10 的截断处理
+                    if "." in start_str:
+                        start_str = start_str[:start_str.find('.')+7] + start_str[start_str.find('+')-1:]
+                    if "." in end_str:
+                        end_str = end_str[:end_str.find('.')+7] + end_str[end_str.find('+')-1:]
+                        
+                    start = datetime.fromisoformat(start_str)
+                    end = datetime.fromisoformat(end_str)
+                    total_seconds += (end - start).total_seconds()
+                except Exception:
+                    pass
         minutes = int(total_seconds / 60)
         return f"已用 {minutes} 分钟 / 2000 分钟 ({minutes/2000*100:.1f}%)"
     return "获取失败"
@@ -88,12 +97,19 @@ def get_cf_pages_usage():
     if not CF_TOKEN or not CF_ACCOUNT:
         return "未配置密钥"
     url = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT}/pages/projects/{CF_PAGES_PROJECT}/deployments"
-    # 重点修复：CF API 的 per_page 参数最大只允许 25，不能用 100
     r = requests.get(url, headers=CF_HEADERS, params={"env": "production", "per_page": 25})
     if r.status_code == 200:
         data = r.json().get("result", [])
         current_month = datetime.now().month
-        count = sum(1 for d in data if datetime.fromisoformat(d["created_on"].replace("Z", "+00:00")).month == current_month)
+        count = 0
+        for d in data:
+            try:
+                # 最稳妥的办法：直接按字符串截取月份 (YYYY-MM-DD...)
+                created_month = int(d["created_on"][5:7])
+                if created_month == current_month:
+                    count += 1
+            except Exception:
+                pass
         return f"已用 {count} 次 / 500 次 ({count/500*100:.1f}%)"
     error_msg = r.json().get("errors", [{}])[0].get("message", "未知错误")
     return f"查询失败: {error_msg}"
@@ -102,7 +118,6 @@ def get_cf_r2_usage():
     if not CF_TOKEN or not CF_ACCOUNT:
         return "未配置密钥"
     url = "https://api.cloudflare.com/client/v4/graphql"
-    # 重点修复：R2 的 GraphQL 排序字段是 datetime_DESC，不是 date_DESC
     query = """
     query getR2Usage($accountId: String!, $startDate: Time!, $endDate: Time!) {
       viewer {
@@ -150,11 +165,13 @@ def send_message(text):
 def main():
     date_str = datetime.now().strftime("%Y-%m-%d %H:%M")
     
-    # 1. 部署状态
     build_run = get_latest_workflow(GITHUB_REPO, "build-and-deploy.yml")
     if build_run:
         build_id = build_run["id"]
-        build_time = datetime.fromisoformat(build_run["updated_at"].replace("Z", "+00:00")).strftime("%m-%d %H:%M")
+        try:
+            build_time = datetime.fromisoformat(build_run["updated_at"].replace("Z", "+00:00")).strftime("%m-%d %H:%M")
+        except:
+            build_time = build_run["updated_at"][5:16].replace("T", " ")
         build_url = f"https://github.com/{GITHUB_REPO}/actions/runs/{build_id}"
         if build_run["conclusion"] == "success":
             build_status = f"✅ [成功]({build_url})"
@@ -168,11 +185,13 @@ def main():
     else:
         build_time, build_status, file_count, build_url = "未知", "未知", None, ""
 
-    # 2. 抓取状态
     sync_run = get_latest_workflow(PODCAST_REPO, "sync.yml")
     if sync_run:
         sync_id = sync_run["id"]
-        sync_time = datetime.fromisoformat(sync_run["updated_at"].replace("Z", "+00:00")).strftime("%m-%d %H:%M")
+        try:
+            sync_time = datetime.fromisoformat(sync_run["updated_at"].replace("Z", "+00:00")).strftime("%m-%d %H:%M")
+        except:
+            sync_time = sync_run["updated_at"][5:16].replace("T", " ")
         sync_url = f"https://github.com/{PODCAST_REPO}/actions/runs/{sync_id}"
         if sync_run["conclusion"] == "success":
             sync_status = f"✅ [成功]({sync_url})"
@@ -184,12 +203,10 @@ def main():
     else:
         sync_time, sync_status = "未知", "未知"
 
-    # 3. 真实额度获取
     gh_usage = get_github_actions_usage()
     cf_pages = get_cf_pages_usage()
     cf_r2 = get_cf_r2_usage()
 
-    # 4. 拼装消息
     msg = f"📊 *播客站运行日报* ({date_str})\n\n"
     msg += f"🚀 *网站部署*: {build_status}\n   └ 时间: {build_time}\n"
     msg += f"📡 *RSS抓取*: {sync_status}\n   └ 时间: {sync_time}\n\n"
