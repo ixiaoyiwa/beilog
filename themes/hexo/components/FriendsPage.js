@@ -38,9 +38,8 @@ const FriendsPage = ({ post, friends = [], tagOptions = [] }) => {
   })
 
   return (
-    // ⭐ 修改点：将原 lg:py-4 改为 lg:pt-10 lg:pb-4。
-    // 顶部加上了 40px 的内边距，刚好空出一行，不再拥挤。
-    <div className='w-full lg:hover:shadow lg:border rounded-t-xl lg:rounded-xl lg:px-2 lg:pt-10 lg:pb-4 bg-white dark:bg-hexo-black-gray dark:border-black article'>
+    // ⭐ 修改点：将原 lg:pt-10 改为 pt-10。让手机端也有顶部间距。
+    <div className='w-full lg:hover:shadow lg:border rounded-t-xl lg:rounded-xl lg:px-2 pt-10 lg:pb-4 bg-white dark:bg-hexo-black-gray dark:border-black article'>
       <div className='w-full md:px-5 px-2'>
         
         {groups.length > 0 && (
