@@ -1,0 +1,66 @@
+name: Smart Cache Keep Alive
+
+on:
+  schedule:
+    # 每 2 天检查一次。只要主流程跑过，它几秒钟就结束，绝不浪费时间。
+    - cron: '0 0 */2 * *'
+  workflow_dispatch: # 允许你随时手动测试
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  smart-keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check last build time and decide
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "开始查询主构建流程的最后运行时间..."
+          
+          # 查询 build-and-deploy.yml 最近一次的创建时间，如果失败则默认为空
+          LAST_RUN=$(gh run list --repo ${{ github.repository }} --workflow=build-and-deploy.yml --limit 1 --json createdAt --jq '.[0].createdAt' 2>/dev/null || echo "")
+          
+          if [ -z "$LAST_RUN" ]; then
+            echo "⚠️ 无法获取构建记录（可能是接口报错）。为了安全起见，强制执行保活。"
+            echo "need_keepalive=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # 将 ISO 时间转为时间戳并计算小时差
+          NOW=$(date +%s)
+          LAST_TS=$(date -d "$LAST_RUN" +%s 2>/dev/null || echo "0")
+          
+          if [ "$LAST_TS" -eq "0" ]; then
+            echo "⚠️ 时间解析失败。为了安全起见，强制执行保活。"
+            echo "need_keepalive=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          DIFF_HOURS=$(( (NOW - LAST_TS) / 3600 ))
+          
+          echo "上次构建发生在 $DIFF_HOURS 小时前。"
+          
+          # 144 小时 = 6 天。如果小于 6 天，说明缓存绝对安全，直接跳过。
+          if [ "$DIFF_HOURS" -lt 144 ]; then
+            echo "🟢 主流程在 6 天内运行过，缓存安全。保活任务休眠。"
+            echo "need_keepalive=false" >> $GITHUB_OUTPUT
+          else
+            echo "🟡 主流程已经超过 6 天没运行了，缓存即将过期，开始执行保活操作！"
+            echo "need_keepalive=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Restore Notion Cache (Keep Alive)
+        if: steps.check.outputs.need_keepalive == 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: .next/cache/notion/data
+          key: notion-data-keepalive-${{ github.run_id }}
+          restore-keys: |
+            notion-data-
+      
+      - name: Finish
+        run: echo "保活检测流程结束。"
