@@ -2,7 +2,7 @@ name: telegram-monitor
 
 on:
   schedule:
-    - cron: '0 12 * * *' # 每天北京时间 20:00 发送日报
+    - cron: '0 12 * * *'
   workflow_dispatch:
 
 jobs:
@@ -19,4 +19,7 @@ jobs:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          PAGES_PROJECT: ${{ vars.PAGES_PROJECT }}
         run: python monitor.py
