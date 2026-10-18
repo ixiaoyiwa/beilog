@@ -121,45 +121,55 @@ def get_cf_r2_usage():
     if not CF_TOKEN or not CF_ACCOUNT:
         return "未配置密钥"
     url = "https://api.cloudflare.com/client/v4/graphql"
-    # 修复：使用 date 字段（Date type）而非 datetime（Time type）
+    # Claude 修复版：增加 dimensions，修复 orderBy 必须伴随 dimension 的问题
     query = """
-    query getR2Usage($accountId: String!, $startDate: Date!, $endDate: Date!) {
+    query getR2Usage($accountId: String!, $start: Time!, $end: Time!) {
       viewer {
         accounts(filter: {accountTag: $accountId}) {
           r2StorageAdaptiveGroups(
-            limit: 1,
-            filter: { date_geq: $startDate, date_leq: $endDate },
-            orderBy: [date_DESC]
+            limit: 10000,
+            filter: { datetime_geq: $start, datetime_leq: $end },
+            orderBy: [datetime_DESC]
           ) {
+            dimensions { datetime bucketName }
             max { payloadSize objectCount }
           }
         }
       }
     }
     """
-    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-    yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).strftime('%Y-%m-%d')
+    now = datetime.now(timezone.utc)
     variables = {
         "accountId": CF_ACCOUNT,
-        "startDate": yesterday,
-        "endDate": today
+        "start": (now - timedelta(hours=48)).strftime('%Y-%m-%dT%H:%M:%SZ'),
+        "end": now.strftime('%Y-%m-%dT%H:%M:%SZ'),
     }
     try:
-        r = requests.post(url, headers=CF_HEADERS, json={"query": query, "variables": variables})
-        if r.status_code == 200:
-            data = r.json()
-            if "errors" in data:
-                return f"查询错误: {data['errors'][0].get('message', '')}"
-            try:
-                groups = data["data"]["viewer"]["accounts"][0]["r2StorageAdaptiveGroups"]
-                if groups and groups[0]["max"]["payloadSize"] is not None:
-                    payload_size = groups[0]["max"]["payloadSize"]
-                    gb = payload_size / (1024 ** 3)
-                    return f"已用 {gb:.2f} GB / 10 GB ({gb / 10 * 100:.1f}%)"
-            except (KeyError, IndexError, TypeError):
-                pass
-            return "已用 0.00 GB / 10 GB (0%) - 桶为空"
-        return f"查询失败: HTTP {r.status_code}"
+        r = requests.post(url, headers=CF_HEADERS, json={"query": query, "variables": variables}, timeout=30)
+        if r.status_code != 200:
+            return f"查询失败: HTTP {r.status_code}"
+        data = r.json()
+        if data.get("errors"):
+            return f"查询错误: {data['errors'][0].get('message', '')}"
+        try:
+            groups = data["data"]["viewer"]["accounts"][0]["r2StorageAdaptiveGroups"]
+        except (KeyError, IndexError, TypeError):
+            groups = []
+
+        # 已按 datetime 倒序：每个桶只取第一条（最新），再汇总
+        latest = {}
+        for g in groups or []:
+            bucket = g["dimensions"]["bucketName"]
+            if bucket not in latest:
+                latest[bucket] = g["max"]
+
+        if not latest:
+            return "已用 0.00 GB / 10 GB (0.0%) - 无数据或桶为空"
+
+        total_bytes = sum(m.get("payloadSize") or 0 for m in latest.values())
+        total_objects = sum(m.get("objectCount") or 0 for m in latest.values())
+        gb = total_bytes / (1024 ** 3)
+        return f"已用 {gb:.2f} GB / 10 GB ({gb / 10 * 100:.1f}%)，共 {total_objects} 个文件"
     except Exception as e:
         return f"查询异常: {str(e)}"
 
@@ -171,7 +181,8 @@ def send_message(text):
 
 
 def main():
-    date_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+    # Claude 修复版：改为北京时间 (UTC+8)
+    date_str = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M")
 
     build_run = get_latest_workflow(GITHUB_REPO, "build-and-deploy.yml")
     if build_run:
