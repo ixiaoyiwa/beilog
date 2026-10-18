@@ -32,8 +32,10 @@ CF_HEADERS = {
 def get_run_details(repo, run_id, extract_files=False, find_errors=False):
     url = f"https://api.github.com/repos/{repo}/actions/runs/{run_id}/logs"
     r = requests.get(url, headers=GH_HEADERS, allow_redirects=True)
+    
+    # 如果日志下载失败（比如过期了），直接返回默认值，防止后续崩溃
     if r.status_code != 200:
-        return None, []
+        return None, ["日志下载失败或已过期"]
     
     file_count = None
     errors = []
@@ -53,7 +55,9 @@ def get_run_details(repo, run_id, extract_files=False, find_errors=False):
                             errors.append(line.strip())
     except Exception:
         pass
-    return file_count, errors[-2:] if errors else ["未知错误"]
+        
+    # 确保有返回值
+    return file_count, (errors[-2:] if errors else ["未知错误，请点击日志查看"])
 
 def get_latest_workflow(repo, workflow_file):
     url = f"https://api.github.com/repos/{repo}/actions/workflows/{workflow_file}/runs?per_page=1"
@@ -63,11 +67,9 @@ def get_latest_workflow(repo, workflow_file):
     return None
 
 def get_github_actions_usage():
-    """统计私有仓库近 30 天的 Actions 使用分钟数"""
     since = (datetime.now(timezone.utc) - timedelta(days=30)).strftime('%Y-%m-%dT%H:%M:%SZ')
     url = f"https://api.github.com/repos/{PODCAST_REPO}/actions/runs?created=>{since}&per_page=100"
     r = requests.get(url, headers=GH_HEADERS)
-    
     if r.status_code == 200:
         runs = r.json().get("workflow_runs", [])
         total_seconds = 0
@@ -78,10 +80,9 @@ def get_github_actions_usage():
                 total_seconds += (end - start).total_seconds()
         minutes = int(total_seconds / 60)
         return f"已用 {minutes} 分钟 / 2000 分钟 ({minutes/2000*100:.1f}%)"
-    return "获取失败(请检查GH_TOKEN权限)"
+    return "获取失败"
 
 def get_cf_pages_usage():
-    """获取 Pages 本月构建次数"""
     if not CF_TOKEN or not CF_ACCOUNT:
         return "未配置密钥"
     url = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT}/pages/projects/{CF_PAGES_PROJECT}/deployments"
@@ -94,10 +95,8 @@ def get_cf_pages_usage():
     return "获取失败"
 
 def get_cf_r2_usage():
-    """获取 R2 存储用量（通过 GraphQL API 查询）"""
     if not CF_TOKEN or not CF_ACCOUNT:
         return "未配置密钥"
-    # 使用 Cloudflare GraphQL API 查询 R2 用量
     url = "https://api.cloudflare.com/client/v4/graphql"
     query = """
     query getR2Usage($accountId: String!) {
@@ -115,13 +114,13 @@ def get_cf_r2_usage():
         if r.status_code == 200:
             data = r.json()
             groups = data["data"]["viewer"]["accounts"][0]["r2StorageAdaptiveGroups"]
-            if groups:
+            if groups and groups[0]["max"]["payloadSize"]:
                 payload_size = groups[0]["max"]["payloadSize"]
                 gb = payload_size / (1024**3)
                 return f"已用 {gb:.2f} GB / 10 GB ({gb/10*100:.1f}%)"
-        return "未获取到数据(可能桶为空)"
+        return "未获取到数据 (桶为空)"
     except Exception:
-        return "查询异常，请去网页后台看"
+        return "查询异常"
 
 def send_message(text):
     url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
@@ -143,7 +142,8 @@ def main():
         else:
             build_status = f"❌ [失败]({build_url})"
             _, errs = get_run_details(GITHUB_REPO, build_id, find_errors=True)
-            build_status += f"\n   └ {errs[-1][:50]}"
+            err_msg = errs[-1] if errs else "未知错误"
+            build_status += f"\n   └ {err_msg[:50]}"
             file_count = None
     else:
         build_time, build_status, file_count, build_url = "未知", "未知", None, ""
@@ -159,7 +159,8 @@ def main():
         else:
             sync_status = f"❌ [失败]({sync_url})"
             _, errs = get_run_details(PODCAST_REPO, sync_id, find_errors=True)
-            sync_status += f"\n   └ {errs[-1][:50]}"
+            err_msg = errs[-1] if errs else "未知错误"
+            sync_status += f"\n   └ {err_msg[:50]}"
     else:
         sync_time, sync_status = "未知", "未知"
 
