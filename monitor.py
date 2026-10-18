@@ -1,49 +1,127 @@
 import os
 import requests
 import re
-import json
 import zipfile
 import io
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 GITHUB_REPO = "zicceho/beilog"
-PODCAST_REPO = "zicceho/podcast-automation" # 你的私有仓库名
+PODCAST_REPO = "zicceho/podcast-automation"
 TG_TOKEN = os.environ.get("TG_BOT_TOKEN")
 TG_CHAT = os.environ.get("TG_CHAT_ID")
 GH_TOKEN = os.environ.get("GH_TOKEN")
+
+CF_TOKEN = os.environ.get("CLOUDFLARE_API_TOKEN")
+CF_ACCOUNT = os.environ.get("CLOUDFLARE_ACCOUNT_ID")
+CF_PAGES_PROJECT = os.environ.get("PAGES_PROJECT", "beilog-new")
 
 PAGES_FILE_LIMIT = 20000
 WARN_THRESHOLD = int(PAGES_FILE_LIMIT * 0.7)
 CRITICAL_THRESHOLD = int(PAGES_FILE_LIMIT * 0.8)
 
-headers = {
+GH_HEADERS = {
     "Authorization": f"Bearer {GH_TOKEN}",
     "Accept": "application/vnd.github+json"
 }
 
-def get_file_count_from_logs(run_id):
-    url = f"https://api.github.com/repos/{GITHUB_REPO}/actions/runs/{run_id}/logs"
-    r = requests.get(url, headers=headers, allow_redirects=True)
+CF_HEADERS = {
+    "Authorization": f"Bearer {CF_TOKEN}",
+    "Content-Type": "application/json"
+}
+
+def get_run_details(repo, run_id, extract_files=False, find_errors=False):
+    url = f"https://api.github.com/repos/{repo}/actions/runs/{run_id}/logs"
+    r = requests.get(url, headers=GH_HEADERS, allow_redirects=True)
     if r.status_code != 200:
-        return None
+        return None, []
+    
+    file_count = None
+    errors = []
+    
     try:
         z = zipfile.ZipFile(io.BytesIO(r.content))
         for name in z.namelist():
-            if "build-and-deploy" in name or "check" in name:
-                text = z.read(name).decode('utf-8', errors='ignore')
+            text = z.read(name).decode('utf-8', errors='ignore')
+            if extract_files and ("build-and-deploy" in name or "check" in name):
                 match = re.search(r"out 文件数:\s*(\d+)", text)
                 if match:
-                    return int(match.group(1))
+                    file_count = int(match.group(1))
+            if find_errors:
+                for line in text.splitlines():
+                    if any(keyword in line for keyword in ["ERROR", "Error", "error:", "Exception", "失败:", "错误:"]):
+                        if "::warning::" not in line and "Warning:" not in line:
+                            errors.append(line.strip())
     except Exception:
         pass
-    return None
+    return file_count, errors[-2:] if errors else ["未知错误"]
 
 def get_latest_workflow(repo, workflow_file):
     url = f"https://api.github.com/repos/{repo}/actions/workflows/{workflow_file}/runs?per_page=1"
-    r = requests.get(url, headers=headers)
+    r = requests.get(url, headers=GH_HEADERS)
     if r.status_code == 200 and r.json().get("workflow_runs"):
         return r.json()["workflow_runs"][0]
     return None
+
+def get_github_actions_usage():
+    """统计私有仓库近 30 天的 Actions 使用分钟数"""
+    since = (datetime.now(timezone.utc) - timedelta(days=30)).strftime('%Y-%m-%dT%H:%M:%SZ')
+    url = f"https://api.github.com/repos/{PODCAST_REPO}/actions/runs?created=>{since}&per_page=100"
+    r = requests.get(url, headers=GH_HEADERS)
+    
+    if r.status_code == 200:
+        runs = r.json().get("workflow_runs", [])
+        total_seconds = 0
+        for run in runs:
+            if run["status"] == "completed" and run.get("run_started_at") and run.get("updated_at"):
+                start = datetime.fromisoformat(run["run_started_at"].replace("Z", "+00:00"))
+                end = datetime.fromisoformat(run["updated_at"].replace("Z", "+00:00"))
+                total_seconds += (end - start).total_seconds()
+        minutes = int(total_seconds / 60)
+        return f"已用 {minutes} 分钟 / 2000 分钟 ({minutes/2000*100:.1f}%)"
+    return "获取失败(请检查GH_TOKEN权限)"
+
+def get_cf_pages_usage():
+    """获取 Pages 本月构建次数"""
+    if not CF_TOKEN or not CF_ACCOUNT:
+        return "未配置密钥"
+    url = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT}/pages/projects/{CF_PAGES_PROJECT}/deployments"
+    r = requests.get(url, headers=CF_HEADERS, params={"env": "production", "per_page": 100})
+    if r.status_code == 200:
+        data = r.json().get("result", [])
+        current_month = datetime.now().month
+        count = sum(1 for d in data if datetime.fromisoformat(d["created_on"].replace("Z", "+00:00")).month == current_month)
+        return f"已用 {count} 次 / 500 次 ({count/500*100:.1f}%)"
+    return "获取失败"
+
+def get_cf_r2_usage():
+    """获取 R2 存储用量（通过 GraphQL API 查询）"""
+    if not CF_TOKEN or not CF_ACCOUNT:
+        return "未配置密钥"
+    # 使用 Cloudflare GraphQL API 查询 R2 用量
+    url = "https://api.cloudflare.com/client/v4/graphql"
+    query = """
+    query getR2Usage($accountId: String!) {
+      viewer {
+        accounts(filter: {accountTag: $accountId}) {
+          r2StorageAdaptiveGroups(limit: 1, filter: {}, orderBy: [date_DESC]) {
+            max { payloadSize }
+          }
+        }
+      }
+    }
+    """
+    try:
+        r = requests.post(url, headers=CF_HEADERS, json={"query": query, "variables": {"accountId": CF_ACCOUNT}})
+        if r.status_code == 200:
+            data = r.json()
+            groups = data["data"]["viewer"]["accounts"][0]["r2StorageAdaptiveGroups"]
+            if groups:
+                payload_size = groups[0]["max"]["payloadSize"]
+                gb = payload_size / (1024**3)
+                return f"已用 {gb:.2f} GB / 10 GB ({gb/10*100:.1f}%)"
+        return "未获取到数据(可能桶为空)"
+    except Exception:
+        return "查询异常，请去网页后台看"
 
 def send_message(text):
     url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
@@ -53,42 +131,68 @@ def send_message(text):
 def main():
     date_str = datetime.now().strftime("%Y-%m-%d %H:%M")
     
-    # 1. 获取主站构建状态
+    # 1. 部署状态
     build_run = get_latest_workflow(GITHUB_REPO, "build-and-deploy.yml")
     if build_run:
-        build_time = datetime.fromisoformat(build_run["updated_at"].replace("Z", "+00:00")).strftime("%Y-%m-%d %H:%M")
-        build_status = "✅ 成功" if build_run["conclusion"] == "success" else f"❌ {build_run['conclusion']}"
-        file_count = get_file_count_from_logs(build_run["id"]) if build_run["conclusion"] == "success" else None
+        build_id = build_run["id"]
+        build_time = datetime.fromisoformat(build_run["updated_at"].replace("Z", "+00:00")).strftime("%m-%d %H:%M")
+        build_url = f"https://github.com/{GITHUB_REPO}/actions/runs/{build_id}"
+        if build_run["conclusion"] == "success":
+            build_status = f"✅ [成功]({build_url})"
+            file_count, _ = get_run_details(GITHUB_REPO, build_id, extract_files=True)
+        else:
+            build_status = f"❌ [失败]({build_url})"
+            _, errs = get_run_details(GITHUB_REPO, build_id, find_errors=True)
+            build_status += f"\n   └ {errs[-1][:50]}"
+            file_count = None
     else:
-        build_time, build_status, file_count = "未知", "未知", None
+        build_time, build_status, file_count, build_url = "未知", "未知", None, ""
 
-    # 2. 获取抓取状态
+    # 2. 抓取状态
     sync_run = get_latest_workflow(PODCAST_REPO, "sync.yml")
     if sync_run:
-        sync_time = datetime.fromisoformat(sync_run["updated_at"].replace("Z", "+00:00")).strftime("%Y-%m-%d %H:%M")
-        sync_status = "✅ 成功" if sync_run["conclusion"] == "success" else f"❌ {sync_run['conclusion']}"
+        sync_id = sync_run["id"]
+        sync_time = datetime.fromisoformat(sync_run["updated_at"].replace("Z", "+00:00")).strftime("%m-%d %H:%M")
+        sync_url = f"https://github.com/{PODCAST_REPO}/actions/runs/{sync_id}"
+        if sync_run["conclusion"] == "success":
+            sync_status = f"✅ [成功]({sync_url})"
+        else:
+            sync_status = f"❌ [失败]({sync_url})"
+            _, errs = get_run_details(PODCAST_REPO, sync_id, find_errors=True)
+            sync_status += f"\n   └ {errs[-1][:50]}"
     else:
         sync_time, sync_status = "未知", "未知"
 
-    # 3. 拼装日报
+    # 3. 真实额度获取
+    gh_usage = get_github_actions_usage()
+    cf_pages = get_cf_pages_usage()
+    cf_r2 = get_cf_r2_usage()
+
+    # 4. 拼装
     msg = f"📊 *播客站运行日报* ({date_str})\n\n"
     msg += f"🚀 *网站部署*: {build_status}\n   └ 时间: {build_time}\n"
     msg += f"📡 *RSS抓取*: {sync_status}\n   └ 时间: {sync_time}\n\n"
-
+    
+    msg += f"📁 *Pages 文件数*:\n"
     if file_count is not None:
         percent = (file_count / PAGES_FILE_LIMIT) * 100
-        msg += f"📁 *Pages 文件数*: `{file_count} / {PAGES_FILE_LIMIT}` ({percent:.1f}%)\n"
-        if file_count >= CRITICAL_THRESHOLD:
-            msg += "\n🚨 *【紧急通知】文件数已超 80%！*\n请立即按以下步骤迁移 R2：\n"
-            msg += "1. GitHub Variables 改 `DEPLOY_TARGET` 为 `r2`\n2. CF 解除正式域名绑定\n3. 把域名绑到 R2 桶\n4. 三条规则改正式域名\n5. 清除CF域名 配置 缓存"
-        elif file_count >= WARN_THRESHOLD:
-            msg += "\n⚠️ *【预警】文件数已超 70%，请准备迁移 R2。*"
-        else:
-            msg += "\n✅ *状态良好，安心创作即可。*"
+        msg += f"   └ `{file_count} / {PAGES_FILE_LIMIT}` ({percent:.1f}%)\n"
     else:
-        msg += "📁 *Pages 文件数*: 解析失败，请查看 Actions 日志。\n"
-    
-    msg += "\n\n☁️ *Workers & R2 额度*：如需显示，请配置 CF API 权限（当前未配置）。"
+        msg += f"   └ 解析失败，[查日志]({build_url})\n\n"
+
+    msg += f"📈 *额度实时监控*:\n"
+    msg += f"   ├ 🔨 *Pages 构建*: {cf_pages}\n"
+    msg += f"   ├ 💾 *R2 存储*: {cf_r2}\n"
+    msg += f"   ├ ⏱️ *Actions(私有仓)*: {gh_usage}\n"
+    msg += f"   └ ♾️ *Actions(公开仓)*: 免费无限量\n\n"
+
+    if file_count is not None:
+        if file_count >= CRITICAL_THRESHOLD:
+            msg += "🚨 *【紧急】文件数超 80%！请立即迁移 R2。*"
+        elif file_count >= WARN_THRESHOLD:
+            msg += "⚠️ *【预警】文件数超 70%，准备迁移。*"
+        else:
+            msg += "✅ *系统运行良好，安心创作！*"
 
     send_message(msg)
 
