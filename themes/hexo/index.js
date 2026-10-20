@@ -1,6 +1,7 @@
 import Comment from '@/components/Comment'
 import replaceSearchResult from '@/components/Mark'
 import NotionPage from '@/components/NotionPage'
+import MarkdownArticle from './components/MarkdownArticle' // 修改 C
 import ShareBar from '@/components/ShareBar'
 import { siteConfig } from '@/lib/config'
 import { useGlobal } from '@/lib/global'
@@ -339,7 +340,12 @@ const LayoutSlug = props => {
             <article id='article-wrapper' className='subpixel-antialiased overflow-y-hidden'>
               <section className='px-5 justify-center mx-auto max-w-2xl lg:max-w-full'>
                 {!hasAudioField && <NotionAudioEnhancer post={post} />}
-                {post && <NotionPage post={post} />}
+                {post &&
+                  (post.markdownHtml ? (
+                    <MarkdownArticle html={post.markdownHtml} />
+                  ) : (
+                    <NotionPage post={post} />
+                  ))}
                 {post && <TimestampLinker post={post} />}
               </section>
 
