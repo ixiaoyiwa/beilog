@@ -9,6 +9,10 @@ export default function MarkdownArticle({ html }) {
       <div id='markdown-article' className='md-article' dangerouslySetInnerHTML={{ __html: html }} />
       <style jsx global>{`
         .md-article {
+          /* ⭐ 新增：Markdown 顶部间距控制 */
+          --md-top-gap: 1.25rem;
+          padding-top: var(--md-top-gap);
+          
           font-size: 1rem;
           line-height: 1.85;
           color: #292524;
