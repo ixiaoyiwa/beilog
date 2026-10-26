@@ -358,11 +358,6 @@ export default function AlgoliaSearchPage() {
               </div>
             </div>
           )}
-          <div
-            className='border-t px-3 py-1.5 text-right text-[11px]'
-            style={{ borderColor: 'var(--hexo-color-border)', color: 'var(--hexo-color-text-secondary)' }}>
-            <i className='fa-brands fa-algolia mr-1' />Algolia 提供搜索服务 · ↑↓ 选择 · Enter 跳转 · Esc 清空
-          </div>
         </div>
       )}
     </div>
