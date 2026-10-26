@@ -516,7 +516,20 @@ const Style = () => {
       #theme-hexo #home-nav-button a:hover {
         color: #000 !important;
       }
-  `}</style>
+
+      #theme-hexo #comment,
+      #theme-hexo #comment .card,
+      #theme-hexo #comment .tabs,
+      #theme-hexo #comment .tab-content,
+      #theme-hexo #comment > div,
+      #theme-hexo #comment > div > div,
+      #theme-hexo #comment .bg-white,
+      #theme-hexo #comment .bg-hexo-black-gray {
+        border: none !important;
+        box-shadow: none !important;
+        outline: none !important;
+      }
+    `}</style>
   )
 }
 
