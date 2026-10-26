@@ -7,7 +7,6 @@ import { useGlobal } from '@/lib/global'
 import { isBrowser } from '@/lib/utils'
 import { getCategoryUrl } from '@/lib/utils/category'
 import { Transition } from '@headlessui/react'
-import dynamic from 'next/dynamic'
 import SmartLink from '@/components/SmartLink'
 import { useRouter } from 'next/router'
 import { createContext, useContext, useEffect, useRef } from 'react'
@@ -42,11 +41,6 @@ import TimestampLinker from './components/TimestampLinker'
 import MarkdownArticle from './components/MarkdownArticle'
 import CONFIG from './config'
 import { Style } from './style'
-
-const AlgoliaSearchModal = dynamic(
-  () => import('@/components/AlgoliaSearchModal'),
-  { ssr: false }
-)
 
 const ThemeGlobalHexo = createContext()
 
@@ -177,7 +171,6 @@ const LayoutBase = props => {
           <TocDrawer post={post} cRef={drawerRight} targetRef={tocRef} />
         </div>
         <RightFloatArea floatSlot={floatSlot} />
-        <AlgoliaSearchModal cRef={searchModal} {...props} />
         <GlobalAudioPlayer />
         <Footer title={siteConfig('TITLE')} />
       </div>
@@ -302,7 +295,6 @@ const LayoutSlug = props => {
   const router = useRouter()
 
   const waiting404 = siteConfig('POST_WAITING_TIME_FOR_404') * 1000
-
   useEffect(() => {
     if (!post) {
       setTimeout(
@@ -329,17 +321,25 @@ const LayoutSlug = props => {
     }
   }
 
-  // 普通 Page 页面保留顶部和左右边框，但不绘制底边。
-  // Post 文章维持官方/现有的完整边框，不影响文章卡片样式。
-  const articleBorderClass = post?.type === 'Page'
+  const isRegularPage = post?.type === 'Page'
+  const articleBorderClass = isRegularPage
     ? 'lg:border-x lg:border-t'
     : 'lg:border'
 
   return (
     <>
-      <div className={`w-full lg:hover:shadow ${articleBorderClass} rounded-t-xl lg:rounded-xl lg:px-2 lg:py-4 bg-white dark:bg-hexo-black-gray dark:border-black article`}>
+      <div
+        style={
+          isRegularPage
+            ? {
+                borderBottom: 'none',
+                borderBottomWidth: 0,
+                boxShadow: 'none'
+              }
+            : undefined
+        }
+        className={`w-full ${isRegularPage ? '' : 'lg:hover:shadow'} ${articleBorderClass} rounded-t-xl lg:rounded-xl lg:px-2 lg:py-4 bg-white dark:bg-hexo-black-gray dark:border-black article`}>
         {lock && <ArticleLock validPassword={validPassword} />}
-
         {!lock && post && (
           <div className='overflow-x-auto flex-grow mx-auto md:w-full md:px-5 '>
             <article id='article-wrapper' className='subpixel-antialiased overflow-y-hidden'>
@@ -354,7 +354,6 @@ const LayoutSlug = props => {
                 {post && <TimestampLinker post={post} />}
               </section>
 
-              {/* 只有 Post 类型才应用 mt-8 的间距，Pages 不应用 */}
               <div className={post?.type === 'Post' ? 'mt-8' : ''}>
                 <ShareBar post={post} />
               </div>
@@ -368,11 +367,15 @@ const LayoutSlug = props => {
               )}
             </article>
 
-            <div className='pt-4 border-dashed'></div>
-
-            <div className='duration-200 overflow-x-auto bg-white dark:bg-hexo-black-gray px-3'>
-              <Comment frontMatter={post} />
-            </div>
+            {/* 文章才保留文章底部间隔和评论容器；普通 Page 不渲染这些空白区域。 */}
+            {post?.type === 'Post' && (
+              <>
+                <div className='pt-4 border-dashed' />
+                <div className='duration-200 overflow-x-auto bg-white dark:bg-hexo-black-gray px-3'>
+                  <Comment frontMatter={post} />
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
