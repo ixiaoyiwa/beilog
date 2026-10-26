@@ -326,6 +326,187 @@ const Style = () => {
       }
       /* ===== 新增结束 ===== */
 
+      /* ===== Hexo 搜索弹窗：沿用官方 SearchInput.js 的灰底、圆角、轻量风格 ===== */
+      #theme-hexo #search-wrapper {
+        box-sizing: border-box;
+        padding-left: 1rem;
+        padding-right: 1rem;
+      }
+
+      #theme-hexo #search-wrapper > div:first-child {
+        box-sizing: border-box;
+        width: min(100%, 42rem) !important;
+        height: auto !important;
+        min-height: 10rem;
+        max-height: 80vh;
+        overflow: hidden;
+        justify-content: flex-start;
+        gap: 0.75rem;
+        margin-left: auto;
+        margin-right: auto;
+        padding: 1.25rem;
+        border: 1px solid var(--hexo-color-border) !important;
+        border-radius: 0.75rem;
+        background-color: var(--hexo-color-card) !important;
+        color: var(--hexo-color-text);
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.16);
+      }
+
+      /* 搜索标题使用 Hexo 当前主题色，不再固定蓝色/黄色 */
+      #theme-hexo #search-wrapper > div:first-child > div:first-child > div:first-child {
+        color: var(--theme-color) !important;
+        font-size: 1.25rem !important;
+        line-height: 1.5;
+        font-weight: 600;
+      }
+
+      #theme-hexo #search-wrapper button[aria-label='关闭搜索'] {
+        color: var(--hexo-color-text-secondary) !important;
+        background: transparent;
+        border: 0;
+        border-radius: 0.4rem;
+      }
+
+      #theme-hexo #search-wrapper button[aria-label='关闭搜索']:hover {
+        color: var(--theme-color) !important;
+        background-color: var(--hexo-color-bg);
+      }
+
+      /* 输入框外观对齐官方 themes/hexo/components/SearchInput.js */
+      #theme-hexo #search-wrapper input[type='text'] {
+        box-sizing: border-box;
+        width: 100%;
+        min-height: 2.75rem;
+        margin: 0.1rem 0 0.25rem;
+        padding: 0.65rem 1.1rem 0.65rem 1.25rem;
+        border: 1px solid transparent !important;
+        border-radius: 0.6rem !important;
+        outline: none !important;
+        background-color: var(--hexo-color-bg) !important;
+        color: var(--hexo-color-text) !important;
+        font-size: 0.875rem;
+        font-weight: 300;
+        line-height: 1.5;
+        box-shadow: none;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      #theme-hexo #search-wrapper input[type='text']::placeholder {
+        color: var(--hexo-color-text-secondary);
+        opacity: 0.9;
+      }
+
+      #theme-hexo #search-wrapper input[type='text']:focus {
+        border-color: var(--theme-color) !important;
+        box-shadow: 0 0 0 3px rgba(146, 140, 238, 0.16) !important;
+      }
+
+      /* 搜索标签变为紧凑的圆角标签，取消原先 hover 放大 */
+      #theme-hexo #search-wrapper #tags-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+      }
+
+      #theme-hexo #search-wrapper #tags-group > a {
+        display: inline-flex;
+        margin: 0 !important;
+        max-width: 100%;
+      }
+
+      #theme-hexo #search-wrapper #tags-group > a > div {
+        box-sizing: border-box;
+        display: inline-flex;
+        align-items: center;
+        max-width: 100%;
+        padding: 0.3rem 0.7rem !important;
+        border: 1px solid var(--hexo-color-border);
+        border-radius: 9999px !important;
+        background-color: var(--hexo-color-bg) !important;
+        color: var(--hexo-color-text) !important;
+        font-size: 0.875rem !important;
+        line-height: 1.5;
+        transform: none !important;
+        transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+      }
+
+      #theme-hexo #search-wrapper #tags-group > a > div:hover {
+        border-color: var(--theme-color) !important;
+        background-color: var(--hexo-color-card) !important;
+        color: var(--theme-color) !important;
+        transform: none !important;
+      }
+
+      /* 结果列表简洁化；键盘选中态、鼠标悬停态统一使用主题色 */
+      #theme-hexo #search-wrapper ul {
+        min-height: 0;
+        max-height: 48vh;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+      }
+
+      #theme-hexo #search-wrapper ul > li {
+        margin: 0.2rem 0 !important;
+        padding: 0.65rem 0.75rem !important;
+        border: 1px solid transparent;
+        border-radius: 0.55rem !important;
+        color: var(--hexo-color-text);
+        transition: background-color 0.16s ease, border-color 0.16s ease;
+      }
+
+      #theme-hexo #search-wrapper ul > li:hover {
+        border-color: var(--hexo-color-border);
+        background-color: var(--hexo-color-bg) !important;
+      }
+
+      #theme-hexo #search-wrapper ul > li[class*='bg-blue-600'],
+      #theme-hexo #search-wrapper ul > li[class*='bg-yellow-600'] {
+        border-color: var(--theme-color) !important;
+        background-color: var(--theme-color) !important;
+      }
+
+      #theme-hexo #search-wrapper ul > li[class*='bg-blue-600'] a,
+      #theme-hexo #search-wrapper ul > li[class*='bg-yellow-600'] a {
+        color: #fff !important;
+      }
+
+      /* 分页选中状态也使用主题色 */
+      #theme-hexo #search-wrapper div[class*='bg-blue-600'],
+      #theme-hexo #search-wrapper div[class*='bg-yellow-600'] {
+        background-color: var(--theme-color) !important;
+      }
+
+      #theme-hexo #search-wrapper div[class*='bg-blue-600'] {
+        color: #fff !important;
+      }
+
+      #theme-hexo #search-wrapper .glassmorphism {
+        background-color: rgba(15, 23, 42, 0.24) !important;
+        -webkit-backdrop-filter: blur(3px);
+        backdrop-filter: blur(3px);
+      }
+
+      @media (max-width: 640px) {
+        #theme-hexo #search-wrapper {
+          padding: 0.75rem;
+        }
+
+        #theme-hexo #search-wrapper > div:first-child {
+          width: 100% !important;
+          max-height: calc(100vh - 1.5rem);
+          max-height: calc(100dvh - 1.5rem);
+          margin-top: 0.75rem;
+          padding: 1rem;
+          border-radius: 0.7rem;
+        }
+
+        #theme-hexo #search-wrapper ul {
+          max-height: 40vh;
+          max-height: 40dvh;
+        }
+      }
+      /* ===== Hexo 搜索弹窗样式结束；不修改 Algolia 搜索逻辑 ===== */
+
       ${themeConsoleStyle('hexo', CONFIG)}
 
       #theme-hexo #home-nav-button a {
