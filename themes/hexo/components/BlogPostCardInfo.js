@@ -7,7 +7,6 @@ import { getCategoryUrl } from '@/lib/utils/category'
 import SmartLink from '@/components/SmartLink'
 
 const SUMMARY_MAX = 68
-
 const truncateSummary = text => {
   if (!text) return ''
   const clean = text.replace(/\s+/g, ' ').trim()
@@ -26,7 +25,7 @@ export const BlogPostCardInfo = ({
   showPreview,
   showPageCover,
   showSummary,
-  featuredType = null // 接收注入的标识：'pinned' | 'featured' | 'latest' | null
+  featuredType = null 
 }) => {
   const { NOTION_CONFIG } = useGlobal()
 
@@ -48,33 +47,27 @@ export const BlogPostCardInfo = ({
               className={`line-clamp-2 replace cursor-pointer text-2xl ${
                 showPreview ? 'text-center' : ''
               } leading-tight font-bold text-gray-600 dark:text-gray-100 hover:text-indigo-700 dark:hover:text-indigo-400`}>
-              
-              {/* 首页专属标识渲染：置顶（灰色） */}
               {featuredType === 'pinned' && (
                 <span className='inline-block px-1.5 py-0.5 text-[10px] font-medium rounded mr-1.5 align-middle bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200'>
                   置顶
                 </span>
               )}
-              {/* 首页专属标识渲染：精选（浅紫色） */}
               {featuredType === 'featured' && (
                 <span className='inline-block px-1.5 py-0.5 text-[10px] font-medium rounded mr-1.5 align-middle bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300'>
                   精选
                 </span>
               )}
-              {/* 首页专属标识渲染：最新（绿色） */}
               {featuredType === 'latest' && (
                 <span className='inline-block px-1.5 py-0.5 text-[10px] font-medium rounded mr-1.5 align-middle bg-green-100 text-green-700 dark:bg-green-900/60 dark:text-green-300'>
                   最新
                 </span>
               )}
-
               {siteConfig('POST_TITLE_ICON') && (
                 <NotionIcon icon={post.pageIcon} />
               )}
               <span className='menu-link '>{post.title}</span>
             </SmartLink>
           </h2>
-
           <div
             className={`flex mt-2 mb-1 items-center ${
               showPreview ? 'justify-center' : 'justify-start'
@@ -90,7 +83,6 @@ export const BlogPostCardInfo = ({
                 <span className='mr-1.5'></span>
               </>
             )}
-
             {post?.category && (
               <>
                 <SmartLink
@@ -99,21 +91,15 @@ export const BlogPostCardInfo = ({
                   className='font-normal cursor-pointer menu-link hover:text-indigo-700 dark:hover:text-indigo-400 transform'>
                   {post.category}
                 </SmartLink>
-                <span className='mx-1.5 text-gray-300 dark:text-gray-700'>
-                  /
-                </span>
+                <span className='mx-1.5 text-gray-300 dark:text-gray-700'>/</span>
               </>
             )}
-
             <span className='font-light'>
               {post?.publishDay || post.date}
             </span>
-
             {visibleGuests.length > 0 && (
               <>
-                <span className='mx-1.5 text-gray-300 dark:text-gray-700'>
-                  /
-                </span>
+                <span className='mx-1.5 text-gray-300 dark:text-gray-700'>/</span>
                 <div className='flex flex-wrap items-center gap-x-2'>
                   {visibleGuests.map(tag => (
                     <SmartLink
@@ -134,7 +120,6 @@ export const BlogPostCardInfo = ({
                 </div>
               </>
             )}
-
             <TwikooCommentCount
               className='ml-2 hover:text-indigo-700 dark:hover:text-indigo-400'
               post={post}
@@ -142,14 +127,14 @@ export const BlogPostCardInfo = ({
           </div>
         </header>
 
+        {/* 恢复官方 Hexo 卡片摘要：最多两行、my-3 间距。保留本站既有的 68 字截断。 */}
         {(!showPreview || showSummary) && !post.results && (
-          <main className='line-clamp-3 replace my-4 text-gray-700 dark:text-gray-300 text-md font-normal leading-relaxed'>
+          <main className='line-clamp-2 replace my-3 text-gray-700 dark:text-gray-300 text-md font-normal'>
             {truncateSummary(post.summary)}
           </main>
         )}
-
         {post.results && (
-          <p className='line-clamp-3 mt-4 text-gray-700 dark:text-gray-300 text-sm font-light leading-relaxed'>
+          <p className='line-clamp-2 mt-4 text-gray-700 dark:text-gray-300 text-sm font-light'>
             {post.results.map((r, index) => (
               <span key={index}>{r}</span>
             ))}
