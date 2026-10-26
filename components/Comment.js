@@ -98,7 +98,7 @@ const Comment = ({ frontMatter, className }) => {
       key={frontMatter?.id}
       id='comment'
       ref={commentRef}
-      className={`comment mt-5 text-gray-800 dark:text-gray-300 !border-none !shadow-none ${className || ''}`}
+      className={`comment mt-5 text-gray-800 dark:text-gray-300 ${className || ''}`}
     >
       {/* 延迟加载评论区 */}
       {!shouldLoad && (
@@ -109,7 +109,7 @@ const Comment = ({ frontMatter, className }) => {
       )}
 
       {shouldLoad && (
-        <Tabs className='!border-none !shadow-none'>
+        <Tabs>
           {isCommentProviderEnabled(COMMENT_ARTALK_SERVER) && (
             <div key='Artalk'>
               <Artalk />
