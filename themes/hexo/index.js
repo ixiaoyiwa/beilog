@@ -371,7 +371,7 @@ const LayoutSlug = props => {
             {post?.type === 'Post' && (
               <>
                 <div className='pt-4 border-dashed' />
-                <div className='duration-200 overflow-x-auto bg-white dark:bg-hexo-black-gray px-3'>
+                <div id='post-comment-wrapper' className='duration-200 overflow-x-auto bg-white dark:bg-hexo-black-gray px-3'>
                   <Comment frontMatter={post} />
                 </div>
               </>
