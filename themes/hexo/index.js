@@ -1,7 +1,6 @@
 import Comment from '@/components/Comment'
 import replaceSearchResult from '@/components/Mark'
 import NotionPage from '@/components/NotionPage'
-import MarkdownArticle from './components/MarkdownArticle' // 修改 C
 import ShareBar from '@/components/ShareBar'
 import { siteConfig } from '@/lib/config'
 import { useGlobal } from '@/lib/global'
@@ -40,6 +39,7 @@ import GlobalAudioPlayer from './components/GlobalAudioPlayer'
 import EpisodesPage from './components/EpisodesPage'
 import FriendsPage from './components/FriendsPage'
 import TimestampLinker from './components/TimestampLinker'
+import MarkdownArticle from './components/MarkdownArticle'
 import CONFIG from './config'
 import { Style } from './style'
 
@@ -322,7 +322,6 @@ const LayoutSlug = props => {
   }, [post])
 
   let hasAudioField = !!post?.audio
-
   if (!hasAudioField && post?.ext) {
     const raw = typeof post.ext === 'string' ? post.ext.trim() : ''
     if (raw && raw.startsWith('http')) {
@@ -330,9 +329,15 @@ const LayoutSlug = props => {
     }
   }
 
+  // 普通 Page 页面保留顶部和左右边框，但不绘制底边。
+  // Post 文章维持官方/现有的完整边框，不影响文章卡片样式。
+  const articleBorderClass = post?.type === 'Page'
+    ? 'lg:border-x lg:border-t'
+    : 'lg:border'
+
   return (
     <>
-      <div className='w-full lg:hover:shadow lg:border rounded-t-xl lg:rounded-xl lg:px-2 lg:py-4 bg-white dark:bg-hexo-black-gray dark:border-black article'>
+      <div className={`w-full lg:hover:shadow ${articleBorderClass} rounded-t-xl lg:rounded-xl lg:px-2 lg:py-4 bg-white dark:bg-hexo-black-gray dark:border-black article`}>
         {lock && <ArticleLock validPassword={validPassword} />}
 
         {!lock && post && (
@@ -349,7 +354,7 @@ const LayoutSlug = props => {
                 {post && <TimestampLinker post={post} />}
               </section>
 
-              {/* ⭐ 修改点：只有 Post 类型才应用 mt-8 的间距，Pages 不应用 */}
+              {/* 只有 Post 类型才应用 mt-8 的间距，Pages 不应用 */}
               <div className={post?.type === 'Post' ? 'mt-8' : ''}>
                 <ShareBar post={post} />
               </div>
