@@ -1,28 +1,33 @@
-import { siteConfig } from '@/lib/config'
 import { useGlobal } from '@/lib/global'
 import { useRouter } from 'next/router'
-import { useHexoGlobal } from '..'
 
 /**
- * 搜索按钮
- * @returns
+ * 搜索入口：统一跳转到 /search 页面，不再打开 Algolia 弹窗。
  */
-export default function SearchButton(props) {
+export default function SearchButton() {
   const { locale } = useGlobal()
   const router = useRouter()
-  const { searchModal } = useHexoGlobal()
 
   function handleSearch() {
-    if (siteConfig('ALGOLIA_APP_ID')) {
-      searchModal.current.openSearch()
-    } else {
-      router.push('/search')
+    if (router.pathname === '/search' || router.asPath.split('?')[0].replace(/\/$/, '') === '/search') {
+      const input = document.getElementById('algolia-search-page-input')
+      if (input) {
+        input.focus()
+        input.scrollIntoView({ block: 'center', behavior: 'smooth' })
+        return
+      }
     }
+    router.push('/search')
   }
 
-  return <>
-        <div onClick={handleSearch} title={locale.NAV.SEARCH} alt={locale.NAV.SEARCH} className='cursor-pointer dark:text-white hover:bg-black hover:bg-opacity-10 rounded-full w-10 h-10 flex justify-center items-center duration-200 transition-all'>
-            <i title={locale.NAV.SEARCH} className="fa-solid fa-magnifying-glass" />
-        </div>
-    </>
+  return (
+    <button
+      type='button'
+      onClick={handleSearch}
+      title={locale.NAV.SEARCH}
+      aria-label={locale.NAV.SEARCH}
+      className='flex h-10 w-10 cursor-pointer items-center justify-center rounded-full transition-all duration-200 hover:bg-black hover:bg-opacity-10 dark:text-white'>
+      <i className='fa-solid fa-magnifying-glass' aria-hidden='true' />
+    </button>
+  )
 }
