@@ -6,7 +6,13 @@ import SmartLink from '@/components/SmartLink'
  * @returns
  */
 export default function SlotBar(props) {
-  const { tag, category, friends = [] } = props
+  const {
+    tag,
+    category,
+    friends = [],
+    categories = [],
+    categoryOptions = []
+  } = props
 
   // 分类简介映射表
   const introMap = {
@@ -18,12 +24,36 @@ export default function SlotBar(props) {
     'Talks': '我们聊的，可能是正上头的新鲜事，也可能是绕不开的困惑和迷茫。不急着下结论，也不用非得有意义。要是刚好有一句触动到你，就够了。'
   }
 
-  // 分类 Tab 列表（带图标和数量）
-  const categoryTabs = [
-    { id: 'Letters', name: '展信安', icon: 'far fa-folder-open', count: 23 },
-    { id: 'Musings', name: '碎碎念', icon: 'far fa-folder-open', count: 328 },
-    { id: 'Talks', name: '慢漫聊', icon: 'far fa-folder-open', count: 6 }
+  // 右侧栏使用的 categories[].count 是真实栏目数量。
+  // 优先复用同一份数据；categoryOptions 仅作为页面提供该字段时的备用来源。
+  const categoryCountSource = Array.isArray(categories) && categories.length > 0
+    ? categories
+    : Array.isArray(categoryOptions)
+      ? categoryOptions
+      : []
+
+  const normalizeCategoryName = value => String(value ?? '').trim().toLowerCase()
+
+  const categoryDefinitions = [
+    { id: 'Letters', name: '展信安', icon: 'far fa-folder-open', aliases: ['Letters', '展信安'] },
+    { id: 'Musings', name: '碎碎念', icon: 'far fa-folder-open', aliases: ['Musings', '碎碎念'] },
+    { id: 'Talks', name: '慢漫聊', icon: 'far fa-folder-open', aliases: ['Talks', '慢漫聊'] }
   ]
+
+  const categoryTabs = categoryDefinitions.map(tab => {
+    const aliases = tab.aliases.map(normalizeCategoryName)
+    const matchedCategory = categoryCountSource.find(item =>
+      aliases.includes(normalizeCategoryName(item?.name))
+    )
+    const parsedCount = Number(matchedCategory?.count)
+
+    return {
+      id: tab.id,
+      name: tab.name,
+      icon: tab.icon,
+      count: Number.isFinite(parsedCount) && parsedCount >= 0 ? parsedCount : 0
+    }
+  })
 
   // Notion 颜色映射
   const colorMap = {
@@ -43,7 +73,6 @@ export default function SlotBar(props) {
     const friendData = friends.find(f => f.name === tag)
     const title = friendData?.title
     const titleColor = colorMap[friendData?.color] || colorMap.default
-
     return (
       <div className="cursor-pointer px-3 py-2 mb-2 font-light hover:text-indigo-700 dark:hover:text-indigo-400 transform dark:text-white">
         <SmartLink
@@ -64,9 +93,8 @@ export default function SlotBar(props) {
     )
   } else if (category) {
     const introText = introMap[category]
-
     return (
-      // 修复：将 pl-0 改回 px-4，让左侧与红线及下方卡片对齐，避免超出
+      // 保留现有的左右对齐和栏目简介布局
       <div className={`px-4 py-1 ${introText ? 'mb-6' : 'mb-2'}`}>
         {/* 分类切换 Tab 栏 */}
         <div className="flex flex-wrap gap-3 mb-5">
@@ -76,22 +104,21 @@ export default function SlotBar(props) {
               <SmartLink
                 key={tab.id}
                 href={`/category/${tab.id}`}
-                // 修复：字号回到上一版的 text-sm (14px)，保证协调
                 className={`flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg transition-all duration-300 cursor-pointer whitespace-nowrap shadow-sm
                   ${isActive
                     ? 'bg-[#3A4A7A] text-white shadow-md font-medium'
                     : 'bg-white text-gray-600 dark:bg-gray-800 dark:text-gray-300 hover:bg-[#3A4A7A] hover:text-white hover:shadow-md'
                   }`}
               >
-                {/* 修复：补全 FontAwesome 前缀 'far'，解决图标不显示的问题 */}
                 <i className={`${isActive ? 'far fa-folder-open' : 'far fa-folder'} text-xs`} />
                 <span>{tab.name}</span>
-                <span className={`text-[10px] ${isActive ? 'opacity-80' : 'opacity-60'}`}>({tab.count})</span>
+                <span className={`text-[10px] ${isActive ? 'opacity-80' : 'opacity-60'}`}>
+                  ({tab.count})
+                </span>
               </SmartLink>
             )
           })}
         </div>
-
         {/* 简介文字 */}
         {introText && (
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 leading-relaxed break-words">
