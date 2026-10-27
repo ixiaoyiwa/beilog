@@ -294,21 +294,18 @@ export default function PostHero({ post, siteInfo }) {
                         backgroundColor: 'rgba(255, 255, 255, 0.15)',
                         backdropFilter: 'blur(12px)',
                         WebkitBackdropFilter: 'blur(12px)',
-                        boxShadow: 'inset 0 0 0 1px rgba(255, 255, 255, 0.1)',
+                        // ✨ 去掉了边框 boxShadow，实现无边框通透感
                         transform: 'translateZ(0)'
                       }}
                       onClick={handlePlayClick}
                     >
-                      {/* 动态渐变填充层：浅色系、高透明度，呈现高级的通透感 */}
                       {progress > 0 && (
                         <div
                           className='absolute inset-0 pointer-events-none'
                           style={{
-                            // 从亮白色微蓝渐入到主题色，自带呼吸感和光泽
                             background: `linear-gradient(90deg, rgba(255, 255, 255, 0.6) 0%, ${primaryColor} 100%)`,
                             WebkitMaskImage: isFilled ? 'none' : `linear-gradient(to right, #000 calc(${progress}% - 24px), transparent ${progress}%)`,
                             maskImage: isFilled ? 'none' : `linear-gradient(to right, #000 calc(${progress}% - 24px), transparent ${progress}%)`,
-                            // 播放时 0.85 透出背景的高级感；暂停时 0.45 变得非常微弱；满格时 0.95 给足分量
                             opacity: isFilled ? 0.95 : (isPlaying ? 0.85 : 0.45),
                             transition: 'opacity 0.3s ease'
                           }}
