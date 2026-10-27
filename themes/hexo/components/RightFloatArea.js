@@ -3,7 +3,7 @@ import ButtonDarkModeFloat from './ButtonFloatDarkMode'
 import ButtonJumpToTop from './ButtonJumpToTop'
 
 const PlayIcon = ({ size = 14 }) => (
-  <svg viewBox='0 0 24 24' width={size} height={size} fill='currentColor' style={{ marginLeft: '1px' }}>
+  <svg viewBox='0 0 24 24' width={size} height={size} fill='currentColor' style={{ marginLeft: '2px' }}>
     <path d='M8 5v14l11-7z' />
   </svg>
 )
@@ -105,14 +105,16 @@ export default function RightFloatArea({ floatSlot }) {
         {hasAudio && !locked && (
           <div
             onClick={handleClick}
-            className='flex justify-center items-center w-7 h-7 hover:bg-black/20 transition-colors'
+            // ✨ 动效升级：transition-all + hover:scale-110
+            className='flex justify-center items-center w-7 h-7 hover:bg-black/20 transition-all duration-200 hover:scale-110'
             title='展开/收起播放器'>
+            {/* ✨ 尺寸放大：从 14 调整为 16 */}
             {loading ? (
-              <LoadingIcon size={14} />
+              <LoadingIcon size={16} />
             ) : isPlaying ? (
-              <PauseIcon size={14} />
+              <PauseIcon size={16} />
             ) : (
-              <PlayIcon size={14} />
+              <PlayIcon size={16} />
             )}
           </div>
         )}
