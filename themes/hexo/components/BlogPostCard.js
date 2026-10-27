@@ -17,20 +17,20 @@ const parseExt = (ext) => {
   return null
 }
 
-const PlayIcon = ({ size = 10 }) => (
+const PlayIcon = ({ size = 14 }) => (
   <svg viewBox='0 0 24 24' width={size} height={size} fill='currentColor' style={{ marginLeft: '1px' }}>
     <path d='M8 5v14l11-7z' />
   </svg>
 )
 
-const PauseIcon = ({ size = 10 }) => (
+const PauseIcon = ({ size = 14 }) => (
   <svg viewBox='0 0 24 24' width={size} height={size} fill='currentColor'>
     <rect x='6' y='5' width='4' height='14' rx='1' />
     <rect x='14' y='5' width='4' height='14' rx='1' />
   </svg>
 )
 
-const LoadingIcon = ({ size = 10 }) => {
+const LoadingIcon = ({ size = 14 }) => {
   const dots = 8
   const radius = 9
   const dotR = 1.6
@@ -77,28 +77,48 @@ const formatDuration = (seconds) => {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-const MiniAudioCapsule = ({ isPlaying, isLoading, remaining }) => {
+// ✨ 升级版微型胶囊
+const MiniAudioCapsule = ({ isPlaying, isLoading, remaining, progress, primaryColor }) => {
+  const isFilled = progress >= 100
+
   return (
     <div
-      className='inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-white drop-shadow-md'
+      className='relative inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-white overflow-hidden'
       style={{
-        // ✨ 改成了极淡的白色半透明，跟头图完全一样，去掉黑黑的感觉
         backgroundColor: 'rgba(255, 255, 255, 0.15)', 
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
         transform: 'translateZ(0)'
       }}
     >
-      <div className='flex-shrink-0 flex items-center justify-center w-3 h-3'>
+      {/* 动态渐变填充层：完美复刻头图的遮罩蔓延逻辑 */}
+      {progress > 0 && (
+        <div
+          className='absolute inset-0 pointer-events-none'
+          style={{
+            background: `linear-gradient(90deg, rgba(255, 255, 255, 0.6) 0%, ${primaryColor} 100%)`,
+            // 微缩版的无边界蔓延（缩小到16px的距离）
+            WebkitMaskImage: isFilled ? 'none' : `linear-gradient(to right, #000 calc(${progress}% - 16px), transparent ${progress}%)`,
+            maskImage: isFilled ? 'none' : `linear-gradient(to right, #000 calc(${progress}% - 16px), transparent ${progress}%)`,
+            // 透明度逻辑保持一致
+            opacity: isFilled ? 0.95 : (isPlaying ? 0.85 : 0.45),
+            transition: 'opacity 0.3s ease'
+          }}
+        />
+      )}
+
+      {/* 图标稍微放大到 14，容器放大到 w-4 h-4 */}
+      <div className='relative z-10 flex-shrink-0 flex items-center justify-center w-4 h-4'>
         {isLoading ? (
-          <LoadingIcon size={10} />
+          <LoadingIcon size={14} />
         ) : isPlaying ? (
-          <PauseIcon size={10} />
+          <PauseIcon size={14} />
         ) : (
-          <PlayIcon size={10} />
+          <PlayIcon size={14} />
         )}
       </div>
-      <span className='text-[10px] font-medium tabular-nums leading-none mt-[1px]'>
+      
+      <span className='relative z-10 text-[11px] font-medium tabular-nums leading-none mt-[1px] drop-shadow-md'>
         {formatDuration(remaining)}
       </span>
     </div>
@@ -125,6 +145,9 @@ const BlogPostCard = ({ index, post, showSummary, siteInfo }) => {
   const [isPlaying, setIsPlaying] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [remaining, setRemaining] = useState(0)
+  const [progress, setProgress] = useState(0)
+
+  const primaryColor = siteConfig('HEXO_COLOR_PRIMARY', '#3A4A7A') || '#3A4A7A'
 
   useEffect(() => {
     if (hasAudio) {
@@ -146,6 +169,10 @@ const BlogPostCard = ({ index, post, showSummary, siteInfo }) => {
         setIsLoading(!!loading)
         if (duration > 0) {
           setRemaining(Math.max(0, duration - currentTime))
+          // ✨ 完美计算进度
+          let p = (currentTime / duration) * 100
+          if (duration - currentTime < 0.5) p = 100
+          setProgress(p)
         }
       } else {
         setIsPlaying(false)
@@ -206,6 +233,8 @@ const BlogPostCard = ({ index, post, showSummary, siteInfo }) => {
                   isPlaying={isPlaying} 
                   isLoading={isLoading} 
                   remaining={remaining} 
+                  progress={progress}
+                  primaryColor={primaryColor}
                 />
               </div>
             )}
