@@ -190,9 +190,6 @@ const LayoutPostList = props => {
   const showSummary = siteConfig('HEXO_POST_LIST_SUMMARY', null, CONFIG)
 
   if (isHomePage) {
-    // ==========================================
-    // 首页限制逻辑：置顶1个，精选2个，会员2个
-    // ==========================================
     let pinnedCount = 0
     let featuredCount = 0
     let memberCount = 0
@@ -204,13 +201,13 @@ const LayoutPostList = props => {
           {posts.map((post, index) => {
             let cardFeaturedType = post.featuredType || null
 
-            if (cardFeaturedType === 'pinned') {
+            if (cardFeaturedType === '置顶' || cardFeaturedType === 'pinned') {
               pinnedCount++
               if (pinnedCount > 1) cardFeaturedType = null
-            } else if (cardFeaturedType === 'featured') {
+            } else if (cardFeaturedType === '精选' || cardFeaturedType === 'featured') {
               featuredCount++
               if (featuredCount > 2) cardFeaturedType = null
-            } else if (cardFeaturedType === '会员') {
+            } else if (cardFeaturedType === '会员' || cardFeaturedType === 'Member') {
               memberCount++
               if (memberCount > 2) cardFeaturedType = null
             }
@@ -222,7 +219,7 @@ const LayoutPostList = props => {
                 index={index}
                 showSummary={showSummary}
                 siteInfo={siteInfo}
-                featuredType={cardFeaturedType} // 将截断后的结果传给卡片
+                featuredType={cardFeaturedType}
               />
             )
           })}
