@@ -80,12 +80,12 @@ const formatDuration = (seconds) => {
 const MiniAudioCapsule = ({ isPlaying, isLoading, remaining }) => {
   return (
     <div
-      className='inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-white'
+      className='inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-white drop-shadow-md'
       style={{
-        backgroundColor: 'rgba(0, 0, 0, 0.55)', // 加深了一点点底色，代替边框，更清晰
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-        // ✨ 彻底去掉了边框 boxShadow
+        // ✨ 改成了极淡的白色半透明，跟头图完全一样，去掉黑黑的感觉
+        backgroundColor: 'rgba(255, 255, 255, 0.15)', 
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
         transform: 'translateZ(0)'
       }}
     >
