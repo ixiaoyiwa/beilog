@@ -14,8 +14,8 @@ const POSTER_FONT =
   '-apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif'
 
 const POSTER_SIZE = {
-  portrait: { width: 900, height: 1350 },
-  landscape: { width: 1200, height: 800 }
+  portrait: { width: 900, height: 1230 },
+  landscape: { width: 1200, height: 720 }
 }
 
 const QR_CDN_CANDIDATES = [
@@ -83,17 +83,9 @@ function getTagNames(post) {
     : Array.isArray(post?.tags)
       ? post.tags
       : []
-
   const names = raw
-    .map(item =>
-      cleanText(
-        typeof item === 'string'
-          ? item
-          : item?.name || item?.value || item?.title || ''
-      )
-    )
+    .map(item => cleanText(typeof item === 'string' ? item : item?.name || item?.value || item?.title || ''))
     .filter(Boolean)
-
   return [...new Set(names)]
 }
 
@@ -105,39 +97,34 @@ function getMetaText(post) {
   const date = cleanText(post?.publishDay || post?.date)
   const names = getTagNames(post)
   const visibleNames = names.slice(0, 3)
-
   if (names.length > 3) visibleNames.push(`+${names.length - 3}`)
+
   if (episode) segments.push(episode)
   if (category) segments.push(category)
   if (date) segments.push(date)
   if (visibleNames.length) segments.push(visibleNames.join(' '))
-
   return segments.join(' / ')
 }
 
 function decodeRepeated(value) {
   let current = String(value || '').trim()
   const results = []
-
   for (let i = 0; i < 4 && current; i += 1) {
     if (/^https?:\/\//i.test(current)) results.push(current)
-
     let decoded = current
     try {
       decoded = decodeURIComponent(current)
     } catch {}
-
     if (decoded === current) break
     current = decoded
   }
-
   return results
 }
 
 /**
  * NotionNext 会把 Notion 页面封面转换成可展示的图片 URL。
- * 如果 URL 形如 /image/<编码后的原始 URL>，优先尝试还原原始 URL，
- * 避免把 Notion 图片代理地址再次交给另一个图片代理。
+ * 如果 URL 形如 /image/<编码后的原始 URL>，这里优先还原 RSS 写入的 external URL，
+ * 避免把 Notion 图片代理地址再交给另一个图片代理。
  */
 function expandImageUrl(rawValue) {
   if (!rawValue) return []
@@ -145,122 +132,126 @@ function expandImageUrl(rawValue) {
 
   const raw = rawValue.trim()
   if (!raw) return []
-
   const values = []
 
   try {
-    const parsed = new URL(
-      raw,
-      typeof window !== 'undefined'
-        ? window.location.href
-        : 'https://na.885111.xyz/'
-    )
-
+    const parsed = new URL(raw, typeof window !== 'undefined' ? window.location.href : 'https://na.885111.xyz/')
     const imageIndex = parsed.pathname.indexOf('/image/')
-
     if (imageIndex >= 0) {
-      const encodedSource = parsed.pathname.slice(
-        imageIndex + '/image/'.length
-      )
+      // 默认是 notion.so/image/<encoded-original-url>；也兼容项目覆盖 NOTION_HOST 后的同类路径。
+      const encodedSource = parsed.pathname.slice(imageIndex + '/image/'.length)
       values.push(...decodeRepeated(encodedSource))
     }
-
     for (const key of ['url', 'src', 'image']) {
       const queryValue = parsed.searchParams.get(key)
       if (queryValue) values.push(...decodeRepeated(queryValue))
     }
-
-    if (
-      imageIndex < 0 &&
-      /(^|\.)notion\.so$/i.test(parsed.hostname)
-    ) {
+    // 少数图片代理会把原地址放进 URL 的最后一个路径段。
+    if (imageIndex < 0 && /(^|\.)notion\.so$/i.test(parsed.hostname)) {
       const lastSegment = parsed.pathname.split('/').pop()
       if (lastSegment) values.push(...decodeRepeated(lastSegment))
     }
-
-    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
-      values.push(parsed.href)
-    }
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') values.push(parsed.href)
   } catch {
     values.push(...decodeRepeated(raw))
   }
 
   const clean = []
-
   for (const value of values) {
     try {
       const parsed = new URL(value)
-
-      if (
-        (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
-        !clean.includes(parsed.href)
-      ) {
+      if ((parsed.protocol === 'http:' || parsed.protocol === 'https:') && !clean.includes(parsed.href)) {
         clean.push(parsed.href)
       }
     } catch {}
   }
-
   return clean
 }
 
 function getUrlsFromValue(value, depth = 0) {
-  if (!value || depth > 5) return []
-
-  if (typeof value === 'string') return expandImageUrl(value)
-
-  if (Array.isArray(value)) {
-    return value.flatMap(item => getUrlsFromValue(item, depth + 1))
+  if (!value || depth > 7) return []
+  if (typeof value === 'string') {
+    // 只收集真正的图片 URL；避免把节目音频地址误当封面。
+    if (!/^https?:\/\//i.test(value.trim()) && !value.trim().startsWith('/')) return []
+    return expandImageUrl(value)
   }
-
+  if (Array.isArray(value)) return value.flatMap(item => getUrlsFromValue(item, depth + 1))
   if (typeof value !== 'object') return []
 
   const urls = []
-
+  // NotionNext / Notion API / RSS 包装结构的封面字段可能不在同一层级。
+  // 对已确认的封面对象递归读取其内部的 url、external、file 等字段。
   for (const key of [
-    'url',
-    'external',
-    'file',
-    'src',
-    'originalUrl',
-    'original_url',
-    'image',
-    'cover',
-    'value'
+    'url', 'external', 'file', 'src', 'originalUrl', 'original_url',
+    'image', 'cover', 'value', 'files', 'thumbnail', 'pageCover',
+    'page_cover', 'coverUrl', 'cover_url', 'imageUrl', 'image_url',
+    'featuredImage', 'featured_image', 'properties'
   ]) {
-    if (value[key]) {
+    if (value[key] !== undefined && value[key] !== null) {
       urls.push(...getUrlsFromValue(value[key], depth + 1))
     }
   }
-
   return [...new Set(urls)]
 }
 
 function getCoverCandidates(post) {
+  if (!post || typeof post !== 'object') return []
   const values = [
-    post?.pageCoverOriginal,
-    post?.originalCoverUrl,
-    post?.coverOriginal,
-    post?.pageCover,
-    post?.pageCoverThumbnail,
-    post?.cover,
-    post?.coverUrl,
-    post?.cover_url,
-    post?.thumbnail,
-    post?.image,
-    post?.page?.cover,
-    post?.cover?.external?.url,
-    post?.cover?.file?.url
+    post.pageCoverOriginal,
+    post.originalCoverUrl,
+    post.coverOriginal,
+    post.pageCover,
+    post.page_cover,
+    post.pageCoverThumbnail,
+    post.cover,
+    post.coverUrl,
+    post.cover_url,
+    post.thumbnail,
+    post.image,
+    post.imageUrl,
+    post.image_url,
+    post.featuredImage,
+    post.featured_image,
+    post.page?.cover,
+    post.properties?.Cover,
+    post.properties?.cover,
+    post.properties?.Image,
+    post.properties?.image,
+    post.properties?.封面,
+    post.properties?.海报,
+    post.properties?.图片
   ]
 
   const candidates = []
-
-  values.forEach(value => {
+  const addValue = value => {
     getUrlsFromValue(value).forEach(url => {
       if (!candidates.includes(url)) candidates.push(url)
     })
-  })
+  }
+  values.forEach(addValue)
 
-  return candidates.slice(0, 10)
+  // 兜底：部分主题传给分享组件的 post 对象不含 pageCover，但节目卡片本身已经显示封面。
+  // 这时按节目标题/slug 在当前页面寻找对应卡片图片，再把图片地址纳入同一套 CORS/代理加载流程。
+  if (typeof document !== 'undefined') {
+    const title = cleanText(post.title).toLocaleLowerCase()
+    const slug = cleanText(post.slug || post.href || post.url).replace(/^\/+|\/+$/g, '').toLocaleLowerCase()
+    const images = Array.from(document.querySelectorAll('img'))
+    for (const image of images) {
+      const alt = cleanText(image.getAttribute('alt')).toLocaleLowerCase()
+      const anchor = image.closest('a[href]')
+      let anchorPath = ''
+      try { anchorPath = new URL(anchor?.href || '', window.location.href).pathname.toLocaleLowerCase() } catch {}
+      const titleMatch = title.length > 3 && alt.includes(title)
+      const slugMatch = slug.length > 2 && anchorPath.includes(slug)
+      if (titleMatch || slugMatch) {
+        addValue(image.currentSrc || image.src || image.getAttribute('data-src'))
+        addValue(image.getAttribute('data-original'))
+      }
+    }
+  }
+
+  // 保留更多候选地址；某些 NotionNext 页面同时提供原图、缩略图和代理图。
+  return candidates.slice(0, 16)
 }
 
 function loadImage(url, timeoutMs) {
@@ -272,58 +263,36 @@ function loadImage(url, timeoutMs) {
 
     const image = new window.Image()
     let settled = false
-
-    const timeout = window.setTimeout(
-      () => finish(new Error('图片请求超时')),
-      timeoutMs
-    )
-
+    const timeout = window.setTimeout(() => finish(new Error('图片请求超时')), timeoutMs)
     const finish = (error, result) => {
       if (settled) return
       settled = true
       window.clearTimeout(timeout)
       image.onload = null
       image.onerror = null
-
       if (error) reject(error)
       else resolve(result)
     }
 
     image.decoding = 'async'
-
     image.onload = () => {
-      if (image.naturalWidth > 0 && image.naturalHeight > 0) {
-        finish(null, image)
-      } else {
-        finish(new Error('图片尺寸无效'))
-      }
+      if (image.naturalWidth > 0 && image.naturalHeight > 0) finish(null, image)
+      else finish(new Error('图片尺寸无效'))
     }
-
-    image.onerror = () => {
-      finish(new Error('图片无法加载或服务器拒绝跨域读取'))
-    }
+    image.onerror = () => finish(new Error('图片无法加载或服务器拒绝跨域读取'))
 
     try {
       const parsed = new URL(url, window.location.href)
-
-      if (parsed.origin !== window.location.origin) {
-        image.crossOrigin = 'anonymous'
-      }
-
+      if (parsed.origin !== window.location.origin) image.crossOrigin = 'anonymous'
       image.src = parsed.href
     } catch (error) {
-      finish(
-        error instanceof Error
-          ? error
-          : new Error('图片 URL 格式无效')
-      )
+      finish(error instanceof Error ? error : new Error('图片 URL 格式无效'))
     }
   })
 }
 
 function getProxyUrls(source) {
   const encoded = encodeURIComponent(source)
-
   return [
     `https://images.weserv.nl/?url=${encoded}`,
     `https://wsrv.nl/?url=${encoded}`
@@ -331,61 +300,46 @@ function getProxyUrls(source) {
 }
 
 async function tryCandidate(source, deadline) {
-  const attempts = [source, ...getProxyUrls(source)]
-  let lastError = null
+  const attempts = [...new Set([source, ...getProxyUrls(source)])]
+  const remaining = deadline - Date.now()
+  if (remaining <= 0) throw new Error('封面加载总时限已到')
 
-  for (const attempt of attempts) {
-    const remaining = deadline - Date.now()
-    if (remaining <= 0) break
-
-    const isOriginal = attempt === source
-    const timeoutMs = Math.max(
-      500,
-      Math.min(isOriginal ? 2600 : 3600, remaining)
-    )
-
-    try {
-      return await loadImage(attempt, timeoutMs)
-    } catch (error) {
-      lastError = error
-    }
+  // 原代码逐个尝试原图和代理图：一个失效地址就可能耗尽 12 秒，导致真正可用的
+  // 后续封面地址根本没有机会加载。这里并行试同一张图的几个来源，成功一个即返回。
+  const timeoutMs = Math.max(700, Math.min(4200, remaining))
+  try {
+    return await Promise.any(attempts.map(url => loadImage(url, timeoutMs)))
+  } catch (error) {
+    throw error?.errors?.[0] || new Error('原图及图片代理均加载失败')
   }
-
-  throw lastError || new Error('封面候选地址全部失败')
 }
 
 async function loadCoverImage(post) {
   const candidates = getCoverCandidates(post)
-
   if (!candidates.length) {
-    if (typeof console !== 'undefined') {
-      console.warn(
-        '[SharePoster] 当前节目没有可识别的 pageCover URL'
-      )
-    }
+    if (typeof console !== 'undefined') console.warn('[SharePoster] 没有找到封面地址。请检查传入的 post 对象字段。', {
+      postKeys: post && typeof post === 'object' ? Object.keys(post) : [],
+      propertyKeys: post?.properties && typeof post.properties === 'object' ? Object.keys(post.properties) : [],
+      title: post?.title || '',
+      slug: post?.slug || post?.href || post?.url || ''
+    })
     return null
   }
 
   const key = candidates.join('|')
-
-  if (coverImagePromises.has(key)) {
-    return coverImagePromises.get(key)
-  }
+  if (coverImagePromises.has(key)) return coverImagePromises.get(key)
 
   const promise = (async () => {
-    const deadline = Date.now() + 12000
+    const deadline = Date.now() + 15000
     let lastError = null
-
     for (const candidate of candidates) {
       if (Date.now() >= deadline) break
-
       try {
         return await tryCandidate(candidate, deadline)
       } catch (error) {
         lastError = error
       }
     }
-
     if (typeof console !== 'undefined') {
       const candidateHosts = candidates.map(candidate => {
         try {
@@ -395,53 +349,34 @@ async function loadCoverImage(post) {
           return '(无效 URL)'
         }
       })
-
       console.warn('[SharePoster] 所有封面地址加载失败', {
         candidateCount: candidates.length,
         candidateHosts,
         lastError: lastError?.message || '无可用地址'
       })
     }
-
     return null
   })()
 
   coverImagePromises.set(key, promise)
-
   const result = await promise
   if (!result) coverImagePromises.delete(key)
-
   return result
 }
 
 function cropSquare(ctx, image, x, y, size, radius) {
   if (!image) return false
-
   const naturalWidth = image.naturalWidth || image.width
   const naturalHeight = image.naturalHeight || image.height
-
   if (!naturalWidth || !naturalHeight) return false
 
   ctx.save()
   roundRect(ctx, x, y, size, size, radius)
   ctx.clip()
-
-  const scale = Math.max(
-    size / naturalWidth,
-    size / naturalHeight
-  )
-
+  const scale = Math.max(size / naturalWidth, size / naturalHeight)
   const width = naturalWidth * scale
   const height = naturalHeight * scale
-
-  ctx.drawImage(
-    image,
-    x + (size - width) / 2,
-    y + (size - height) / 2,
-    width,
-    height
-  )
-
+  ctx.drawImage(image, x + (size - width) / 2, y + (size - height) / 2, width, height)
   ctx.restore()
   return true
 }
@@ -450,175 +385,89 @@ function drawCoverPlaceholder(ctx, x, y, size, radius) {
   ctx.save()
   roundRect(ctx, x, y, size, size, radius)
   ctx.clip()
-
-  const gradient = ctx.createLinearGradient(
-    x,
-    y,
-    x + size,
-    y + size
-  )
-
+  const gradient = ctx.createLinearGradient(x, y, x + size, y + size)
   gradient.addColorStop(0, '#DCE3F0')
   gradient.addColorStop(0.52, '#E9E5E2')
   gradient.addColorStop(1, '#C9D1E2')
-
   ctx.fillStyle = gradient
   ctx.fillRect(x, y, size, size)
 
+  // 无封面时使用安静的抽象渐变占位，不把错误文案印到正式海报上。
   ctx.globalAlpha = 0.22
   ctx.fillStyle = '#FFFFFF'
   ctx.beginPath()
-  ctx.arc(
-    x + size * 0.68,
-    y + size * 0.29,
-    size * 0.23,
-    0,
-    Math.PI * 2
-  )
+  ctx.arc(x + size * 0.68, y + size * 0.29, size * 0.23, 0, Math.PI * 2)
   ctx.fill()
-
   ctx.globalAlpha = 0.24
   ctx.fillStyle = THEME.primary
   ctx.beginPath()
-  ctx.arc(
-    x + size * 0.34,
-    y + size * 0.72,
-    size * 0.34,
-    0,
-    Math.PI * 2
-  )
+  ctx.arc(x + size * 0.34, y + size * 0.72, size * 0.34, 0, Math.PI * 2)
   ctx.fill()
-
   ctx.restore()
 }
 
 function drawBackground(ctx, width, height) {
-  const gradient = ctx.createLinearGradient(
-    0,
-    0,
-    width * 0.92,
-    height
-  )
-
+  const gradient = ctx.createLinearGradient(0, 0, width * 0.92, height)
   gradient.addColorStop(0, '#FFFCF7')
   gradient.addColorStop(0.58, '#F7F5F1')
   gradient.addColorStop(1, '#E9EDF6')
-
   ctx.fillStyle = gradient
   ctx.fillRect(0, 0, width, height)
 
-  const glow = ctx.createRadialGradient(
-    width * 0.88,
-    height * 0.12,
-    8,
-    width * 0.88,
-    height * 0.12,
-    width * 0.65
-  )
-
+  // 极轻的主题色光晕，借鉴播客分享图常见渐变，但不抢封面主体。
+  const glow = ctx.createRadialGradient(width * 0.88, height * 0.12, 8, width * 0.88, height * 0.12, width * 0.65)
   glow.addColorStop(0, 'rgba(112, 132, 174, 0.10)')
   glow.addColorStop(1, 'rgba(112, 132, 174, 0)')
-
   ctx.fillStyle = glow
   ctx.fillRect(0, 0, width, height)
 
-  strokeRoundRect(
-    ctx,
-    24,
-    24,
-    width - 48,
-    height - 48,
-    15,
-    THEME.border,
-    2
-  )
-
-  strokeRoundRect(
-    ctx,
-    34,
-    34,
-    width - 68,
-    height - 68,
-    10,
-    'rgba(70, 89, 130, 0.08)',
-    1
-  )
+  strokeRoundRect(ctx, 24, 24, width - 48, height - 48, 15, THEME.border, 2)
+  strokeRoundRect(ctx, 34, 34, width - 68, height - 68, 10, 'rgba(70, 89, 130, 0.08)', 1)
 }
 
 function splitLines(ctx, text, maxWidth, maxLines) {
   const characters = Array.from(cleanText(text))
-
   if (!characters.length) return []
-
   const lines = []
   let line = ''
 
   characters.forEach(character => {
     const candidate = line + character
-
-    if (
-      line &&
-      ctx.measureText(candidate).width > maxWidth
-    ) {
+    if (line && ctx.measureText(candidate).width > maxWidth) {
       lines.push(line)
       line = character
     } else {
       line = candidate
     }
   })
-
   if (line) lines.push(line)
 
   if (lines.length > maxLines) {
     const visible = lines.slice(0, maxLines)
     let last = visible[visible.length - 1] || ''
-
-    while (
-      last &&
-      ctx.measureText(`${last}…`).width > maxWidth
-    ) {
-      last = last.slice(0, -1)
-    }
-
+    while (last && ctx.measureText(`${last}…`).width > maxWidth) last = last.slice(0, -1)
     visible[visible.length - 1] = `${last.trimEnd()}…`
     return visible
   }
-
   return lines
 }
 
 function drawLines(ctx, lines, x, y, lineHeight) {
   ctx.textAlign = 'left'
   ctx.textBaseline = 'top'
-
-  lines.forEach((line, index) => {
-    ctx.fillText(line, x, y + index * lineHeight)
-  })
-
+  lines.forEach((line, index) => ctx.fillText(line, x, y + index * lineHeight))
   return y + lines.length * lineHeight
 }
 
 function drawDurationPill(ctx, x, y, duration) {
   if (!duration) return 0
-
   const height = 42
-
   ctx.font = `500 20px ${POSTER_FONT}`
   const textWidth = Math.ceil(ctx.measureText(duration).width)
   const pillWidth = 18 + 16 + 10 + textWidth + 17
 
   ctx.save()
-
-  fillRoundRect(
-    ctx,
-    x,
-    y,
-    pillWidth,
-    height,
-    height / 2,
-    'rgba(24, 31, 47, 0.80)'
-  )
-
+  fillRoundRect(ctx, x, y, pillWidth, height, height / 2, 'rgba(24, 31, 47, 0.80)')
   ctx.fillStyle = '#FFFFFF'
   ctx.beginPath()
   ctx.moveTo(x + 15, y + 12)
@@ -626,12 +475,10 @@ function drawDurationPill(ctx, x, y, duration) {
   ctx.lineTo(x + 29, y + 21)
   ctx.closePath()
   ctx.fill()
-
   ctx.font = `500 20px ${POSTER_FONT}`
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
   ctx.fillText(duration, x + 42, y + height / 2 + 0.5)
-
   ctx.restore()
   return pillWidth
 }
@@ -639,207 +486,113 @@ function drawDurationPill(ctx, x, y, duration) {
 function drawBrandAndQr(ctx, qrCanvas, width, height, layout) {
   const { edge, brandY, qrSize } = layout
 
-  // 底部品牌区不再绘制分隔横线。
+  // 底部品牌区不再画分隔横线，让海报更简洁。
   ctx.textAlign = 'left'
   ctx.textBaseline = 'top'
-
-  // 品牌名称
   ctx.fillStyle = THEME.ink
   ctx.font = `600 ${layout.brandFont}px ${POSTER_FONT}`
   ctx.fillText('念安酒馆', edge + 2, brandY)
 
-  // 扫码提示
   ctx.fillStyle = THEME.primary
   ctx.font = `400 ${layout.subFont}px ${POSTER_FONT}`
-  ctx.fillText(
-    '扫码收听本期',
-    edge + 3,
-    brandY + layout.subOffset
-  )
+  ctx.fillText('扫码收听本期', edge + 3, brandY + layout.subOffset)
 
-  // 二维码向左微移，并使外框底边与副标题底部对齐。
+  // QR 外框向左微移；外框底边与“扫码收听本期”文字底部对齐。
   const qrShiftLeft = layout.qrShiftLeft ?? 8
   const qrX = width - edge - qrSize - qrShiftLeft
-
-  const textBottom =
-    brandY + layout.subOffset + layout.subFont
-
-  const qrY = Math.round(
-    textBottom - qrSize - 7
-  )
+  const textBottom = brandY + layout.subOffset + layout.subFont
+  const qrY = Math.round(textBottom - qrSize - 7)
 
   if (qrCanvas) {
-    // 白色留白区域
-    fillRoundRect(
-      ctx,
-      qrX - 7,
-      qrY - 7,
-      qrSize + 14,
-      qrSize + 14,
-      8,
-      '#FFFFFF'
-    )
-
-    // 二维码
-    ctx.drawImage(
-      qrCanvas,
-      qrX,
-      qrY,
-      qrSize,
-      qrSize
-    )
-
-    // 极淡的边框
-    strokeRoundRect(
-      ctx,
-      qrX - 7,
-      qrY - 7,
-      qrSize + 14,
-      qrSize + 14,
-      8,
-      'rgba(70, 89, 130, 0.14)',
-      1
-    )
+    fillRoundRect(ctx, qrX - 7, qrY - 7, qrSize + 14, qrSize + 14, 8, '#FFFFFF')
+    ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize)
+    strokeRoundRect(ctx, qrX - 7, qrY - 7, qrSize + 14, qrSize + 14, 8, 'rgba(70, 89, 130, 0.14)', 1)
   } else {
-    // 二维码还没生成时保留相同尺寸，不改变布局。
-    fillRoundRect(
-      ctx,
-      qrX - 7,
-      qrY - 7,
-      qrSize + 14,
-      qrSize + 14,
-      8,
-      'rgba(255,255,255,0.62)'
-    )
+    // 保留相同大小的轻薄占位，不改变布局尺寸。
+    fillRoundRect(ctx, qrX - 7, qrY - 7, qrSize + 14, qrSize + 14, 8, 'rgba(255,255,255,0.62)')
   }
 }
 
 function drawPoster(canvas, { post, orientation, duration }, coverImage, qrCanvas) {
   const { width, height } = POSTER_SIZE[orientation]
-
   if (canvas.width !== width) canvas.width = width
   if (canvas.height !== height) canvas.height = height
-
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('Canvas 初始化失败')
 
   drawBackground(ctx, width, height)
-
   const title = cleanText(post?.title) || '这一期，等你来听'
-  const summary = cleanText(
-    post?.summary || post?.description || post?.excerpt || ''
-  )
+  const summary = cleanText(post?.summary || post?.description || post?.excerpt || '')
   const meta = getMetaText(post)
 
   if (orientation === 'portrait') {
     const edge = 58
-    const coverX = edge
     const coverY = 48
-    const coverSize = width - edge * 2
-
+    const coverSize = width - edge * 2 - 44
+    const coverX = Math.round((width - coverSize) / 2)
     if (!cropSquare(ctx, coverImage, coverX, coverY, coverSize, 9)) {
       drawCoverPlaceholder(ctx, coverX, coverY, coverSize, 9)
     }
-
-    if (duration) {
-      drawDurationPill(
-        ctx,
-        coverX + 18,
-        coverY + coverSize - 59,
-        duration
-      )
-    }
+    if (duration) drawDurationPill(ctx, coverX + 18, coverY + coverSize - 59, duration)
 
     const contentX = edge + 2
     const contentWidth = width - edge * 2 - 4
-
     let currentY = coverY + coverSize + 31
-
     ctx.fillStyle = THEME.ink
     ctx.font = `650 41px ${POSTER_FONT}`
-
     const titleLines = splitLines(ctx, title, contentWidth, 2)
     currentY = drawLines(ctx, titleLines, contentX, currentY, 52) + 11
 
     if (meta) {
       ctx.fillStyle = THEME.primary
       ctx.font = `400 21px ${POSTER_FONT}`
-
       const metaLines = splitLines(ctx, meta, contentWidth, 2)
       currentY = drawLines(ctx, metaLines, contentX, currentY, 29) + 10
     }
 
-    const footerY = 1178
-
+    // 这是简介区域的保留边界，不再绘制分隔线；最多保留 3 行简介。
+    const footerY = 1092
     if (summary && currentY < footerY - 16) {
       ctx.fillStyle = THEME.muted
       ctx.font = `400 24px ${POSTER_FONT}`
-
-      const availableLines = Math.max(
-        1,
-        Math.min(3, Math.floor((footerY - currentY - 16) / 33))
-      )
-
-      drawLines(
-        ctx,
-        splitLines(ctx, summary, contentWidth - 2, availableLines),
-        contentX,
-        currentY,
-        33
-      )
+      const availableLines = Math.max(1, Math.min(3, Math.floor((footerY - currentY - 16) / 33)))
+      drawLines(ctx, splitLines(ctx, summary, contentWidth - 2, availableLines), contentX, currentY, 33)
     }
 
     drawBrandAndQr(ctx, qrCanvas, width, height, {
       edge,
-      dividerY: 1182,
-      brandY: 1210,
+      brandY: 1120,
       qrSize: 90,
       brandFont: 31,
       subFont: 21,
-      subOffset: 41
+      subOffset: 41,
+      qrShiftLeft: 8
     })
   } else {
     const edge = 44
     const coverX = 47
     const coverY = 54
     const coverSize = 410
-
     if (!cropSquare(ctx, coverImage, coverX, coverY, coverSize, 9)) {
       drawCoverPlaceholder(ctx, coverX, coverY, coverSize, 9)
     }
-
-    if (duration) {
-      drawDurationPill(
-        ctx,
-        coverX + 16,
-        coverY + coverSize - 58,
-        duration
-      )
-    }
+    if (duration) drawDurationPill(ctx, coverX + 16, coverY + coverSize - 58, duration)
 
     const contentX = 500
     const contentWidth = width - contentX - edge - 2
 
+    // 先量出标题、元信息和简介的实际行数，再将整组内容垂直居中放在封面右侧，避免短简介时上方挤、下方空。
     ctx.font = `650 40px ${POSTER_FONT}`
     const titleLines = splitLines(ctx, title, contentWidth, 2)
-
     ctx.font = `400 20px ${POSTER_FONT}`
-    const metaLines = meta
-      ? splitLines(ctx, meta, contentWidth, 2)
-      : []
-
+    const metaLines = meta ? splitLines(ctx, meta, contentWidth, 2) : []
     ctx.font = `400 23px ${POSTER_FONT}`
-    const summaryLines = summary
-      ? splitLines(ctx, summary, contentWidth, 5)
-      : []
-
+    const summaryLines = summary ? splitLines(ctx, summary, contentWidth, 5) : []
     const blockHeight =
       titleLines.length * 50 +
       (metaLines.length ? 13 + metaLines.length * 29 : 0) +
       (summaryLines.length ? 14 + summaryLines.length * 31 : 0)
-
-    let currentY =
-      coverY + Math.max(0, Math.floor((coverSize - blockHeight) / 2))
+    let currentY = coverY + Math.max(0, Math.floor((coverSize - blockHeight) / 2))
 
     ctx.fillStyle = THEME.ink
     ctx.font = `650 40px ${POSTER_FONT}`
@@ -861,100 +614,70 @@ function drawPoster(canvas, { post, orientation, duration }, coverImage, qrCanva
 
     drawBrandAndQr(ctx, qrCanvas, width, height, {
       edge: 48,
-      dividerY: 626,
-      brandY: 654,
+      brandY: 596,
       qrSize: 82,
       brandFont: 30,
       subFont: 20,
-      subOffset: 39
+      subOffset: 39,
+      qrShiftLeft: 8
     })
   }
 }
 
 function formatDuration(seconds) {
   const total = Math.floor(Number(seconds))
-
   if (!Number.isFinite(total) || total <= 0) return ''
-
   const hours = Math.floor(total / 3600)
   const minutes = Math.floor((total % 3600) / 60)
   const remainder = total % 60
-
   return hours > 0
     ? `${hours}:${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`
     : `${minutes}:${String(remainder).padStart(2, '0')}`
 }
 
 function formatDurationValue(value) {
-  if (Number.isFinite(Number(value)) && Number(value) > 0) {
-    return formatDuration(value)
-  }
-
+  if (Number.isFinite(Number(value)) && Number(value) > 0) return formatDuration(value)
   const text = cleanText(value)
   return /^\d{1,3}:\d{2}(?::\d{2})?$/.test(text) ? text : ''
 }
 
 function getAudioUrl(post) {
-  const candidates = [
-    post?.audio,
-    post?.ext,
-    post?.audioUrl,
-    post?.audio_url,
-    post?.enclosure
-  ]
-
+  const candidates = [post?.audio, post?.ext, post?.audioUrl, post?.audio_url, post?.enclosure]
   for (const candidate of candidates) {
-    const url = typeof candidate === 'string'
-      ? candidate.trim()
-      : candidate?.url
-
+    const url = typeof candidate === 'string' ? candidate.trim() : candidate?.url
     if (/^https?:\/\//i.test(url || '')) return url
   }
-
   return ''
 }
 
 async function loadQrScript(url) {
-  if (typeof window === 'undefined') {
-    throw new Error('当前环境无法生成二维码')
-  }
-
+  if (typeof window === 'undefined') throw new Error('当前环境无法生成二维码')
   if (typeof window.QRCode === 'function') return
   if (qrScriptPromises.has(url)) return qrScriptPromises.get(url)
 
   const promise = new Promise((resolve, reject) => {
     const script = document.createElement('script')
     let settled = false
-
-    const timer = window.setTimeout(
-      () => finish(new Error('二维码脚本超时')),
-      4500
-    )
-
+    const timer = window.setTimeout(() => finish(new Error('二维码脚本超时')), 4500)
     const finish = error => {
       if (settled) return
-
       settled = true
       window.clearTimeout(timer)
       script.onload = null
       script.onerror = null
-
       if (error) reject(error)
       else if (typeof window.QRCode === 'function') resolve()
       else reject(new Error('二维码脚本没有提供 QRCode'))
     }
-
     script.src = url
     script.async = true
     script.dataset.snShareQr = 'true'
     script.onload = () => finish()
     script.onerror = () => finish(new Error('二维码脚本加载失败'))
-
     document.head.appendChild(script)
   })
 
   qrScriptPromises.set(url, promise)
-
   try {
     await promise
   } catch (error) {
@@ -965,26 +688,21 @@ async function loadQrScript(url) {
 
 async function createQrCanvas(value) {
   if (!value || typeof document === 'undefined') return null
-
-  let QRCodeConstructor =
-    typeof window !== 'undefined' ? window.QRCode : null
+  let QRCodeConstructor = typeof window !== 'undefined' ? window.QRCode : null
 
   if (typeof QRCodeConstructor !== 'function') {
     for (const url of QR_CDN_CANDIDATES) {
       try {
         await loadQrScript(url)
         QRCodeConstructor = window.QRCode
-
         if (typeof QRCodeConstructor === 'function') break
       } catch {}
     }
   }
-
   if (typeof QRCodeConstructor !== 'function') return null
 
   try {
     const host = document.createElement('div')
-
     new QRCodeConstructor(host, {
       text: value,
       width: 256,
@@ -993,54 +711,30 @@ async function createQrCanvas(value) {
       colorLight: '#FFFFFF',
       correctLevel: QRCodeConstructor.CorrectLevel?.H ?? 2
     })
-
     const directCanvas = host.querySelector('canvas')
     if (directCanvas) return directCanvas
 
     const image = host.querySelector('img')
     if (!image) return null
-
     if (!image.complete || image.naturalWidth === 0) {
       await new Promise((resolve, reject) => {
-        const timer = window.setTimeout(
-          () => reject(new Error('二维码图片超时')),
-          2200
-        )
-
-        image.onload = () => {
-          window.clearTimeout(timer)
-          resolve()
-        }
-
-        image.onerror = () => {
-          window.clearTimeout(timer)
-          reject(new Error('二维码图片失败'))
-        }
+        const timer = window.setTimeout(() => reject(new Error('二维码图片超时')), 2200)
+        image.onload = () => { window.clearTimeout(timer); resolve() }
+        image.onerror = () => { window.clearTimeout(timer); reject(new Error('二维码图片失败')) }
       })
     }
-
     if (!image.naturalWidth) return null
-
     const canvas = document.createElement('canvas')
     canvas.width = 256
     canvas.height = 256
-
     const context = canvas.getContext('2d')
     if (!context) return null
-
     context.fillStyle = '#FFFFFF'
     context.fillRect(0, 0, 256, 256)
     context.drawImage(image, 0, 0, 256, 256)
-
     return canvas
   } catch (error) {
-    if (typeof console !== 'undefined') {
-      console.warn(
-        '[SharePoster] 二维码生成失败',
-        error?.message || error
-      )
-    }
-
+    if (typeof console !== 'undefined') console.warn('[SharePoster] 二维码生成失败', error?.message || error)
     return null
   }
 }
@@ -1055,7 +749,6 @@ function safeFileName(value) {
 
 export default function SharePosterModal({ open, onClose, post, shareUrl }) {
   const canvasRef = useRef(null)
-
   const [orientation, setOrientation] = useState('portrait')
   const [ready, setReady] = useState(false)
   const [duration, setDuration] = useState('')
@@ -1065,16 +758,12 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
 
   useEffect(() => {
     if (!open) return undefined
-
     const onKeyDown = event => {
       if (event.key === 'Escape') onClose?.()
     }
-
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-
     window.addEventListener('keydown', onKeyDown)
-
     return () => {
       document.body.style.overflow = previousOverflow
       window.removeEventListener('keydown', onKeyDown)
@@ -1084,70 +773,45 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
   // 音频时长只作附加信息，不等待它加载就显示海报。
   useEffect(() => {
     if (!open) return undefined
-
     let cancelled = false
-
     const setFromSeconds = seconds => {
       const formatted = formatDuration(seconds)
-
       if (!cancelled && formatted) setDuration(formatted)
     }
 
-    const explicitDuration = formatDurationValue(
-      post?.duration ||
-      post?.audioDuration ||
-      post?.audio_duration
-    )
-
+    const explicitDuration = formatDurationValue(post?.duration || post?.audioDuration || post?.audio_duration)
     if (explicitDuration) {
       setDuration(explicitDuration)
-      return () => {
-        cancelled = true
-      }
+      return () => { cancelled = true }
     }
 
     const audioElements = Array.from(document.querySelectorAll('audio'))
-
-    const existing = audioElements.find(
-      element => Number.isFinite(element.duration) && element.duration > 0
-    )
-
+    const existing = audioElements.find(element => Number.isFinite(element.duration) && element.duration > 0)
     if (existing) {
       setFromSeconds(existing.duration)
-
-      return () => {
-        cancelled = true
-      }
+      return () => { cancelled = true }
     }
 
     const audioUrl = getAudioUrl(post)
-
     if (!audioUrl) {
       setDuration('')
-
-      return () => {
-        cancelled = true
-      }
+      return () => { cancelled = true }
     }
 
     const probe = new Audio()
     probe.preload = 'metadata'
-
     const timer = window.setTimeout(() => {
       probe.src = ''
     }, 7000)
-
     probe.onloadedmetadata = () => {
       window.clearTimeout(timer)
       setFromSeconds(probe.duration)
       probe.src = ''
     }
-
     probe.onerror = () => {
       window.clearTimeout(timer)
       probe.src = ''
     }
-
     probe.src = audioUrl
 
     return () => {
@@ -1159,22 +823,18 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
     }
   }, [open, post])
 
-  // 先同步绘制固定尺寸的完整版式，再单独加载封面和二维码。
-  // 资源完成不会改变海报尺寸，因此不会先小后大。
+  // 先同步绘制固定尺寸的完整版式，再单独加载封面和二维码；资源完成不会改变海报尺寸。
   useEffect(() => {
     if (!open || !canvasRef.current) return undefined
-
     let cancelled = false
     const canvas = canvasRef.current
     const options = { post, orientation, duration }
-
     let loadedCover = null
     let loadedQr = null
     let coverDone = false
     let qrDone = false
 
     setReady(false)
-
     try {
       drawPoster(canvas, options, null, null)
     } catch (error) {
@@ -1184,35 +844,24 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
 
     const repaint = () => {
       if (cancelled || !canvasRef.current) return
-
       try {
-        drawPoster(
-          canvasRef.current,
-          options,
-          loadedCover,
-          loadedQr
-        )
+        drawPoster(canvasRef.current, options, loadedCover, loadedQr)
       } catch (error) {
         console.error('[SharePoster] 海报重绘失败', error)
       }
-
-      // 只有二维码真实生成后才允许下载。
-      if (coverDone && qrDone) {
-        setReady(Boolean(loadedQr))
-      }
+      // 只有二维码真实生成后才允许下载，避免生成一张右下角空白的“假海报”。
+      if (coverDone && qrDone) setReady(Boolean(loadedQr))
     }
 
     loadCoverImage(post)
       .then(image => {
         if (cancelled) return
-
         loadedCover = image
         coverDone = true
         repaint()
       })
       .catch(() => {
         if (cancelled) return
-
         coverDone = true
         repaint()
       })
@@ -1220,21 +869,17 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
     createQrCanvas(shareUrl)
       .then(qr => {
         if (cancelled) return
-
         loadedQr = qr
         qrDone = true
         repaint()
       })
       .catch(() => {
         if (cancelled) return
-
         qrDone = true
         repaint()
       })
 
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [open, post, shareUrl, orientation, duration])
 
   useEffect(() => {
@@ -1244,35 +889,24 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
   if (!open) return null
 
   const copyLink = async () => {
-    const value = shareUrl ||
-      (typeof window !== 'undefined' ? window.location.href : '')
-
+    const value = shareUrl || (typeof window !== 'undefined' ? window.location.href : '')
     if (!value) return
-
     try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(value)
-      } else {
-        throw new Error('Clipboard API unavailable')
-      }
-
+      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(value)
+      else throw new Error('Clipboard API unavailable')
       setCopied(true)
       window.setTimeout(() => setCopied(false), 1600)
     } catch {
       try {
         const input = document.createElement('textarea')
-
         input.value = value
         input.setAttribute('readonly', '')
         input.style.position = 'fixed'
         input.style.opacity = '0'
-
         document.body.appendChild(input)
         input.select()
-
         const successful = document.execCommand('copy')
         input.remove()
-
         if (successful) {
           setCopied(true)
           window.setTimeout(() => setCopied(false), 1600)
@@ -1285,26 +919,17 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
 
   const downloadPoster = async () => {
     const canvas = canvasRef.current
-
     if (!canvas || !ready) return
-
     try {
-      const blob = await new Promise(resolve => {
-        canvas.toBlob(resolve, 'image/png')
-      })
-
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'))
       if (!blob) throw new Error('PNG 导出失败')
-
       const downloadUrl = URL.createObjectURL(blob)
       const anchor = document.createElement('a')
-
       anchor.href = downloadUrl
       anchor.download = `${safeFileName(post?.title)}.png`
-
       document.body.appendChild(anchor)
       anchor.click()
       anchor.remove()
-
       window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1200)
     } catch (error) {
       console.error('[SharePoster] 下载海报失败', error)
@@ -1315,9 +940,7 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
     <div
       className='sn-share-overlay'
       role='presentation'
-      onMouseDown={event => {
-        if (event.target === event.currentTarget) onClose?.()
-      }}
+      onMouseDown={event => event.target === event.currentTarget && onClose?.()}
     >
       <section
         className={`sn-share-dialog ${orientation}`}
@@ -1327,15 +950,7 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
       >
         <header className='sn-share-header'>
           <h2 id='sn-share-title'>分享这一期</h2>
-
-          <button
-            type='button'
-            className='sn-share-close'
-            aria-label='关闭'
-            onClick={onClose}
-          >
-            ×
-          </button>
+          <button type='button' className='sn-share-close' aria-label='关闭' onClick={onClose}>×</button>
         </header>
 
         <div className={`sn-share-body ${orientation}`}>
@@ -1347,106 +962,41 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
               aria-label='节目分享海报预览'
               className={`sn-share-canvas ${orientation}`}
             />
-
             <button
               type='button'
               className='sn-share-orientation-float'
-              aria-label={
-                orientation === 'portrait'
-                  ? '切换为横版海报'
-                  : '切换为竖版海报'
-              }
+              aria-label={orientation === 'portrait' ? '切换为横版海报' : '切换为竖版海报'}
               title={orientation === 'portrait' ? '切换横版' : '切换竖版'}
-              onClick={() => {
-                setOrientation(current =>
-                  current === 'portrait' ? 'landscape' : 'portrait'
-                )
-              }}
+              onClick={() => setOrientation(current => current === 'portrait' ? 'landscape' : 'portrait')}
             >
-              <svg
-                viewBox='0 0 24 24'
-                aria-hidden='true'
-                fill='none'
-                stroke='currentColor'
-                strokeWidth='1.7'
-                strokeLinecap='round'
-                strokeLinejoin='round'
-              >
+              <svg viewBox='0 0 24 24' aria-hidden='true' fill='none' stroke='currentColor' strokeWidth='1.7' strokeLinecap='round' strokeLinejoin='round'>
                 {orientation === 'portrait'
-                  ? (
-                    <>
-                      <rect x='7' y='3' width='10' height='18' rx='1.5' />
-                      <path d='M10 17h4' />
-                    </>
-                  )
-                  : (
-                    <>
-                      <rect x='3' y='7' width='18' height='10' rx='1.5' />
-                      <path d='M7 12h10' />
-                    </>
-                  )}
+                  ? <><rect x='7' y='3' width='10' height='18' rx='1.5' /><path d='M10 17h4' /></>
+                  : <><rect x='3' y='7' width='18' height='10' rx='1.5' /><path d='M7 12h10' /></>}
               </svg>
             </button>
           </div>
 
           <div className='sn-share-actions'>
-            <button
-              type='button'
-              className='sn-action-btn'
-              onClick={downloadPoster}
-              disabled={!ready}
-            >
-              <svg
-                viewBox='0 0 24 24'
-                aria-hidden='true'
-                fill='none'
-                stroke='currentColor'
-                strokeWidth='1.8'
-                strokeLinecap='round'
-                strokeLinejoin='round'
-              >
+            <button type='button' className='sn-action-btn' onClick={downloadPoster} disabled={!ready}>
+              <svg viewBox='0 0 24 24' aria-hidden='true' fill='none' stroke='currentColor' strokeWidth='1.8' strokeLinecap='round' strokeLinejoin='round'>
                 <path d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4' />
                 <polyline points='7 10 12 15 17 10' />
                 <line x1='12' y1='15' x2='12' y2='3' />
               </svg>
-
               <span>下载海报</span>
             </button>
-
-            <button
-              type='button'
-              className='sn-action-btn'
-              onClick={copyLink}
-            >
-              {copied
-                ? (
-                  <svg
-                    viewBox='0 0 24 24'
-                    aria-hidden='true'
-                    fill='none'
-                    stroke='currentColor'
-                    strokeWidth='1.8'
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                  >
-                    <polyline points='20 6 9 17 4 12' />
-                  </svg>
-                )
-                : (
-                  <svg
-                    viewBox='0 0 24 24'
-                    aria-hidden='true'
-                    fill='none'
-                    stroke='currentColor'
-                    strokeWidth='1.8'
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                  >
-                    <path d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71' />
-                    <path d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71' />
-                  </svg>
-                )}
-
+            <button type='button' className='sn-action-btn' onClick={copyLink}>
+              {copied ? (
+                <svg viewBox='0 0 24 24' aria-hidden='true' fill='none' stroke='currentColor' strokeWidth='1.8' strokeLinecap='round' strokeLinejoin='round'>
+                  <polyline points='20 6 9 17 4 12' />
+                </svg>
+              ) : (
+                <svg viewBox='0 0 24 24' aria-hidden='true' fill='none' stroke='currentColor' strokeWidth='1.8' strokeLinecap='round' strokeLinejoin='round'>
+                  <path d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71' />
+                  <path d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71' />
+                </svg>
+              )}
               <span>{copied ? '已复制' : '复制链接'}</span>
             </button>
           </div>
@@ -1465,7 +1015,6 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
           background: rgba(22, 28, 43, 0.58);
           backdrop-filter: blur(5px);
         }
-
         .sn-share-dialog {
           max-width: calc(100vw - 20px);
           max-height: calc(100dvh - 20px);
@@ -1478,15 +1027,8 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
           box-shadow: 0 18px 54px rgba(20, 26, 43, 0.24);
           transition: width 160ms ease;
         }
-
-        .sn-share-dialog.portrait {
-          width: min(94vw, 430px);
-        }
-
-        .sn-share-dialog.landscape {
-          width: min(96vw, 790px);
-        }
-
+        .sn-share-dialog.portrait { width: min(94vw, 430px); }
+        .sn-share-dialog.landscape { width: min(96vw, 790px); }
         .sn-share-header {
           flex: 0 0 auto;
           min-height: 46px;
@@ -1496,7 +1038,6 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
           align-items: center;
           border-bottom: 1px solid rgba(70, 89, 130, 0.09);
         }
-
         .sn-share-header h2 {
           margin: 0;
           color: ${THEME.ink};
@@ -1504,7 +1045,6 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
           font-weight: 600;
           letter-spacing: 0.01em;
         }
-
         .sn-share-close {
           width: 30px;
           height: 30px;
@@ -1516,11 +1056,7 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
           line-height: 1;
           cursor: pointer;
         }
-
-        .sn-share-close:hover {
-          background: rgba(70, 89, 130, 0.07);
-        }
-
+        .sn-share-close:hover { background: rgba(70, 89, 130, 0.07); }
         .sn-share-body {
           min-height: 0;
           padding: 12px 14px 9px;
@@ -1531,7 +1067,6 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
           overflow-y: auto;
           overscroll-behavior: contain;
         }
-
         .sn-share-preview {
           position: relative;
           flex: 0 0 auto;
@@ -1542,7 +1077,6 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
           max-width: 100%;
           line-height: 0;
         }
-
         .sn-share-canvas {
           display: block;
           width: auto;
@@ -1553,17 +1087,14 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
           background: ${THEME.paper};
           box-shadow: 0 3px 13px rgba(28, 36, 57, 0.13);
         }
-
         .sn-share-canvas.portrait {
           max-width: min(100%, 320px);
           max-height: min(68dvh, 610px);
         }
-
         .sn-share-canvas.landscape {
           max-width: min(100%, 680px);
           max-height: min(64dvh, 455px);
         }
-
         .sn-share-orientation-float {
           position: absolute;
           right: 8px;
@@ -1583,17 +1114,8 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
           cursor: pointer;
           transition: background 0.15s ease, transform 0.15s ease;
         }
-
-        .sn-share-orientation-float:hover {
-          background: rgba(27, 37, 56, 0.9);
-          transform: scale(1.04);
-        }
-
-        .sn-share-orientation-float svg {
-          width: 17px;
-          height: 17px;
-        }
-
+        .sn-share-orientation-float:hover { background: rgba(27, 37, 56, 0.9); transform: scale(1.04); }
+        .sn-share-orientation-float svg { width: 17px; height: 17px; }
         .sn-share-actions {
           flex: 0 0 auto;
           display: flex;
@@ -1603,7 +1125,6 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
           min-height: 31px;
           padding: 1px 0 0;
         }
-
         .sn-action-btn {
           min-width: 0;
           min-height: 29px;
@@ -1615,116 +1136,39 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
           border: 0;
           border-radius: 0;
           background: transparent;
-          color: #52617E;
+          color: #171717;
           font-size: 13px;
-          font-weight: 500;
+          font-weight: 600;
           white-space: nowrap;
           cursor: pointer;
           transition: color 0.15s ease, opacity 0.15s ease;
         }
-
-        .sn-action-btn:hover:not(:disabled) {
-          color: ${THEME.primaryDeep};
-        }
-
-        .sn-action-btn svg {
-          width: 15px;
-          height: 15px;
-          flex: 0 0 auto;
-        }
-
-        .sn-action-btn:disabled {
-          opacity: 0.42;
-          cursor: wait;
-        }
-
-        .sn-action-btn:focus-visible,
-        .sn-share-orientation-float:focus-visible,
-        .sn-share-close:focus-visible {
+        .sn-action-btn:hover:not(:disabled) { color: #000000; }
+        .sn-action-btn svg { width: 15px; height: 15px; flex: 0 0 auto; }
+        .sn-action-btn:disabled { color: #333333; opacity: 0.78; cursor: wait; }
+        .sn-action-btn:focus-visible, .sn-share-orientation-float:focus-visible, .sn-share-close:focus-visible {
           outline: 2px solid ${THEME.primary};
           outline-offset: 3px;
         }
-
         @media (max-width: 600px) {
-          .sn-share-overlay {
-            padding: 6px;
-          }
-
-          .sn-share-dialog {
-            max-width: calc(100vw - 12px);
-            max-height: calc(100dvh - 12px);
-            border-radius: 12px;
-          }
-
-          .sn-share-dialog.portrait {
-            width: min(calc(100vw - 12px), 390px);
-          }
-
-          .sn-share-dialog.landscape {
-            width: calc(100vw - 12px);
-          }
-
-          .sn-share-header {
-            min-height: 42px;
-            padding: 6px 9px 6px 13px;
-          }
-
-          .sn-share-body {
-            padding: 8px 7px 7px;
-            gap: 5px;
-          }
-
-          .sn-share-canvas.portrait {
-            max-width: min(100%, 286px);
-            max-height: 62dvh;
-          }
-
-          .sn-share-canvas.landscape {
-            max-width: 100%;
-            max-height: 52dvh;
-          }
-
-          .sn-share-orientation-float {
-            width: 30px;
-            height: 30px;
-            right: 6px;
-            bottom: 6px;
-          }
-
-          .sn-share-actions {
-            gap: 20px;
-            min-height: 28px;
-          }
-
-          .sn-action-btn {
-            min-height: 27px;
-            font-size: 12px;
-          }
-
-          .sn-action-btn svg {
-            width: 14px;
-            height: 14px;
-          }
+          .sn-share-overlay { padding: 6px; }
+          .sn-share-dialog { max-width: calc(100vw - 12px); max-height: calc(100dvh - 12px); border-radius: 12px; }
+          .sn-share-dialog.portrait { width: min(calc(100vw - 12px), 390px); }
+          .sn-share-dialog.landscape { width: calc(100vw - 12px); }
+          .sn-share-header { min-height: 42px; padding: 6px 9px 6px 13px; }
+          .sn-share-body { padding: 8px 7px 7px; gap: 5px; }
+          .sn-share-canvas.portrait { max-width: min(100%, 286px); max-height: 62dvh; }
+          .sn-share-canvas.landscape { max-width: 100%; max-height: 52dvh; }
+          .sn-share-orientation-float { width: 30px; height: 30px; right: 6px; bottom: 6px; }
+          .sn-share-actions { gap: 20px; min-height: 28px; }
+          .sn-action-btn { min-height: 27px; font-size: 12px; font-weight: 600; }
+          .sn-action-btn svg { width: 14px; height: 14px; }
         }
-
         @media (max-height: 700px) {
-          .sn-share-body {
-            padding-top: 6px;
-            padding-bottom: 5px;
-            gap: 4px;
-          }
-
-          .sn-share-canvas.portrait {
-            max-height: 61dvh;
-          }
-
-          .sn-share-canvas.landscape {
-            max-height: 55dvh;
-          }
-
-          .sn-share-actions {
-            min-height: 26px;
-          }
+          .sn-share-body { padding-top: 6px; padding-bottom: 5px; gap: 4px; }
+          .sn-share-canvas.portrait { max-height: 61dvh; }
+          .sn-share-canvas.landscape { max-height: 55dvh; }
+          .sn-share-actions { min-height: 26px; }
         }
       `}</style>
     </div>
