@@ -32,11 +32,11 @@ function getPosterFont() {
 
 const POSTER_SIZE = {
   portrait: { width: 900, height: 1230 },
-  // 横版高度从 720 降低到 680，减少底部冗余留白
-  landscape: { width: 1200, height: 680 }
+  // 横版高度固定为 620，底部留白控制在合理范围
+  landscape: { width: 1200, height: 620 }
 }
 
-// 用户指定的最终兜底默认封面（防止出现狗头等奇怪占位图）
+// 强制兜底默认封面（获取不到原图时使用）
 const DEFAULT_COVER = 'https://up.885111.xyz/file/img/1789746781222_2027LOGO.webp'
 
 const QR_CDN_CANDIDATES = [
@@ -207,28 +207,14 @@ function getUrlsFromValue(value, depth = 0) {
 function getCoverCandidates(post) {
   if (!post || typeof post !== 'object') return []
   const fieldCandidates = []
-  const pageCandidates = []
+  
   const collect = (target, value) => {
     getUrlsFromValue(value).forEach(url => {
       if (!target.includes(url)) target.push(url)
     })
   }
-  const addField = value => collect(fieldCandidates, value)
-  const addPage = value => collect(pageCandidates, value)
 
-  const slugValue = cleanText(post.slug || post.href || post.url)
-  let slug = slugValue.replace(/^\/+|\/+$/g, '').toLocaleLowerCase()
-  try {
-    if (/^https?:\/\//i.test(slugValue)) slug = decodeURIComponent(new URL(slugValue).pathname).replace(/^\/+|\/+$/g, '').toLocaleLowerCase()
-  } catch {}
-
-  let currentPath = ''
-  if (typeof window !== 'undefined') {
-    try { currentPath = decodeURIComponent(window.location.pathname).replace(/^\/+|\/+$/g, '').toLocaleLowerCase() }
-    catch { currentPath = window.location.pathname.replace(/^\/+|\/+$/g, '').toLocaleLowerCase() }
-  }
-  const currentEpisodePage = Boolean(slug && currentPath && (currentPath.includes(slug) || slug.includes(currentPath)))
-
+  // 废弃抓取未知 DOM 图片，只信任 post 对象的字段，防止出现原页面里的无关图片。
   const values = [
     post.cover, post.page?.cover, post.pageCoverOriginal, post.originalCoverUrl,
     post.coverOriginal, post.pageCover, post.page_cover, post.pageCoverThumbnail,
@@ -237,60 +223,9 @@ function getCoverCandidates(post) {
     post.properties?.Cover, post.properties?.cover, post.properties?.Image,
     post.properties?.image, post.properties?.封面, post.properties?.海报, post.properties?.图片
   ]
-  values.forEach(addField)
+  values.forEach(value => collect(fieldCandidates, value))
 
-  if (typeof document !== 'undefined') {
-    const title = cleanText(post.title).toLocaleLowerCase()
-    const images = Array.from(document.querySelectorAll('img'))
-
-    if (currentEpisodePage) {
-      for (const selector of [
-        'meta[property="og:image"]',
-        'meta[name="twitter:image"]',
-        'meta[property="twitter:image"]'
-      ]) {
-        document.querySelectorAll(selector).forEach(meta => addPage(meta.getAttribute('content')))
-      }
-    }
-
-    for (const image of images) {
-      const alt = cleanText(image.getAttribute('alt')).toLocaleLowerCase()
-      const anchor = image.closest('a[href]')
-      let anchorPath = ''
-      try { anchorPath = decodeURIComponent(new URL(anchor?.href || '', window.location.href).pathname).toLocaleLowerCase() } catch {}
-      const titleMatch = title.length > 3 && (alt.includes(title) || (title.includes(alt) && alt.length > 3))
-      const slugMatch = slug.length > 2 && anchorPath.includes(slug)
-      if (titleMatch || slugMatch) {
-        addPage(image.currentSrc || image.src || image.getAttribute('data-src') || image.getAttribute('data-original'))
-        addPage(image.getAttribute('data-original'))
-      }
-    }
-
-    if (currentEpisodePage) {
-      const selectors = [
-        '.post-cover img', '.post-header img', '.notion-page-cover img',
-        'article img', '.notion-page img', '.post-content > img', 'main img', 'img'
-      ]
-      const seen = new Set()
-      for (const selector of selectors) {
-        for (const image of document.querySelectorAll(selector)) {
-          if (seen.has(image)) continue
-          seen.add(image)
-          addPage(image.currentSrc || image.src || image.getAttribute('data-src') || image.getAttribute('data-original'))
-          addPage(image.getAttribute('data-original'))
-        }
-      }
-      for (const selector of ['article', '.post-cover', '.post-header', '.notion-page-cover', '[class*="cover"]']) {
-        for (const node of document.querySelectorAll(selector)) {
-          const bg = window.getComputedStyle(node).backgroundImage
-          const matches = bg && [...bg.matchAll(/url\(["']?(.*?)["']?\)/g)]
-          if (matches) matches.forEach(match => addPage(match[1]))
-        }
-      }
-    }
-  }
-
-  return [...new Set([...pageCandidates, ...fieldCandidates])].slice(0, 28)
+  return fieldCandidates.slice(0, 10)
 }
 
 function loadImage(url, timeoutMs) {
@@ -352,8 +287,9 @@ async function tryCandidate(source, deadline) {
 }
 
 async function loadCoverImage(post) {
-  const candidates = getCoverCandidates(post)
-  // 将用户指定的默认封面作为最终的兜底候选加入队列
+  let candidates = getCoverCandidates(post)
+  
+  // 确保默认链接一定在候选队列的末尾，作为绝对的兜底
   if (!candidates.includes(DEFAULT_COVER)) {
     candidates.push(DEFAULT_COVER)
   }
@@ -363,31 +299,14 @@ async function loadCoverImage(post) {
 
   const promise = (async () => {
     const deadline = Date.now() + 15000
-    let lastError = null
-    // 按顺序尝试，包含了原本有效封面以及最后的默认 Logo
-    const prioritized = candidates.slice(0, 15)
+    const prioritized = candidates.slice(0, 10)
     for (const candidate of prioritized) {
       if (Date.now() >= deadline) break
       try {
         return await tryCandidate(candidate, deadline)
       } catch (error) {
-        lastError = error
+        // 失败则继续尝试下一个，直到尝试到最后的默认图片
       }
-    }
-    if (typeof console !== 'undefined') {
-      const candidateHosts = candidates.map(candidate => {
-        try {
-          const parsed = new URL(candidate)
-          return `${parsed.hostname}${parsed.pathname.slice(0, 48)}`
-        } catch {
-          return '(无效 URL)'
-        }
-      })
-      console.warn('[SharePoster] 所有封面地址加载失败', {
-        candidateCount: candidates.length,
-        candidateHosts,
-        lastError: lastError?.message || '无可用地址'
-      })
     }
     return null
   })()
@@ -554,42 +473,42 @@ function drawPoster(canvas, { post, orientation, duration }, coverImage, qrCanva
 
   if (orientation === 'portrait') {
     const edge = 58
-    const contentX = edge + 2 
-    const contentWidth = width - edge * 2 - 4 // 900 - 116 - 4 = 780
+    const contentWidth = width - edge * 2 - 4 // 780
+    const contentX = edge + 2
     
-    const coverY = 48
-    // 使封面图宽度与下方文字区域宽度完全一致
-    const coverSize = contentWidth 
-    const coverX = contentX
+    const coverY = 50
+    // 封面尺寸改为固定 700，居中，给下方留出充足空间，不再压缩文字
+    const coverSize = 700
+    const coverX = Math.round((width - coverSize) / 2)
 
-    // 仅绘制封面
-    cropSquare(ctx, coverImage, coverX, coverY, coverSize, 9)
+    cropSquare(ctx, coverImage, coverX, coverY, coverSize, 12)
     if (duration && coverImage) drawDurationPill(ctx, coverX + 18, coverY + coverSize - 59, duration)
 
-    let currentY = coverY + coverSize + 31
+    let currentY = coverY + coverSize + 40 // 50 + 700 + 40 = 790
     ctx.fillStyle = THEME.ink
     ctx.font = `650 41px ${getPosterFont()}`
     const titleLines = splitLines(ctx, title, contentWidth, 2)
-    currentY = drawLines(ctx, titleLines, contentX, currentY, 52) + 11
+    currentY = drawLines(ctx, titleLines, contentX, currentY, 52) + 15
 
     if (meta) {
       ctx.fillStyle = THEME.primary
       ctx.font = `400 21px ${getPosterFont()}`
       const metaLines = splitLines(ctx, meta, contentWidth, 2)
-      currentY = drawLines(ctx, metaLines, contentX, currentY, 29) + 10
+      currentY = drawLines(ctx, metaLines, contentX, currentY, 30) + 15
     }
 
-    const footerY = 1092
-    if (summary && currentY < footerY - 16) {
+    // 竖版简介强制最多 3 行
+    if (summary) {
       ctx.fillStyle = THEME.muted
       ctx.font = `400 24px ${getPosterFont()}`
-      const availableLines = Math.max(1, Math.min(3, Math.floor((footerY - currentY - 16) / 33)))
-      drawLines(ctx, splitLines(ctx, summary, contentWidth - 2, availableLines), contentX, currentY, 35)
+      const summaryLines = splitLines(ctx, summary, contentWidth, 3)
+      drawLines(ctx, summaryLines, contentX, currentY, 36)
     }
 
+    // 底部品牌固定最下方
     drawBrandAndQr(ctx, qrCanvas, width, height, {
       edge,
-      brandY: 1120,
+      brandY: 1100,
       qrSize: 90,
       brandFont: 31,
       subFont: 21,
@@ -599,10 +518,10 @@ function drawPoster(canvas, { post, orientation, duration }, coverImage, qrCanva
   } else {
     const edge = 44
     const coverX = 47
-    const coverY = 45 // 从 54 微调上移，配合整体高度缩小
+    const coverY = 54
     const coverSize = 410
     
-    cropSquare(ctx, coverImage, coverX, coverY, coverSize, 9)
+    cropSquare(ctx, coverImage, coverX, coverY, coverSize, 12)
     if (duration && coverImage) drawDurationPill(ctx, coverX + 16, coverY + coverSize - 58, duration)
 
     const contentX = 500
@@ -613,11 +532,16 @@ function drawPoster(canvas, { post, orientation, duration }, coverImage, qrCanva
     ctx.font = `400 20px ${getPosterFont()}`
     const metaLines = meta ? splitLines(ctx, meta, contentWidth, 2) : []
     ctx.font = `400 23px ${getPosterFont()}`
+    
+    // 横版简介强制最多 5 行
     const summaryLines = summary ? splitLines(ctx, summary, contentWidth, 5) : []
+    
     const blockHeight =
       titleLines.length * 50 +
       (metaLines.length ? 13 + metaLines.length * 29 : 0) +
       (summaryLines.length ? 14 + summaryLines.length * 33 : 0)
+      
+    // 右侧内容相对封面居中
     let currentY = coverY + Math.max(0, Math.floor((coverSize - blockHeight) / 2))
 
     ctx.fillStyle = THEME.ink
@@ -638,10 +562,10 @@ function drawPoster(canvas, { post, orientation, duration }, coverImage, qrCanva
       drawLines(ctx, summaryLines, contentX, currentY, 33)
     }
 
-    // 底部品牌区上提（原 596），使下方留白从“两行”减至“一行”
+    // 高度 620，品牌区下拉至合适位置
     drawBrandAndQr(ctx, qrCanvas, width, height, {
       edge: 48,
-      brandY: 550, 
+      brandY: 500,
       qrSize: 82,
       brandFont: 30,
       subFont: 20,
