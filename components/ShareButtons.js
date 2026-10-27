@@ -7,7 +7,6 @@ import { useEffect, useState } from 'react'
 import SharePosterModal from '@/components/SharePosterModal'
 
 const QrCode = dynamic(() => import('@/components/QrCode'), { ssr: false })
-// 基础样式保留圆形布局，去掉原本写死的 bgClass
 const BASE_BUTTON_CLASS =
   'cursor-pointer rounded-full mx-1 w-8 h-8 flex items-center justify-center text-white transition-colors duration-200'
 const ICON_CLASS = 'text-sm leading-none'
@@ -36,7 +35,6 @@ const SHARE_ICON_CLASS = {
   threads: 'fas fa-at'
 }
 
-// 平台悬停专属色
 const SHARE_HOVER_COLORS = {
   facebook: '#1877F2',
   messenger: '#00B2FF',
@@ -73,6 +71,9 @@ const ShareButtons = ({ post }) => {
   const { locale } = useGlobal()
   const [qrCodeShow, setQrCodeShow] = useState(false)
   const [sharePosterOpen, setSharePosterOpen] = useState(false)
+
+  // ✨ 直接获取当前系统的主题色，作为所有按钮的默认底色
+  const primaryColor = siteConfig('HEXO_COLOR_PRIMARY', '#3A4A7A')
 
   const openPopover = () => setQrCodeShow(true)
   const closePopover = () => setQrCodeShow(false)
@@ -125,14 +126,18 @@ const ShareButtons = ({ post }) => {
     const shareLink = buildShareUrl(service)
     if (!shareLink) return null
     const iconClass = SHARE_ICON_CLASS[service] || 'fas fa-share-alt'
+    const hoverColor = SHARE_HOVER_COLORS[service] || primaryColor
+
     return (
       <button 
         aria-label={service} 
         key={service} 
         onClick={() => openShareWindow(shareLink)} 
-        // ✨ 统一默认主题色背景，加上 data-service 用于 CSS 悬停匹配
-        className={`${BASE_BUTTON_CLASS} share-btn`} 
-        data-service={service}
+        className={BASE_BUTTON_CLASS}
+        // ✨ 核心逻辑：默认主题色，onMouseEnter 变品牌色，onMouseLeave 变回主题色
+        style={{ backgroundColor: primaryColor }}
+        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = hoverColor }}
+        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = primaryColor }}
         title={service}>
         <i className={`${iconClass} ${ICON_CLASS}`} />
       </button>
@@ -153,8 +158,10 @@ const ShareButtons = ({ post }) => {
                 aria-label={singleService} 
                 key={singleService} 
                 onClick={() => openShareWindow(`http://connect.qq.com/widget/shareqq/index.html?url=${shareUrl}&sharesource=qzone&title=${title}&desc=${body}`)} 
-                className={`${BASE_BUTTON_CLASS} share-btn`} 
-                data-service="qq"
+                className={BASE_BUTTON_CLASS}
+                style={{ backgroundColor: primaryColor }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = SHARE_HOVER_COLORS['qq'] }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = primaryColor }}
                 title={singleService}>
                 <i className={`fab fa-qq ${ICON_CLASS}`} />
               </button>
@@ -162,12 +169,18 @@ const ShareButtons = ({ post }) => {
           case 'wechat':
             return (
               <button 
-                onMouseEnter={openPopover} 
-                onMouseLeave={closePopover} 
+                onMouseEnter={(e) => {
+                  openPopover();
+                  e.currentTarget.style.backgroundColor = SHARE_HOVER_COLORS['wechat'];
+                }} 
+                onMouseLeave={(e) => {
+                  closePopover();
+                  e.currentTarget.style.backgroundColor = primaryColor;
+                }}
                 aria-label={singleService} 
                 key={singleService} 
-                className={`${BASE_BUTTON_CLASS} share-btn relative`} 
-                data-service="wechat"
+                className={`${BASE_BUTTON_CLASS} relative`}
+                style={{ backgroundColor: primaryColor }}
                 title={singleService}>
                 <i className={`fab fa-weixin ${ICON_CLASS}`} />
                 <div className='absolute'>
@@ -180,7 +193,7 @@ const ShareButtons = ({ post }) => {
             )
           case 'link':
             return (
-              <button aria-label='分享这一期' key={singleService} onClick={() => setSharePosterOpen(true)} className={`${BASE_BUTTON_CLASS} bg-yellow-500`} title='分享海报 / 复制链接'>
+              <button aria-label='分享这一期' key={singleService} onClick={() => setSharePosterOpen(true)} className={`${BASE_BUTTON_CLASS} bg-yellow-500 hover:bg-yellow-600`} title='分享海报 / 复制链接'>
                 <i className={`fas fa-share-alt ${ICON_CLASS}`} />
               </button>
             )
@@ -200,21 +213,6 @@ const ShareButtons = ({ post }) => {
         }
       })}
       <SharePosterModal open={sharePosterOpen} onClose={() => setSharePosterOpen(false)} post={post} shareUrl={shareUrl} />
-
-      {/* ✨ 核心注入：直接用 CSS 变量处理默认色，用 data 属性精准匹配各平台的悬浮色 */}
-      <style jsx>{`
-        .share-btn {
-          background-color: var(--theme-color) !important;
-        }
-        .share-btn:hover {
-          background-color: var(--hover-color) !important;
-        }
-        ${Object.entries(SHARE_HOVER_COLORS).map(([service, color]) => `
-          .share-btn[data-service="${service}"]:hover {
-            background-color: ${color} !important;
-          }
-        `).join('')}
-      `}</style>
     </>
   )
 }
