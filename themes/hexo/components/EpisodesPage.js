@@ -48,7 +48,7 @@ const EpisodesPage = props => {
                   post={post}
                   showSummary={showSummary}
                   siteInfo={siteInfo}
-                  featuredType={post.featuredType} // 直接将原始标签传给卡片，不做任何截断
+                  featuredType={post.featuredType} // ✨ 节目页直传原值
                 />
               </div>
             ))}
