@@ -6,20 +6,20 @@ import SmartLink from '@/components/SmartLink'
 import { getCategoryUrl } from '@/lib/utils/category'
 import { useEffect, useRef, useState } from 'react'
 
-const PlayIcon = ({ size = 12 }) => (
+const PlayIcon = ({ size = 16 }) => (
   <svg viewBox='0 0 24 24' width={size} height={size} fill='currentColor' style={{ marginLeft: '2px' }}>
     <path d='M8 5v14l11-7z' />
   </svg>
 )
 
-const PauseIcon = ({ size = 12 }) => (
+const PauseIcon = ({ size = 16 }) => (
   <svg viewBox='0 0 24 24' width={size} height={size} fill='currentColor'>
     <rect x='6' y='5' width='4' height='14' rx='1' />
     <rect x='14' y='5' width='4' height='14' rx='1' />
   </svg>
 )
 
-const LoadingIcon = ({ size = 14 }) => {
+const LoadingIcon = ({ size = 16 }) => {
   const dots = 8
   const radius = 9
   const dotR = 1.6
@@ -54,12 +54,9 @@ const LoadingIcon = ({ size = 14 }) => {
   )
 }
 
-// ✨ 升级版声波组件：高低错落、播放时缓慢跳跃
 const Waveform = ({ isPlaying, progress }) => {
-  // 定义 5 根声波的基础高度比例，制造长短不一的视觉效果（像豆包那样）
   const baseHeights = ['40%', '75%', '100%', '55%', '85%']
   const bars = baseHeights.length
-  // 根据进度计算当前有几根亮起（保留原有的进度联动逻辑）
   const activeBars = Math.ceil((progress / 100) * bars)
 
   return (
@@ -74,7 +71,6 @@ const Waveform = ({ isPlaying, progress }) => {
             }`}
             style={{
               height: baseHeights[i],
-              // 慢速跳动动画（1.8s 周期）
               animation: isPlaying && isActive ? `wave 1.8s ease-in-out infinite alternate` : 'none',
               animationDelay: `${i * 0.15}s`,
               transformOrigin: 'center'
@@ -206,14 +202,13 @@ export default function PostHero({ post, siteInfo }) {
 
   const isActive = isCurrentSrc && (isPlaying || isLoading)
 
-  // ✨ 调整了内边距和边框：手机端更小，PC端拉长；边框变细变淡
   const capsuleStyle = {
     background: isActive
       ? `linear-gradient(135deg, #7B8BC4 0%, ${primaryColor} 100%)`
       : 'rgba(255, 255, 255, 0.15)',
     backdropFilter: 'blur(12px)',
     WebkitBackdropFilter: 'blur(12px)',
-    border: '1px solid rgba(255, 255, 255, 0.1)' // 边框透明度从 0.2 降到 0.1
+    border: '1px solid rgba(255, 255, 255, 0.1)'
   }
 
   return (
@@ -298,19 +293,19 @@ export default function PostHero({ post, siteInfo }) {
                       style={{ display: 'none' }}
                     />
 
-                    {/* 胶囊播放器：调整了 px 和 py 让高度更扁、宽度更长 */}
+                    {/* 这里加了 text-white 确保图标全是纯白，尺寸稍微调大了容器 */}
                     <div
-                      className='inline-flex items-center gap-2 sm:gap-2.5 px-4 py-1.5 sm:px-6 sm:py-2 rounded-full transition-all duration-300 cursor-pointer select-none'
+                      className='inline-flex items-center gap-2 sm:gap-2.5 px-4 py-1.5 sm:px-6 sm:py-2 rounded-full transition-all duration-300 cursor-pointer select-none text-white'
                       style={capsuleStyle}
                       onClick={handlePlayClick}
                     >
-                      <div className='flex-shrink-0 flex items-center justify-center w-4 h-4 sm:w-5 sm:h-5'>
+                      <div className='flex-shrink-0 flex items-center justify-center w-5 h-5 sm:w-[22px] sm:h-[22px]'>
                         {isCurrentSrc && isLoading ? (
-                          <LoadingIcon size={14} />
+                          <LoadingIcon size={16} />
                         ) : isCurrentSrc && isPlaying ? (
-                          <PauseIcon size={12} />
+                          <PauseIcon size={16} />
                         ) : (
-                          <PlayIcon size={12} />
+                          <PlayIcon size={16} />
                         )}
                       </div>
 
