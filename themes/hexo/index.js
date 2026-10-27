@@ -191,8 +191,7 @@ const LayoutPostList = props => {
 
   if (isHomePage) {
     // ==========================================
-    // ✨ 修正后的首页限制逻辑：
-    // 只修改传给卡片组件的 featuredType，不修改原始 post 数据。
+    // 首页限制逻辑：置顶1个，精选2个，会员2个
     // ==========================================
     let pinnedCount = 0
     let featuredCount = 0
@@ -203,7 +202,6 @@ const LayoutPostList = props => {
         <SlotBar {...props} />
         <div className='space-y-6 px-2'>
           {posts.map((post, index) => {
-            // 复制一份 post，用于判断是否显示标签
             let cardFeaturedType = post.featuredType || null
 
             if (cardFeaturedType === 'pinned') {
@@ -224,7 +222,7 @@ const LayoutPostList = props => {
                 index={index}
                 showSummary={showSummary}
                 siteInfo={siteInfo}
-                featuredType={cardFeaturedType} // 传入经过限制的 featuredType
+                featuredType={cardFeaturedType} // 将截断后的结果传给卡片
               />
             )
           })}
