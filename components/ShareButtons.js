@@ -40,7 +40,7 @@ const SHARE_HOVER_COLORS = {
   messenger: '#00B2FF',
   line: '#00C300',
   reddit: '#FF4500',
-  email: '#4B5563',
+  email: '#0078D4', // ✨ 改成了 Outlook 蓝
   twitter: '#000000',
   telegram: '#26A5E4',
   whatsapp: '#25D366',
@@ -52,7 +52,8 @@ const SHARE_HOVER_COLORS = {
   weibo: '#E6162D',
   threads: '#000000',
   wechat: '#07C160',
-  qq: '#12B7F5'
+  qq: '#12B7F5',
+  link: '#EAB308' // ✨ 海报按钮的黄色移到这里
 }
 
 const ShareButtons = ({ post }) => {
@@ -72,7 +73,6 @@ const ShareButtons = ({ post }) => {
   const [qrCodeShow, setQrCodeShow] = useState(false)
   const [sharePosterOpen, setSharePosterOpen] = useState(false)
 
-  // ✨ 直接获取当前系统的主题色，作为所有按钮的默认底色
   const primaryColor = siteConfig('HEXO_COLOR_PRIMARY', '#3A4A7A')
 
   const openPopover = () => setQrCodeShow(true)
@@ -134,7 +134,6 @@ const ShareButtons = ({ post }) => {
         key={service} 
         onClick={() => openShareWindow(shareLink)} 
         className={BASE_BUTTON_CLASS}
-        // ✨ 核心逻辑：默认主题色，onMouseEnter 变品牌色，onMouseLeave 变回主题色
         style={{ backgroundColor: primaryColor }}
         onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = hoverColor }}
         onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = primaryColor }}
@@ -193,7 +192,15 @@ const ShareButtons = ({ post }) => {
             )
           case 'link':
             return (
-              <button aria-label='分享这一期' key={singleService} onClick={() => setSharePosterOpen(true)} className={`${BASE_BUTTON_CLASS} bg-yellow-500 hover:bg-yellow-600`} title='分享海报 / 复制链接'>
+              <button 
+                aria-label='分享这一期' 
+                key={singleService} 
+                onClick={() => setSharePosterOpen(true)} 
+                className={BASE_BUTTON_CLASS}
+                style={{ backgroundColor: primaryColor }} // ✨ 统一底色
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = SHARE_HOVER_COLORS['link'] }} // ✨ 悬停变黄
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = primaryColor }}
+                title='分享海报 / 复制链接'>
                 <i className={`fas fa-share-alt ${ICON_CLASS}`} />
               </button>
             )
