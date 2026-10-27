@@ -191,41 +191,43 @@ const LayoutPostList = props => {
 
   if (isHomePage) {
     // ==========================================
-    // ✨ 首页限制逻辑：强制截断标签
-    // 置顶只准 1 个，精选只准 2 个，会员只准 2 个
+    // ✨ 修正后的首页限制逻辑：
+    // 只修改传给卡片组件的 featuredType，不修改原始 post 数据。
     // ==========================================
     let pinnedCount = 0
     let featuredCount = 0
     let memberCount = 0
 
-    const processedPosts = posts.map(post => {
-      const newPost = { ...post } // 浅拷贝，不影响原始数据
-      if (newPost.featuredType === 'pinned') {
-        pinnedCount++
-        if (pinnedCount > 1) newPost.featuredType = null
-      } else if (newPost.featuredType === 'featured') {
-        featuredCount++
-        if (featuredCount > 2) newPost.featuredType = null
-      } else if (newPost.featuredType === '会员') {
-        memberCount++
-        if (memberCount > 2) newPost.featuredType = null
-      }
-      return newPost
-    })
-
     return (
       <div>
         <SlotBar {...props} />
         <div className='space-y-6 px-2'>
-          {processedPosts.map((post, index) => (
-            <BlogPostCard
-              key={post.id}
-              post={post}
-              index={index}
-              showSummary={showSummary}
-              siteInfo={siteInfo}
-            />
-          ))}
+          {posts.map((post, index) => {
+            // 复制一份 post，用于判断是否显示标签
+            let cardFeaturedType = post.featuredType || null
+
+            if (cardFeaturedType === 'pinned') {
+              pinnedCount++
+              if (pinnedCount > 1) cardFeaturedType = null
+            } else if (cardFeaturedType === 'featured') {
+              featuredCount++
+              if (featuredCount > 2) cardFeaturedType = null
+            } else if (cardFeaturedType === '会员') {
+              memberCount++
+              if (memberCount > 2) cardFeaturedType = null
+            }
+
+            return (
+              <BlogPostCard
+                key={post.id}
+                post={post}
+                index={index}
+                showSummary={showSummary}
+                siteInfo={siteInfo}
+                featuredType={cardFeaturedType} // 传入经过限制的 featuredType
+              />
+            )
+          })}
         </div>
         <div className='mt-8 mb-4 text-center'>
           <SmartLink
