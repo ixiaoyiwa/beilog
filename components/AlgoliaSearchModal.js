@@ -3,7 +3,6 @@ import { siteConfig } from '@/lib/config'
 import algoliasearch from 'algoliasearch'
 import { useRouter } from 'next/router'
 import {
-  Fragment,
   useCallback,
   useMemo,
   useEffect,
@@ -12,12 +11,6 @@ import {
   useState
 } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
-
-const ShortCutActions = [
-  { key: '↑ ↓', action: '选择' },
-  { key: 'Enter', action: '跳转' },
-  { key: 'Esc', action: '关闭' }
-]
 
 export default function AlgoliaSearchModal({ cRef }) {
   const [searchResults, setSearchResults] = useState([])
@@ -193,86 +186,69 @@ export default function AlgoliaSearchModal({ cRef }) {
         isModalOpen ? 'opacity-100' : 'invisible opacity-0 pointer-events-none'
       } z-[9999] fixed h-screen w-screen left-0 top-0 sm:mt-[10vh] flex items-start justify-center mt-0`}>
       
-      {/* 模态框：完全恢复原版紧凑样式 */}
+      {/* 模态框主体 */}
       <div
         className={`${
           isModalOpen ? 'opacity-100' : 'invisible opacity-0 translate-y-10'
-        } max-h-[80vh] flex flex-col justify-between w-full min-h-[10rem] h-full md:h-fit max-w-xl dark:bg-hexo-black-gray dark:border-gray-800 bg-white p-5 rounded-lg z-50 shadow-xl border hover:border-blue-600 duration-300 transition-all relative`}>
-        <div className='flex justify-between items-center'>
-          <div className='text-2xl text-blue-600 dark:text-yellow-600 font-bold'>
+        } max-h-[80vh] flex flex-col w-full min-h-[10rem] h-full md:h-fit max-w-xl dark:bg-hexo-black-gray dark:border-gray-800 bg-white p-5 rounded-lg z-50 shadow-xl border hover:border-blue-600 duration-300 transition-all relative`}>
+        
+        <div className='flex justify-between items-center mb-4'>
+          <div className='text-xl text-blue-600 dark:text-yellow-600 font-bold'>
             搜索
           </div>
           <div>
             <button type='button' aria-label='关闭搜索'
-              className='text-gray-600 fa-solid fa-xmark p-1 cursor-pointer hover:text-blue-600'
+              className='text-gray-500 fa-solid fa-xmark p-1 cursor-pointer hover:text-blue-600 transition-colors'
               onClick={closeModal} />
           </div>
         </div>
 
+        {/* 修改了 placeholder 提示文字 */}
         <input
           type='text'
-          placeholder='在这里输入搜索关键词...'
+          placeholder='搜索标题、主创等关键词...'
           onChange={e => handleInputChange(e)}
           onFocus={() => setIsInputFocused(true)}
           onBlur={() => setIsInputFocused(false)}
-          className='text-black dark:text-gray-200 bg-gray-50 dark:bg-gray-600 outline-blue-500 w-full px-4 my-2 py-1 mb-4 border rounded-md'
+          className='text-black dark:text-gray-200 bg-gray-50 dark:bg-gray-600 outline-blue-500 w-full px-4 py-2 mb-2 border rounded-md text-sm transition-all focus:bg-white dark:focus:bg-black'
           ref={inputRef}
         />
 
-        {/* 标签组已彻底删除 */}
-
-        {isLoading && <p role='status' className='text-center text-gray-500'>正在搜索…</p>}
-        {searchError && <p role='alert' className='text-center text-red-600'>{searchError} <button type='button' className='underline' onClick={() => { void handleSearch(keyword, page) }}>重试</button></p>}
+        {isLoading && <p role='status' className='text-center text-gray-500 text-sm py-2'>正在搜索…</p>}
+        {searchError && <p role='alert' className='text-center text-red-500 text-sm py-2'>{searchError} <button type='button' className='underline' onClick={() => { void handleSearch(keyword, page) }}>重试</button></p>}
         {searchResults.length === 0 && keyword && !isLoading && !searchError && (
-          <div>
-            <p className=' text-slate-600 text-center my-4 text-base'>
-              无法找到相关结果 <span className='font-semibold'>&quot;{keyword}&quot;</span>
-            </p>
+          <div className='text-center text-gray-500 text-sm py-4'>
+            无法找到相关结果 <span className='font-semibold'>&quot;{keyword}&quot;</span>
           </div>
         )}
-        <ul className='flex-1 overflow-auto'>
+
+        <ul className='flex-1 overflow-y-auto min-h-[50px] mb-2'>
           {searchResults.map((result, index) => (
             <li
               key={result.objectID}
               onMouseEnter={() => setActiveIndex(index)}
               onClick={() => onJumpSearchResult(index)}
-              className={`cursor-pointer replace my-2 p-2 duration-100 rounded-lg ${
-                activeIndex === index ? 'bg-blue-600 dark:bg-yellow-600' : ''
+              className={`cursor-pointer replace my-1 p-2 duration-100 rounded-lg ${
+                activeIndex === index ? 'bg-blue-600 dark:bg-yellow-600 text-white' : 'text-gray-700 dark:text-gray-300'
               }`}>
-              <a className={`${activeIndex === index ? ' text-white' : ' text-black dark:text-gray-300 '}`}>
+              <a className={`${activeIndex === index ? 'text-white' : ''} block truncate`}>
                 {result.title}
               </a>
             </li>
           ))}
         </ul>
         
-        <Pagination totalPage={totalPage} page={page} switchPage={switchPage} />
-        
-        <div className='flex items-center justify-between mt-2 sm:text-sm text-xs dark:text-gray-300'>
-          {totalHit === 0 && (
-            <div className='flex items-center'>
-              {ShortCutActions.map((action, index) => (
-                <Fragment key={index}>
-                  <div className='border-gray-300 dark:text-gray-300 text-gray-600 px-2 rounded border inline-block'>
-                    {action.key}
-                  </div>
-                  <span className='ml-2 mr-4  text-gray-600 dark:text-gray-300'>
-                    {action.action}
-                  </span>
-                </Fragment>
-              ))}
-            </div>
-          )}
+        {/* 底部单行布局：左边统计，右边分页 */}
+        <div className='flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400'>
           <div>
-            {totalHit > 0 && (
-              <p>共搜索到 {totalHit} 条结果，用时 {useTime} 毫秒</p>
-            )}
+            {totalHit > 0 ? `共 ${totalHit} 条 · ${useTime} ms` : ''}
           </div>
-          {/* 底部 Algolia 广告已删除 */}
+          
+          <Pagination totalPage={totalPage} page={page} switchPage={switchPage} />
         </div>
       </div>
 
-      {/* 半透明遮罩（单独放，确保生效） */}
+      {/* 半透明遮罩 */}
       <div
         onClick={closeModal}
         className='absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm -z-10'
@@ -281,24 +257,47 @@ export default function AlgoliaSearchModal({ cRef }) {
   )
 }
 
-function Pagination(props) {
-  const { totalPage, page, switchPage } = props
-  if (totalPage <= 0) return <></>
+/**
+ * 极简紧凑版分页组件
+ */
+function Pagination({ totalPage, page, switchPage }) {
+  if (totalPage <= 1) return null // 只有一页时不显示分页
+  
   return (
-    <div className='flex space-x-1 w-full justify-center py-1'>
+    <div className='flex items-center space-x-1 select-none'>
+      <button 
+        onClick={() => switchPage(page - 1)} 
+        disabled={page === 0}
+        className={`px-2 py-1 rounded hover:text-black dark:hover:text-white transition-colors ${page === 0 ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`}
+      >
+        上一页
+      </button>
+      
       {Array.from({ length: totalPage }, (_, i) => {
-        const classNames = page === i
-            ? 'font-bold text-white bg-blue-600 dark:bg-yellow-600 rounded'
-            : 'hover:text-blue-600 hover:font-bold dark:text-gray-300'
+        // 如果页数太多（比如超过 5 页），为了不撑破排版，可以考虑只显示当前页附近的
+        // 但鉴于你目前最多也就几页，这里先直接渲染，保持代码极简
         return (
-          <div
+          <button
+            key={i}
             onClick={() => switchPage(i)}
-            className={`text-center cursor-pointer w-6 h-6 ${classNames}`}
-            key={i}>
+            className={`w-6 h-6 flex items-center justify-center rounded transition-colors ${
+              page === i 
+                ? 'bg-blue-600 text-white font-bold dark:bg-yellow-600 dark:text-white' 
+                : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+            }`}
+          >
             {i + 1}
-          </div>
+          </button>
         )
       })}
+      
+      <button 
+        onClick={() => switchPage(page + 1)} 
+        disabled={page === totalPage - 1}
+        className={`px-2 py-1 rounded hover:text-black dark:hover:text-white transition-colors ${page === totalPage - 1 ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`}
+      >
+        下一页
+      </button>
     </div>
   )
 }
