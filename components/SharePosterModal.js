@@ -10,8 +10,26 @@ const THEME = {
   border: 'rgba(70, 89, 130, 0.28)'
 }
 
-const POSTER_FONT =
-  '-apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif'
+// 海报 Canvas 直接读取站点当前全局字体，避免写死系统字体；同时等待网页字体加载后再绘制。
+function getPosterFont() {
+  if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+    // 有些主题只给正文容器设置落霞文楷，而 body 本身仍是系统字体；优先取站点实际正文的字体。
+    const targets = [
+      document.querySelector('.notion-page'),
+      document.querySelector('.post-content'),
+      document.querySelector('article'),
+      document.querySelector('main'),
+      document.body,
+      document.documentElement
+    ].filter(Boolean)
+    const families = targets.map(target => window.getComputedStyle(target).fontFamily).filter(Boolean)
+    const siteFont = families.find(family => /LXGW|落霞|WenKai|文楷/i.test(family))
+    if (siteFont) return siteFont
+    const family = families.find(value => value && value !== 'inherit')
+    if (family) return family
+  }
+  return 'sans-serif'
+}
 
 const POSTER_SIZE = {
   portrait: { width: 900, height: 1230 },
@@ -99,8 +117,8 @@ function getMetaText(post) {
   const visibleNames = names.slice(0, 3)
   if (names.length > 3) visibleNames.push(`+${names.length - 3}`)
 
-  if (episode) segments.push(episode)
-  if (category) segments.push(category)
+  const episodeCategory = [episode, category].filter(Boolean).join(' ')
+  if (episodeCategory) segments.push(episodeCategory)
   if (date) segments.push(date)
   if (visibleNames.length) segments.push(visibleNames.join(' '))
   return segments.join(' / ')
@@ -196,62 +214,98 @@ function getUrlsFromValue(value, depth = 0) {
 
 function getCoverCandidates(post) {
   if (!post || typeof post !== 'object') return []
-  const values = [
-    post.pageCoverOriginal,
-    post.originalCoverUrl,
-    post.coverOriginal,
-    post.pageCover,
-    post.page_cover,
-    post.pageCoverThumbnail,
-    post.cover,
-    post.coverUrl,
-    post.cover_url,
-    post.thumbnail,
-    post.image,
-    post.imageUrl,
-    post.image_url,
-    post.featuredImage,
-    post.featured_image,
-    post.page?.cover,
-    post.properties?.Cover,
-    post.properties?.cover,
-    post.properties?.Image,
-    post.properties?.image,
-    post.properties?.封面,
-    post.properties?.海报,
-    post.properties?.图片
-  ]
-
-  const candidates = []
-  const addValue = value => {
+  const fieldCandidates = []
+  const pageCandidates = []
+  const collect = (target, value) => {
     getUrlsFromValue(value).forEach(url => {
-      if (!candidates.includes(url)) candidates.push(url)
+      if (!target.includes(url)) target.push(url)
     })
   }
-  values.forEach(addValue)
+  const addField = value => collect(fieldCandidates, value)
+  const addPage = value => collect(pageCandidates, value)
 
-  // 兜底：部分主题传给分享组件的 post 对象不含 pageCover，但节目卡片本身已经显示封面。
-  // 这时按节目标题/slug 在当前页面寻找对应卡片图片，再把图片地址纳入同一套 CORS/代理加载流程。
+  const slugValue = cleanText(post.slug || post.href || post.url)
+  let slug = slugValue.replace(/^\/+|\/+$/g, '').toLocaleLowerCase()
+  try {
+    if (/^https?:\/\//i.test(slugValue)) slug = decodeURIComponent(new URL(slugValue).pathname).replace(/^\/+|\/+$/g, '').toLocaleLowerCase()
+  } catch {}
+
+  let currentPath = ''
+  if (typeof window !== 'undefined') {
+    try { currentPath = decodeURIComponent(window.location.pathname).replace(/^\/+|\/+$/g, '').toLocaleLowerCase() }
+    catch { currentPath = window.location.pathname.replace(/^\/+|\/+$/g, '').toLocaleLowerCase() }
+  }
+  const currentEpisodePage = Boolean(slug && currentPath && (currentPath.includes(slug) || slug.includes(currentPath)))
+
+  // 先收集 Notion 原生 cover 与 NotionNext 的映射字段，保留作为页面信息缺失时的兜底。
+  const values = [
+    post.cover, post.page?.cover, post.pageCoverOriginal, post.originalCoverUrl,
+    post.coverOriginal, post.pageCover, post.page_cover, post.pageCoverThumbnail,
+    post.coverUrl, post.cover_url, post.thumbnail, post.image, post.imageUrl,
+    post.image_url, post.featuredImage, post.featured_image,
+    post.properties?.Cover, post.properties?.cover, post.properties?.Image,
+    post.properties?.image, post.properties?.封面, post.properties?.海报, post.properties?.图片
+  ]
+  values.forEach(addField)
+
   if (typeof document !== 'undefined') {
     const title = cleanText(post.title).toLocaleLowerCase()
-    const slug = cleanText(post.slug || post.href || post.url).replace(/^\/+|\/+$/g, '').toLocaleLowerCase()
     const images = Array.from(document.querySelectorAll('img'))
+
+    // 详情页正在展示的封面优先于 post 中可能过期的 pageCover 缓存值。
+    // Notion 改过封面但 post 数据未同步到新字段时，og:image 往往仍指向当前页面实际封面。
+    if (currentEpisodePage) {
+      for (const selector of [
+        'meta[property="og:image"]',
+        'meta[name="twitter:image"]',
+        'meta[property="twitter:image"]'
+      ]) {
+        document.querySelectorAll(selector).forEach(meta => addPage(meta.getAttribute('content')))
+      }
+    }
+
+    // 列表/首页：只把标题或链接明确匹配本期的图片作为高优先级候选。
     for (const image of images) {
       const alt = cleanText(image.getAttribute('alt')).toLocaleLowerCase()
       const anchor = image.closest('a[href]')
       let anchorPath = ''
-      try { anchorPath = new URL(anchor?.href || '', window.location.href).pathname.toLocaleLowerCase() } catch {}
-      const titleMatch = title.length > 3 && alt.includes(title)
+      try { anchorPath = decodeURIComponent(new URL(anchor?.href || '', window.location.href).pathname).toLocaleLowerCase() } catch {}
+      const titleMatch = title.length > 3 && (alt.includes(title) || (title.includes(alt) && alt.length > 3))
       const slugMatch = slug.length > 2 && anchorPath.includes(slug)
       if (titleMatch || slugMatch) {
-        addValue(image.currentSrc || image.src || image.getAttribute('data-src'))
-        addValue(image.getAttribute('data-original'))
+        addPage(image.currentSrc || image.src || image.getAttribute('data-src') || image.getAttribute('data-original'))
+        addPage(image.getAttribute('data-original'))
+      }
+    }
+
+    // 详情页封面常常没有链接、alt 也不是标题，因此必须读取详情页主图与 CSS 背景图。
+    // 仅当当前 URL 确认是本期页面时启用，避免把其他页面的图误当成封面。
+    if (currentEpisodePage) {
+      const selectors = [
+        '.post-cover img', '.post-header img', '.notion-page-cover img',
+        'article img', '.notion-page img', '.post-content > img', 'main img', 'img'
+      ]
+      const seen = new Set()
+      for (const selector of selectors) {
+        for (const image of document.querySelectorAll(selector)) {
+          if (seen.has(image)) continue
+          seen.add(image)
+          addPage(image.currentSrc || image.src || image.getAttribute('data-src') || image.getAttribute('data-original'))
+          addPage(image.getAttribute('data-original'))
+        }
+      }
+      for (const selector of ['article', '.post-cover', '.post-header', '.notion-page-cover', '[class*="cover"]']) {
+        for (const node of document.querySelectorAll(selector)) {
+          const bg = window.getComputedStyle(node).backgroundImage
+          const matches = bg && [...bg.matchAll(/url\(["']?(.*?)["']?\)/g)]
+          if (matches) matches.forEach(match => addPage(match[1]))
+        }
       }
     }
   }
 
-  // 保留更多候选地址；某些 NotionNext 页面同时提供原图、缩略图和代理图。
-  return candidates.slice(0, 16)
+  // 当前详情页正在显示的封面优先，旧 NotionNext/RSS 字段作为兜底。
+  return [...new Set([...pageCandidates, ...fieldCandidates])].slice(0, 28)
 }
 
 function loadImage(url, timeoutMs) {
@@ -332,13 +386,13 @@ async function loadCoverImage(post) {
   const promise = (async () => {
     const deadline = Date.now() + 15000
     let lastError = null
-    for (const candidate of candidates) {
-      if (Date.now() >= deadline) break
-      try {
-        return await tryCandidate(candidate, deadline)
-      } catch (error) {
-        lastError = error
-      }
+    // 不再按顺序等待每个旧 URL 超时。Notion 旧封面/缩略图失效时，后面的新封面可能
+    // 被 15 秒总时限挡住；改为并发竞争，任一有效原图或代理成功即返回。
+    const prioritized = candidates.slice(0, 12)
+    try {
+      return await Promise.any(prioritized.map(candidate => tryCandidate(candidate, deadline)))
+    } catch (error) {
+      lastError = error?.errors?.[0] || error
     }
     if (typeof console !== 'undefined') {
       const candidateHosts = candidates.map(candidate => {
@@ -462,12 +516,38 @@ function drawLines(ctx, lines, x, y, lineHeight) {
 function drawDurationPill(ctx, x, y, duration) {
   if (!duration) return 0
   const height = 42
-  ctx.font = `500 20px ${POSTER_FONT}`
+  ctx.font = `500 20px ${getPosterFont()}`
   const textWidth = Math.ceil(ctx.measureText(duration).width)
   const pillWidth = 18 + 16 + 10 + textWidth + 17
 
   ctx.save()
-  fillRoundRect(ctx, x, y, pillWidth, height, height / 2, 'rgba(24, 31, 47, 0.80)')
+  // 取胶囊下方的封面局部做轻微模糊，再覆一层透明玻璃与细白边，避免实色底块。
+  try {
+    const glass = document.createElement('canvas')
+    glass.width = Math.max(1, Math.ceil(pillWidth))
+    glass.height = height
+    const glassCtx = glass.getContext('2d')
+    if (glassCtx) {
+      glassCtx.filter = 'blur(7px)'
+      glassCtx.drawImage(ctx.canvas, x - 5, y - 5, pillWidth + 10, height + 10, -5, -5, pillWidth + 10, height + 10)
+      glassCtx.filter = 'none'
+      roundRect(ctx, x, y, pillWidth, height, height / 2)
+      ctx.clip()
+      ctx.drawImage(glass, x, y, pillWidth, height)
+      ctx.restore()
+      ctx.save()
+    }
+  } catch {}
+  roundRect(ctx, x, y, pillWidth, height, height / 2)
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.17)'
+  ctx.fill()
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.58)'
+  ctx.lineWidth = 1.5
+  ctx.stroke()
+
+  ctx.shadowColor = 'rgba(15, 20, 30, 0.48)'
+  ctx.shadowBlur = 4
+  ctx.shadowOffsetY = 1
   ctx.fillStyle = '#FFFFFF'
   ctx.beginPath()
   ctx.moveTo(x + 15, y + 12)
@@ -475,7 +555,7 @@ function drawDurationPill(ctx, x, y, duration) {
   ctx.lineTo(x + 29, y + 21)
   ctx.closePath()
   ctx.fill()
-  ctx.font = `500 20px ${POSTER_FONT}`
+  ctx.font = `500 20px ${getPosterFont()}`
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
   ctx.fillText(duration, x + 42, y + height / 2 + 0.5)
@@ -490,11 +570,11 @@ function drawBrandAndQr(ctx, qrCanvas, width, height, layout) {
   ctx.textAlign = 'left'
   ctx.textBaseline = 'top'
   ctx.fillStyle = THEME.ink
-  ctx.font = `600 ${layout.brandFont}px ${POSTER_FONT}`
+  ctx.font = `600 ${layout.brandFont}px ${getPosterFont()}`
   ctx.fillText('念安酒馆', edge + 2, brandY)
 
   ctx.fillStyle = THEME.primary
-  ctx.font = `400 ${layout.subFont}px ${POSTER_FONT}`
+  ctx.font = `400 ${layout.subFont}px ${getPosterFont()}`
   ctx.fillText('扫码收听本期', edge + 3, brandY + layout.subOffset)
 
   // QR 外框向左微移；外框底边与“扫码收听本期”文字底部对齐。
@@ -539,13 +619,13 @@ function drawPoster(canvas, { post, orientation, duration }, coverImage, qrCanva
     const contentWidth = width - edge * 2 - 4
     let currentY = coverY + coverSize + 31
     ctx.fillStyle = THEME.ink
-    ctx.font = `650 41px ${POSTER_FONT}`
+    ctx.font = `650 41px ${getPosterFont()}`
     const titleLines = splitLines(ctx, title, contentWidth, 2)
     currentY = drawLines(ctx, titleLines, contentX, currentY, 52) + 11
 
     if (meta) {
       ctx.fillStyle = THEME.primary
-      ctx.font = `400 21px ${POSTER_FONT}`
+      ctx.font = `400 21px ${getPosterFont()}`
       const metaLines = splitLines(ctx, meta, contentWidth, 2)
       currentY = drawLines(ctx, metaLines, contentX, currentY, 29) + 10
     }
@@ -554,9 +634,9 @@ function drawPoster(canvas, { post, orientation, duration }, coverImage, qrCanva
     const footerY = 1092
     if (summary && currentY < footerY - 16) {
       ctx.fillStyle = THEME.muted
-      ctx.font = `400 24px ${POSTER_FONT}`
+      ctx.font = `400 24px ${getPosterFont()}`
       const availableLines = Math.max(1, Math.min(3, Math.floor((footerY - currentY - 16) / 33)))
-      drawLines(ctx, splitLines(ctx, summary, contentWidth - 2, availableLines), contentX, currentY, 33)
+      drawLines(ctx, splitLines(ctx, summary, contentWidth - 2, availableLines), contentX, currentY, 35)
     }
 
     drawBrandAndQr(ctx, qrCanvas, width, height, {
@@ -582,34 +662,34 @@ function drawPoster(canvas, { post, orientation, duration }, coverImage, qrCanva
     const contentWidth = width - contentX - edge - 2
 
     // 先量出标题、元信息和简介的实际行数，再将整组内容垂直居中放在封面右侧，避免短简介时上方挤、下方空。
-    ctx.font = `650 40px ${POSTER_FONT}`
+    ctx.font = `650 40px ${getPosterFont()}`
     const titleLines = splitLines(ctx, title, contentWidth, 2)
-    ctx.font = `400 20px ${POSTER_FONT}`
+    ctx.font = `400 20px ${getPosterFont()}`
     const metaLines = meta ? splitLines(ctx, meta, contentWidth, 2) : []
-    ctx.font = `400 23px ${POSTER_FONT}`
+    ctx.font = `400 23px ${getPosterFont()}`
     const summaryLines = summary ? splitLines(ctx, summary, contentWidth, 5) : []
     const blockHeight =
       titleLines.length * 50 +
       (metaLines.length ? 13 + metaLines.length * 29 : 0) +
-      (summaryLines.length ? 14 + summaryLines.length * 31 : 0)
+      (summaryLines.length ? 14 + summaryLines.length * 33 : 0)
     let currentY = coverY + Math.max(0, Math.floor((coverSize - blockHeight) / 2))
 
     ctx.fillStyle = THEME.ink
-    ctx.font = `650 40px ${POSTER_FONT}`
+    ctx.font = `650 40px ${getPosterFont()}`
     currentY = drawLines(ctx, titleLines, contentX, currentY, 50)
 
     if (metaLines.length) {
       currentY += 13
       ctx.fillStyle = THEME.primary
-      ctx.font = `400 20px ${POSTER_FONT}`
+      ctx.font = `400 20px ${getPosterFont()}`
       currentY = drawLines(ctx, metaLines, contentX, currentY, 29)
     }
 
     if (summaryLines.length) {
       currentY += 14
       ctx.fillStyle = THEME.muted
-      ctx.font = `400 23px ${POSTER_FONT}`
-      drawLines(ctx, summaryLines, contentX, currentY, 31)
+      ctx.font = `400 23px ${getPosterFont()}`
+      drawLines(ctx, summaryLines, contentX, currentY, 33)
     }
 
     drawBrandAndQr(ctx, qrCanvas, width, height, {
@@ -853,6 +933,8 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
       if (coverDone && qrDone) setReady(Boolean(loadedQr))
     }
 
+    if (document.fonts?.ready) document.fonts.ready.then(() => { if (!cancelled) repaint() })
+
     loadCoverImage(post)
       .then(image => {
         if (cancelled) return
@@ -921,6 +1003,7 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
     const canvas = canvasRef.current
     if (!canvas || !ready) return
     try {
+      if (typeof document !== 'undefined' && document.fonts?.ready) await document.fonts.ready
       const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'))
       if (!blob) throw new Error('PNG 导出失败')
       const downloadUrl = URL.createObjectURL(blob)
