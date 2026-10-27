@@ -32,10 +32,11 @@ function getPosterFont() {
 
 const POSTER_SIZE = {
   portrait: { width: 900, height: 1230 },
-  landscape: { width: 1200, height: 720 }
+  // 横版高度从 720 降低到 680，减少底部冗余留白
+  landscape: { width: 1200, height: 680 }
 }
 
-// 用户指定的最终兜底默认封面
+// 用户指定的最终兜底默认封面（防止出现狗头等奇怪占位图）
 const DEFAULT_COVER = 'https://up.885111.xyz/file/img/1789746781222_2027LOGO.webp'
 
 const QR_CDN_CANDIDATES = [
@@ -493,7 +494,6 @@ function drawDurationPill(ctx, x, y, duration) {
   roundRect(ctx, x, y, pillWidth, height, height / 2)
   ctx.fillStyle = 'rgba(255, 255, 255, 0.17)'
   ctx.fill()
-  // 已移除白边
 
   ctx.shadowColor = 'rgba(15, 20, 30, 0.48)'
   ctx.shadowBlur = 4
@@ -554,15 +554,18 @@ function drawPoster(canvas, { post, orientation, duration }, coverImage, qrCanva
 
   if (orientation === 'portrait') {
     const edge = 58
+    const contentX = edge + 2 
+    const contentWidth = width - edge * 2 - 4 // 900 - 116 - 4 = 780
+    
     const coverY = 48
-    const coverSize = width - edge * 2 - 44
-    const coverX = Math.round((width - coverSize) / 2)
-    // 仅绘制封面，不再绘制渐变色/狗头等占位图
+    // 使封面图宽度与下方文字区域宽度完全一致
+    const coverSize = contentWidth 
+    const coverX = contentX
+
+    // 仅绘制封面
     cropSquare(ctx, coverImage, coverX, coverY, coverSize, 9)
     if (duration && coverImage) drawDurationPill(ctx, coverX + 18, coverY + coverSize - 59, duration)
 
-    const contentX = edge + 2
-    const contentWidth = width - edge * 2 - 4
     let currentY = coverY + coverSize + 31
     ctx.fillStyle = THEME.ink
     ctx.font = `650 41px ${getPosterFont()}`
@@ -596,8 +599,9 @@ function drawPoster(canvas, { post, orientation, duration }, coverImage, qrCanva
   } else {
     const edge = 44
     const coverX = 47
-    const coverY = 54
+    const coverY = 45 // 从 54 微调上移，配合整体高度缩小
     const coverSize = 410
+    
     cropSquare(ctx, coverImage, coverX, coverY, coverSize, 9)
     if (duration && coverImage) drawDurationPill(ctx, coverX + 16, coverY + coverSize - 58, duration)
 
@@ -634,9 +638,10 @@ function drawPoster(canvas, { post, orientation, duration }, coverImage, qrCanva
       drawLines(ctx, summaryLines, contentX, currentY, 33)
     }
 
+    // 底部品牌区上提（原 596），使下方留白从“两行”减至“一行”
     drawBrandAndQr(ctx, qrCanvas, width, height, {
       edge: 48,
-      brandY: 596,
+      brandY: 550, 
       qrSize: 82,
       brandFont: 30,
       subFont: 20,
