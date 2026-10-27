@@ -25,19 +25,19 @@ const PauseIcon = ({ size = 18 }) => (
   </svg>
 )
 
-// 苹果风格 15秒快退
-const RewindIcon = ({ size = 18 }) => (
+// 苹果风格 15秒快退，数字放大
+const RewindIcon = ({ size = 20 }) => (
   <svg viewBox='0 0 24 24' width={size} height={size} fill='currentColor'>
     <path d="M12 5V2L7 7l5 5V9c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z" />
-    <text x="12" y="15" fontSize="7" fontWeight="bold" textAnchor="middle" fill="currentColor">15</text>
+    <text x="12" y="15.5" fontSize="10" fontWeight="bold" textAnchor="middle" fill="currentColor">15</text>
   </svg>
 )
 
-// 苹果风格 30秒快进
-const ForwardIcon = ({ size = 18 }) => (
+// 苹果风格 30秒快进，数字放大
+const ForwardIcon = ({ size = 20 }) => (
   <svg viewBox='0 0 24 24' width={size} height={size} fill='currentColor'>
     <path d="M12 5V2l5 5-5 5V9c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z" />
-    <text x="12" y="15" fontSize="7" fontWeight="bold" textAnchor="middle" fill="currentColor">30</text>
+    <text x="12" y="15.5" fontSize="10" fontWeight="bold" textAnchor="middle" fill="currentColor">30</text>
   </svg>
 )
 
@@ -94,7 +94,7 @@ export default function GlobalAudioPlayer() {
   const [showVolume, setShowVolume] = useState(false)
   const [speedIndex, setSpeedIndex] = useState(0)
   const [visible, setVisible] = useState(false)
-  const [minimized, setMinimized] = useState(true) // 默认隐藏
+  const [minimized, setMinimized] = useState(true)
   const [noAudioMessage, setNoAudioMessage] = useState('')
   const [titleOverflow, setTitleOverflow] = useState(false)
   const [locked, setLocked] = useState(false)
@@ -381,20 +381,19 @@ export default function GlobalAudioPlayer() {
     <div id='global-audio-player-root'>
       <audio ref={audioRef} preload='metadata' />
 
-      {/* 隐藏后的右侧悬浮恢复按钮 */}
+      {/* 隐藏后的右侧极简小拉手 */}
       <div
         onClick={() => setMinimized(false)}
-        className={`fixed right-0 top-1/2 -translate-y-1/2 z-[9998] cursor-pointer transition-all duration-500 ease-out flex items-center justify-center bg-white/70 dark:bg-gray-900/70 backdrop-blur-3xl border border-white/40 dark:border-gray-700/40 shadow-lg rounded-l-full pl-2 pr-1.5 py-3 hover:pl-3 group ${
+        className={`fixed right-0 top-1/2 -translate-y-1/2 z-[9998] cursor-pointer transition-all duration-300 ease-out flex items-center justify-center bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-[inset_1px_0_0_rgba(255,255,255,0.4)] dark:shadow-[inset_1px_0_0_rgba(255,255,255,0.1)] rounded-l-full pl-2 pr-1 py-3 group hover:pr-2 ${
           visible && minimized ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0 pointer-events-none'
         }`}
         title="展开播放器"
       >
-        {/* 音波动效提示 */}
-        <div className="flex items-end gap-[2px] h-3">
+        <div className="flex items-end gap-[2px] h-2.5">
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className={`w-[2px] rounded-full bg-[#3A4A7A] dark:bg-gray-300 ${playing ? 'animate-pulse' : ''}`}
+              className={`w-[1.5px] rounded-full bg-gray-400 dark:bg-gray-500 ${playing ? 'animate-pulse' : ''}`}
               style={{
                 height: `${i * 33}%`,
                 animationDelay: `${i * 150}ms`,
@@ -405,215 +404,221 @@ export default function GlobalAudioPlayer() {
         </div>
       </div>
 
-      {/* 播放器主体 */}
-      <div
-        className={`fixed bottom-6 left-1/2 w-[95%] sm:w-[90%] max-w-xl z-[9999] transition-all duration-500 ease-out transform ${
-          shouldRender
-            ? '-translate-x-1/2 translate-x-0 opacity-100'
-            : '-translate-x-1/2 translate-x-full opacity-0 pointer-events-none'
-        }`}>
-        {/* 将圆角改成 rounded-full，并调整 padding 让左侧封面贴合 */}
-        <div className='relative bg-white/70 dark:bg-gray-900/70 backdrop-blur-3xl border border-white/40 dark:border-gray-700/40 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.12)] pl-1.5 pr-3 py-1.5 flex items-center gap-3'>
-
-          {/* 左侧圆形封面，严丝合缝贴在左边 */}
-          <div className='relative flex-shrink-0 w-12 h-12 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800 shadow-sm border border-black/5 dark:border-white/5'>
-            {coverSrc ? (
-              <img src={coverSrc} alt='封面' className='w-full h-full object-cover' />
-            ) : (
-              <div className='w-full h-full bg-gradient-to-br from-[#5A6A9A] to-[#3A4A7A]' />
-            )}
-            {hasAudio && (
-              <button
-                onClick={togglePlay}
-                className='absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/40 transition-colors text-white'>
-                {loading ? (
-                  <LoadingIcon size={20} />
-                ) : playing ? (
-                  <PauseIcon size={20} />
-                ) : (
-                  <PlayIcon size={20} />
-                )}
-              </button>
-            )}
-          </div>
-
-          <div className='flex-1 min-w-0 flex flex-col justify-center gap-1'>
-            <div className='font-bold text-xs text-gray-800 dark:text-gray-100 w-full overflow-hidden pr-2'>
-              {noAudioMessage ? (
-                <span className='truncate block text-gray-500 dark:text-gray-400'>
-                  {noAudioMessage}
-                </span>
-              ) : audioData?.href ? (
-                <SmartLink
-                  href={audioData.href}
-                  className='hover:text-[#3A4A7A] transition-colors block w-full overflow-hidden'>
-                  <span
-                    ref={titleRef}
-                    className={titleOverflow ? 'animate-marquee' : 'truncate block'}>
-                    {audioData.title || '未知节目'}
-                  </span>
-                </SmartLink>
+      {/* 居中容器 */}
+      <div className='fixed bottom-6 left-0 right-0 z-[9999] flex justify-center pointer-events-none px-4'>
+        <div
+          className={`w-full max-w-xl transition-all duration-500 ease-out transform ${
+            shouldRender
+              ? 'translate-x-0 opacity-100 pointer-events-auto'
+              : 'translate-x-[150%] opacity-0 pointer-events-none'
+          }`}
+        >
+          {/* 播放器主体：去掉了实体 border，换成了极细的内阴影 Ring 和超强毛玻璃 */}
+          <div 
+            className='relative bg-white/75 dark:bg-[#1c1c1e]/75 backdrop-blur-2xl rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] ring-1 ring-black/5 dark:ring-white/10 pl-1.5 pr-3 py-1.5 flex items-center gap-3'
+          >
+            
+            {/* 左侧圆形封面 */}
+            <div className='relative flex-shrink-0 w-12 h-12 rounded-full overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.15)] bg-gray-100 dark:bg-gray-800'>
+              {coverSrc ? (
+                <img src={coverSrc} alt='封面' className='w-full h-full object-cover' />
               ) : (
-                <div className='w-full overflow-hidden'>
-                  <span
-                    ref={titleRef}
-                    className={titleOverflow ? 'animate-marquee' : 'truncate block'}>
-                    {audioData?.title || '未知节目'}
+                <div className='w-full h-full bg-gradient-to-br from-[#5A6A9A] to-[#3A4A7A]' />
+              )}
+              {hasAudio && (
+                <button
+                  onClick={togglePlay}
+                  className='absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/40 transition-colors text-white'>
+                  {loading ? (
+                    <LoadingIcon size={20} />
+                  ) : playing ? (
+                    <PauseIcon size={20} />
+                  ) : (
+                    <PlayIcon size={20} />
+                  )}
+                </button>
+              )}
+            </div>
+
+            <div className='flex-1 min-w-0 flex flex-col justify-center gap-1'>
+              <div className='font-bold text-xs text-gray-800 dark:text-gray-100 w-full overflow-hidden pr-2'>
+                {noAudioMessage ? (
+                  <span className='truncate block text-gray-500 dark:text-gray-400'>
+                    {noAudioMessage}
                   </span>
+                ) : audioData?.href ? (
+                  <SmartLink
+                    href={audioData.href}
+                    className='hover:text-[#3A4A7A] transition-colors block w-full overflow-hidden'>
+                    <span
+                      ref={titleRef}
+                      className={titleOverflow ? 'animate-marquee' : 'truncate block'}>
+                      {audioData.title || '未知节目'}
+                    </span>
+                  </SmartLink>
+                ) : (
+                  <div className='w-full overflow-hidden'>
+                    <span
+                      ref={titleRef}
+                      className={titleOverflow ? 'animate-marquee' : 'truncate block'}>
+                      {audioData?.title || '未知节目'}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {hasAudio && (
+                <div className='flex items-center gap-2'>
+                  <span className='text-[10px] text-gray-500 tabular-nums text-left w-8'>
+                    {formatTime(currentTime)}
+                  </span>
+                  
+                  <div
+                    ref={progressRef}
+                    onPointerDown={(e) => {
+                      e.preventDefault()
+                      seekFromEvent(e)
+                    }}
+                    className='flex-1 h-1 bg-gray-200/80 dark:bg-gray-700/80 rounded-full cursor-pointer relative min-w-[50px]'>
+                    <div
+                      className='h-full rounded-full'
+                      style={{
+                        width: `${progress}%`,
+                        background:
+                          'linear-gradient(90deg, #8B9BD4 0%, #4A5A8A 50%, #3A4A7A 100%)'
+                      }}
+                    />
+                  </div>
+                  
+                  <span className='text-[10px] text-gray-500 tabular-nums w-8'>
+                    {formatTime(duration)}
+                  </span>
+
+                  <div className='hidden sm:flex items-center gap-1.5 ml-1'>
+                    <button
+                      onClick={() => skip(-15)}
+                      className='w-6 h-6 flex items-center justify-center text-gray-500 hover:text-[#3A4A7A] transition-colors'
+                      title='后退15秒'>
+                      <RewindIcon size={18} />
+                    </button>
+                    <button
+                      onClick={() => skip(30)}
+                      className='w-6 h-6 flex items-center justify-center text-gray-500 hover:text-[#3A4A7A] transition-colors'
+                      title='前进30秒'>
+                      <ForwardIcon size={18} />
+                    </button>
+                    {/* 固定宽度防挤压 */}
+                    <button
+                      onClick={cycleSpeed}
+                      className='w-8 h-6 flex items-center justify-center text-[11px] font-bold text-gray-500 hover:text-[#3A4A7A] transition-colors'
+                      title='切换倍速'>
+                      {SPEEDS[speedIndex]}x
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={() => setShowMore((v) => !v)}
+                    className='w-6 h-6 flex items-center justify-center sm:hidden text-gray-500 hover:text-[#3A4A7A] transition-colors'
+                    title='更多'>
+                    <i className='fa-solid fa-ellipsis-vertical text-xs' />
+                  </button>
                 </div>
               )}
             </div>
 
-            {hasAudio && (
-              <div className='flex items-center gap-2'>
-                <span className='text-[10px] text-gray-500 tabular-nums text-left'>
-                  {formatTime(currentTime)}
-                </span>
+            <div className='flex items-center justify-end gap-1 flex-shrink-0'>
+              {hasAudio && (
                 <div
-                  ref={progressRef}
-                  onPointerDown={(e) => {
-                    e.preventDefault()
-                    seekFromEvent(e)
-                  }}
-                  className='flex-1 h-1 bg-gray-200 dark:bg-gray-700 rounded-full cursor-pointer relative min-w-[50px]'>
-                  <div
-                    className='h-full rounded-full'
-                    style={{
-                      width: `${progress}%`,
-                      background:
-                        'linear-gradient(90deg, #8B9BD4 0%, #4A5A8A 50%, #3A4A7A 100%)'
-                    }}
-                  />
+                  className='relative hidden sm:flex items-center'
+                  onMouseEnter={() => setShowVolume(true)}
+                  onMouseLeave={() => setShowVolume(false)}>
+                  <button
+                    onClick={toggleMute}
+                    className='w-8 h-8 flex items-center justify-center text-gray-500 hover:text-[#3A4A7A] transition-colors'
+                    title='音量'>
+                    <i
+                      className={`fa-solid ${
+                        muted ? 'fa-volume-xmark' : 'fa-volume-high'
+                      } text-sm`}
+                    />
+                  </button>
+                  {showVolume && (
+                    <div className='absolute bottom-full left-1/2 -translate-x-1/2 pb-2'>
+                      <div
+                        className='p-3 bg-white dark:bg-gray-800 rounded-lg shadow-xl border dark:border-gray-600 z-50 flex items-center justify-center'
+                        style={{ width: '36px', height: '100px' }}>
+                        <input
+                          type='range'
+                          min='0'
+                          max='1'
+                          step='0.05'
+                          value={muted ? 0 : volume}
+                          onChange={(e) => {
+                            const v = parseFloat(e.target.value)
+                            setVolume(v)
+                            setMuted(false)
+                            if (audioRef.current) {
+                              audioRef.current.volume = v
+                              audioRef.current.muted = false
+                            }
+                          }}
+                          className='w-20 h-1 cursor-pointer'
+                          style={{
+                            accentColor: '#3A4A7A',
+                            transform: 'rotate(-90deg)',
+                            transformOrigin: 'center'
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <span className='text-[10px] text-gray-500 tabular-nums'>
-                  {formatTime(duration)}
-                </span>
+              )}
 
-                {/* 桌面端控制区：15/30 秒图标 + 无边框倍速 */}
-                <div className='hidden sm:flex items-center gap-1.5 ml-1'>
+              <button
+                onClick={() => setLocked((v) => !v)}
+                className={`w-8 h-8 flex items-center justify-center transition-colors flex-shrink-0 ${
+                  locked ? 'text-[#3A4A7A]' : 'text-gray-400 hover:text-[#3A4A7A]'
+                }`}
+                title={locked ? '已固定，点击解锁' : '点击固定播放器，滑动页面不隐藏'}>
+                <i className={`fa-solid ${locked ? 'fa-lock' : 'fa-lock-open'} text-xs`} />
+              </button>
+
+              {!locked && (
+                <button
+                  onClick={() => setMinimized(true)}
+                  className='w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#3A4A7A] transition-colors flex-shrink-0'
+                  title='向右隐藏播放器'>
+                  <i className='fa-solid fa-chevron-right text-xs' />
+                </button>
+              )}
+            </div>
+
+            {showMore && hasAudio && (
+              <div className='absolute bottom-full left-1/2 -translate-x-1/2 mb-2 sm:hidden'>
+                <div className='bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-2xl shadow-xl border border-white/40 dark:border-gray-700/40 px-4 py-2.5 flex items-center gap-4'>
                   <button
                     onClick={() => skip(-15)}
-                    className='text-gray-500 hover:text-[#3A4A7A] transition-colors'
+                    className='flex flex-col items-center gap-1 text-gray-600 hover:text-[#3A4A7A] transition-colors'
                     title='后退15秒'>
-                    <RewindIcon size={16} />
+                    <RewindIcon size={18} />
                   </button>
                   <button
                     onClick={() => skip(30)}
-                    className='text-gray-500 hover:text-[#3A4A7A] transition-colors'
+                    className='flex flex-col items-center gap-1 text-gray-600 hover:text-[#3A4A7A] transition-colors'
                     title='前进30秒'>
-                    <ForwardIcon size={16} />
+                    <ForwardIcon size={18} />
                   </button>
                   <button
                     onClick={cycleSpeed}
-                    className='text-[11px] font-bold text-gray-500 hover:text-[#3A4A7A] transition-colors px-1'
+                    className='flex flex-col items-center gap-0.5 text-gray-600 hover:text-[#3A4A7A] transition-colors ml-2'
                     title='切换倍速'>
-                    {SPEEDS[speedIndex]}x
+                    <span className='text-xs font-bold'>{SPEEDS[speedIndex]}x</span>
                   </button>
                 </div>
-
-                <button
-                  onClick={() => setShowMore((v) => !v)}
-                  className='sm:hidden text-gray-500 hover:text-[#3A4A7A] transition-colors'
-                  title='更多'>
-                  <i className='fa-solid fa-ellipsis-vertical text-xs' />
-                </button>
               </div>
             )}
           </div>
-
-          <div className='flex items-center justify-end gap-1 flex-shrink-0'>
-            {hasAudio && (
-              <div
-                className='relative hidden sm:flex items-center'
-                onMouseEnter={() => setShowVolume(true)}
-                onMouseLeave={() => setShowVolume(false)}>
-                <button
-                  onClick={toggleMute}
-                  className='w-8 h-8 flex items-center justify-center text-gray-500 hover:text-[#3A4A7A] transition-colors'
-                  title='音量'>
-                  <i
-                    className={`fa-solid ${
-                      muted ? 'fa-volume-xmark' : 'fa-volume-high'
-                    } text-sm`}
-                  />
-                </button>
-                {showVolume && (
-                  <div className='absolute bottom-full left-1/2 -translate-x-1/2 pb-2'>
-                    <div
-                      className='p-3 bg-white dark:bg-gray-800 rounded-lg shadow-xl border dark:border-gray-600 z-50 flex items-center justify-center'
-                      style={{ width: '36px', height: '100px' }}>
-                      <input
-                        type='range'
-                        min='0'
-                        max='1'
-                        step='0.05'
-                        value={muted ? 0 : volume}
-                        onChange={(e) => {
-                          const v = parseFloat(e.target.value)
-                          setVolume(v)
-                          setMuted(false)
-                          if (audioRef.current) {
-                            audioRef.current.volume = v
-                            audioRef.current.muted = false
-                          }
-                        }}
-                        className='w-20 h-1 cursor-pointer'
-                        style={{
-                          accentColor: '#3A4A7A',
-                          transform: 'rotate(-90deg)',
-                          transformOrigin: 'center'
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <button
-              onClick={() => setLocked((v) => !v)}
-              className={`w-8 h-8 flex items-center justify-center transition-colors flex-shrink-0 ${
-                locked ? 'text-[#3A4A7A]' : 'text-gray-400 hover:text-[#3A4A7A]'
-              }`}
-              title={locked ? '已固定，点击解锁' : '点击固定播放器，滑动页面不隐藏'}>
-              <i className={`fa-solid ${locked ? 'fa-lock' : 'fa-lock-open'} text-xs`} />
-            </button>
-
-            {!locked && (
-              <button
-                onClick={() => setMinimized(true)}
-                className='w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#3A4A7A] transition-colors flex-shrink-0'
-                title='向右隐藏播放器'>
-                {/* 将向下箭头改为向右箭头 */}
-                <i className='fa-solid fa-chevron-right text-xs' />
-              </button>
-            )}
-          </div>
-
-          {showMore && hasAudio && (
-            <div className='absolute bottom-full left-1/2 -translate-x-1/2 mb-2 sm:hidden'>
-              <div className='bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-2xl shadow-xl border border-white/40 dark:border-gray-700/40 px-4 py-2.5 flex items-center gap-4'>
-                <button
-                  onClick={() => skip(-15)}
-                  className='flex flex-col items-center gap-1 text-gray-600 hover:text-[#3A4A7A] transition-colors'
-                  title='后退15秒'>
-                  <RewindIcon size={16} />
-                </button>
-                <button
-                  onClick={() => skip(30)}
-                  className='flex flex-col items-center gap-1 text-gray-600 hover:text-[#3A4A7A] transition-colors'
-                  title='前进30秒'>
-                  <ForwardIcon size={16} />
-                </button>
-                <button
-                  onClick={cycleSpeed}
-                  className='flex flex-col items-center gap-0.5 text-gray-600 hover:text-[#3A4A7A] transition-colors ml-2'
-                  title='切换倍速'>
-                  <span className='text-xs font-bold'>{SPEEDS[speedIndex]}x</span>
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
