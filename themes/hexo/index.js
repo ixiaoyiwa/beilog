@@ -190,11 +190,34 @@ const LayoutPostList = props => {
   const showSummary = siteConfig('HEXO_POST_LIST_SUMMARY', null, CONFIG)
 
   if (isHomePage) {
+    // ==========================================
+    // ✨ 首页限制逻辑：强制截断标签
+    // 置顶只准 1 个，精选只准 2 个，会员只准 2 个
+    // ==========================================
+    let pinnedCount = 0
+    let featuredCount = 0
+    let memberCount = 0
+
+    const processedPosts = posts.map(post => {
+      const newPost = { ...post } // 浅拷贝，不影响原始数据
+      if (newPost.featuredType === 'pinned') {
+        pinnedCount++
+        if (pinnedCount > 1) newPost.featuredType = null
+      } else if (newPost.featuredType === 'featured') {
+        featuredCount++
+        if (featuredCount > 2) newPost.featuredType = null
+      } else if (newPost.featuredType === '会员') {
+        memberCount++
+        if (memberCount > 2) newPost.featuredType = null
+      }
+      return newPost
+    })
+
     return (
       <div>
         <SlotBar {...props} />
         <div className='space-y-6 px-2'>
-          {posts.map((post, index) => (
+          {processedPosts.map((post, index) => (
             <BlogPostCard
               key={post.id}
               post={post}
@@ -367,7 +390,6 @@ const LayoutSlug = props => {
               )}
             </article>
 
-            {/* 文章才保留文章底部间隔和评论容器；普通 Page 不渲染这些空白区域。 */}
             {post?.type === 'Post' && (
               <>
                 <div className='pt-4 border-dashed' />
