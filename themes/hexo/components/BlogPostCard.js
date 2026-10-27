@@ -121,7 +121,6 @@ const MiniAudioCapsule = ({ isPlaying, isLoading, remaining, progress, primaryCo
 const BlogPostCard = ({ index, post, showSummary, siteInfo, featuredType }) => {
   const router = useRouter()
   
-  // ✨ 最关键的一步：接住外部传的 featuredType
   const finalFeaturedType = featuredType !== undefined ? featuredType : (post?.featuredType || null)
 
   const showPreview = siteConfig('HEXO_POST_LIST_PREVIEW', null, CONFIG) && post.blockMap
@@ -204,7 +203,7 @@ const BlogPostCard = ({ index, post, showSummary, siteInfo, featuredType }) => {
         <BlogPostCardInfo
           index={index}
           post={post}
-          featuredType={finalFeaturedType} // ✨ 把最终结果传下去
+          featuredType={finalFeaturedType}
           showPageCover={showPageCover}
           showPreview={showPreview}
           showSummary={showSummary}
