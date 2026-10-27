@@ -47,21 +47,35 @@ export const BlogPostCardInfo = ({
               className={`line-clamp-2 replace cursor-pointer text-2xl ${
                 showPreview ? 'text-center' : ''
               } leading-tight font-bold text-gray-600 dark:text-gray-100 hover:text-indigo-700 dark:hover:text-indigo-400`}>
+              
+              {/* 1. 置顶 */}
               {featuredType === 'pinned' && (
                 <span className='inline-block px-1.5 py-0.5 text-[10px] font-medium rounded mr-1.5 align-middle bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200'>
                   置顶
                 </span>
               )}
+              
+              {/* 2. 精选 */}
               {featuredType === 'featured' && (
                 <span className='inline-block px-1.5 py-0.5 text-[10px] font-medium rounded mr-1.5 align-middle bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300'>
                   精选
                 </span>
               )}
+
+              {/* 3. 会员 */}
+              {featuredType === '会员' && (
+                <span className='inline-block px-1.5 py-0.5 text-[10px] font-medium rounded mr-1.5 align-middle bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300'>
+                  会员
+                </span>
+              )}
+
+              {/* 4. 最新 */}
               {featuredType === 'latest' && (
                 <span className='inline-block px-1.5 py-0.5 text-[10px] font-medium rounded mr-1.5 align-middle bg-green-100 text-green-700 dark:bg-green-900/60 dark:text-green-300'>
                   最新
                 </span>
               )}
+              
               {siteConfig('POST_TITLE_ICON') && (
                 <NotionIcon icon={post.pageIcon} />
               )}
@@ -127,7 +141,6 @@ export const BlogPostCardInfo = ({
           </div>
         </header>
 
-        {/* 恢复官方 Hexo 卡片摘要：最多两行、my-3 间距。保留本站既有的 68 字截断。 */}
         {(!showPreview || showSummary) && !post.results && (
           <main className='line-clamp-2 replace my-3 text-gray-700 dark:text-gray-300 text-md font-normal'>
             {truncateSummary(post.summary)}
