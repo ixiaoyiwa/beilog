@@ -1,19 +1,16 @@
 import { siteConfig } from '@/lib/config'
 import { useGlobal } from '@/lib/global'
 import throttle from 'lodash.throttle'
-import SmartLink from '@/components/SmartLink'
 import { useRouter } from 'next/router'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import CONFIG from '../config'
 import ButtonRandomPost from './ButtonRandomPost'
-import CategoryGroup from './CategoryGroup'
 import Logo from './Logo'
 import { MenuListTop } from './MenuListTop'
-import SearchButton from './SearchButton'
-import SearchDrawer from './SearchDrawer'
 import SideBar from './SideBar'
 import SideBarDrawer from './SideBarDrawer'
-import TagGroups from './TagGroups'
+// 引入我们刚刚改造好的 Algolia 弹窗搜索组件
+import AlgoliaSearchModal from '@/components/AlgoliaSearchModal'
 
 let windowTop = 0
 
@@ -23,11 +20,12 @@ let windowTop = 0
  * @returns
  */
 const Header = props => {
-  const searchDrawer = useRef()
-  const { tags, currentTag, categories, currentCategory } = props
+  // 使用 algoliaSearchRef 替代原来的 searchDrawer
+  const algoliaSearchRef = useRef()
   const { locale } = useGlobal()
   const router = useRouter()
   const [isOpen, changeShow] = useState(false)
+  
   const showSearchButton = siteConfig('HEXO_MENU_SEARCH', false, CONFIG)
   const showRandomButton = siteConfig('HEXO_MENU_RANDOM', false, CONFIG)
 
@@ -57,11 +55,8 @@ const Header = props => {
     throttle(() => {
       const scrollS = window.scrollY
       const nav = document.querySelector('#sticky-nav')
-
-      // 首页和文章页会有头图
       const header = document.querySelector('#header')
 
-      // 导航栏和头图是否重叠
       const scrollInHeader =
         header &&
         (scrollS < 10 || scrollS < header?.clientHeight - 50)
@@ -72,68 +67,34 @@ const Header = props => {
 
       if (scrollInHeader) {
         nav.classList.replace('bg-white', 'bg-none')
-
-        // 始终保持“只有底边”的结构
         nav.classList.remove(
-          'border',
-          'border-transparent',
-          'border-gray-200',
-          'dark:border-transparent',
-          'dark:border-gray-800'
+          'border', 'border-transparent', 'border-gray-200', 'dark:border-transparent', 'dark:border-gray-800'
         )
-
         nav.classList.add(
-          'border-0',
-          'border-b',
-          'border-transparent',
-          'dark:border-transparent'
+          'border-0', 'border-b', 'border-transparent', 'dark:border-transparent'
         )
-
-        // 不使用阴影
         nav.classList.remove('drop-shadow-md')
         nav.classList.add('shadow-none')
-
-        nav.classList.replace(
-          'dark:bg-hexo-black-gray',
-          'transparent'
-        )
+        nav.classList.replace('dark:bg-hexo-black-gray', 'transparent')
       } else {
         nav.classList.replace('bg-none', 'bg-white')
-
-        // 始终只有底边线，不允许重新出现四边 border
         nav.classList.remove(
-          'border',
-          'border-transparent',
-          'border-gray-200',
-          'dark:border-transparent',
-          'dark:border-gray-800'
+          'border', 'border-transparent', 'border-gray-200', 'dark:border-transparent', 'dark:border-gray-800'
         )
-
         nav.classList.add(
-          'border-0',
-          'border-b',
-          'border-gray-200',
-          'dark:border-gray-800'
+          'border-0', 'border-b', 'border-gray-200', 'dark:border-gray-800'
         )
-
-        // 完全取消阴影
         nav.classList.remove('drop-shadow-md')
         nav.classList.add('shadow-none')
-
-        nav.classList.replace(
-          'transparent',
-          'dark:bg-hexo-black-gray'
-        )
+        nav.classList.replace('transparent', 'dark:bg-hexo-black-gray')
       }
 
-      // 头图区域文字为白色
       if (scrollInHeader) {
         nav.classList.replace('text-black', 'text-white')
       } else {
         nav.classList.replace('text-white', 'text-black')
       }
 
-      // 导航栏不在头图里，且页面向下滚动一定程度隐藏导航栏
       const showNav =
         scrollS <= windowTop ||
         scrollS < 5 ||
@@ -149,66 +110,10 @@ const Header = props => {
     }, throttleMs)
   )
 
-  const searchDrawerSlot = (
-    <>
-      {categories && (
-        <section className='mt-8'>
-          <div className='text-sm flex flex-nowrap justify-between font-light px-2'>
-            <div className='text-gray-600 dark:text-gray-200'>
-              <i className='mr-2 fas fa-th-list' />
-              {locale.COMMON.CATEGORY}
-            </div>
-
-            <SmartLink
-              href={'/category'}
-              passHref
-              className='mb-3 text-gray-400 hover:text-black dark:text-gray-400 dark:hover:text-white hover:underline cursor-pointer'>
-              {locale.COMMON.MORE}{' '}
-              <i className='fas fa-angle-double-right' />
-            </SmartLink>
-          </div>
-
-          <CategoryGroup
-            currentCategory={currentCategory}
-            categories={categories}
-          />
-        </section>
-      )}
-
-      {tags && (
-        <section className='mt-4'>
-          <div className='text-sm py-2 px-2 flex flex-nowrap justify-between font-light dark:text-gray-200'>
-            <div className='text-gray-600 dark:text-gray-200'>
-              <i className='mr-2 fas fa-tag' />
-              {locale.COMMON.TAGS}
-            </div>
-
-            <SmartLink
-              href={'/tag'}
-              passHref
-              className='text-gray-400 hover:text-black dark:hover:text-white hover:underline cursor-pointer'>
-              {locale.COMMON.MORE}{' '}
-              <i className='fas fa-angle-double-right' />
-            </SmartLink>
-          </div>
-
-          <div className='p-2'>
-            <TagGroups
-              tags={tags}
-              currentTag={currentTag}
-            />
-          </div>
-        </section>
-      )}
-    </>
-  )
-
   return (
     <div id='top-nav' className='z-40'>
-      <SearchDrawer
-        cRef={searchDrawer}
-        slot={searchDrawerSlot}
-      />
+      {/* 挂载高级 Algolia 搜索弹窗 */}
+      <AlgoliaSearchModal cRef={algoliaSearchRef} />
 
       {/* 导航栏 */}
       <div
@@ -236,7 +141,18 @@ const Header = props => {
               )}
             </div>
 
-            {showSearchButton && <SearchButton />}
+            {/* 自定义搜索按钮，点击直接呼出弹窗 */}
+            {showSearchButton && (
+              <button
+                type='button'
+                aria-label='搜索'
+                onClick={() => algoliaSearchRef.current?.openSearch()}
+                className='w-8 h-8 flex justify-center items-center cursor-pointer ml-2 text-gray-600 hover:text-black dark:text-gray-300 dark:hover:text-white transition-colors'
+              >
+                <i className='fas fa-search' />
+              </button>
+            )}
+            
             {showRandomButton && (
               <ButtonRandomPost {...props} />
             )}
@@ -244,7 +160,7 @@ const Header = props => {
         </div>
       </div>
 
-      {/* 折叠侧边栏 */}
+      {/* 折叠侧边栏 (移动端菜单) */}
       <SideBarDrawer
         isOpen={isOpen}
         onClose={toggleSideBarClose}>
