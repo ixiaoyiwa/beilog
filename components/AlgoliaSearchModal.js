@@ -1,9 +1,9 @@
 import replaceSearchResult from '@/components/Mark'
 import { siteConfig } from '@/lib/config'
-import { useGlobal } from '@/lib/global'
 import algoliasearch from 'algoliasearch'
 import { useRouter } from 'next/router'
 import {
+  Fragment,
   useCallback,
   useMemo,
   useEffect,
@@ -13,10 +13,12 @@ import {
 } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 
-/**
- * 结合 Algolia 实现的弹出式搜索框
- * 打开方式 cRef.current.openSearch()
- */
+const ShortCutActions = [
+  { key: '↑ ↓', action: '选择' },
+  { key: 'Enter', action: '跳转' },
+  { key: 'Esc', action: '关闭' }
+]
+
 export default function AlgoliaSearchModal({ cRef }) {
   const [searchResults, setSearchResults] = useState([])
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -53,7 +55,6 @@ export default function AlgoliaSearchModal({ cRef }) {
     setIsModalOpen(true)
   }
 
-  // 快捷键设置
   useHotkeys('ctrl+k', e => {
     e.preventDefault()
     openSearch()
@@ -190,98 +191,109 @@ export default function AlgoliaSearchModal({ cRef }) {
       id='search-wrapper'
       className={`${
         isModalOpen ? 'opacity-100' : 'invisible opacity-0 pointer-events-none'
-      } z-[9999] fixed h-screen w-screen left-0 top-0 flex items-center justify-center transition-opacity duration-300`}>
+      } z-[9999] fixed h-screen w-screen left-0 top-0 sm:mt-[10vh] flex items-start justify-center mt-0`}>
       
-      {/* 高级半透明毛玻璃遮罩 */}
-      <div
-        onClick={closeModal}
-        className='absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm'
-      />
-
-      {/* 搜索弹窗主体 */}
+      {/* 模态框：完全恢复原版紧凑样式 */}
       <div
         className={`${
-          isModalOpen ? 'opacity-100 scale-100' : 'invisible opacity-0 scale-95'
-        } relative max-h-[75vh] flex flex-col w-full max-w-xl mx-4 dark:bg-hexo-black-gray dark:border-gray-700 bg-white p-6 rounded-2xl shadow-2xl border duration-300 transition-all z-10`}>
-        
-        {/* 头部标题 */}
-        <div className='flex justify-between items-center mb-4'>
-          <div className='text-xl text-gray-800 dark:text-gray-200 font-bold'>
+          isModalOpen ? 'opacity-100' : 'invisible opacity-0 translate-y-10'
+        } max-h-[80vh] flex flex-col justify-between w-full min-h-[10rem] h-full md:h-fit max-w-xl dark:bg-hexo-black-gray dark:border-gray-800 bg-white p-5 rounded-lg z-50 shadow-xl border hover:border-blue-600 duration-300 transition-all relative`}>
+        <div className='flex justify-between items-center'>
+          <div className='text-2xl text-blue-600 dark:text-yellow-600 font-bold'>
             搜索
           </div>
-          <button type='button' aria-label='关闭搜索'
-            className='text-gray-400 hover:text-red-500 transition-colors p-1 cursor-pointer'
-            onClick={closeModal}>
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-          </button>
+          <div>
+            <button type='button' aria-label='关闭搜索'
+              className='text-gray-600 fa-solid fa-xmark p-1 cursor-pointer hover:text-blue-600'
+              onClick={closeModal} />
+          </div>
         </div>
 
-        {/* 输入框 */}
         <input
           type='text'
-          placeholder='输入关键词查找节目...'
+          placeholder='在这里输入搜索关键词...'
           onChange={e => handleInputChange(e)}
           onFocus={() => setIsInputFocused(true)}
           onBlur={() => setIsInputFocused(false)}
-          className='text-black dark:text-gray-200 bg-gray-100 dark:bg-gray-800 focus:bg-white dark:focus:bg-black outline-none focus:ring-2 focus:ring-blue-500 w-full px-4 py-3 rounded-xl border border-transparent transition-all mb-4'
+          className='text-black dark:text-gray-200 bg-gray-50 dark:bg-gray-600 outline-blue-500 w-full px-4 my-2 py-1 mb-4 border rounded-md'
           ref={inputRef}
         />
 
-        {/* 状态提示 */}
-        {isLoading && <p role='status' className='text-center text-sm text-gray-400 py-4'>正在搜索…</p>}
-        {searchError && <p role='alert' className='text-center text-sm text-red-500 py-4'>{searchError} <button type='button' className='underline ml-2' onClick={() => { void handleSearch(keyword, page) }}>重试</button></p>}
+        {/* 标签组已彻底删除 */}
+
+        {isLoading && <p role='status' className='text-center text-gray-500'>正在搜索…</p>}
+        {searchError && <p role='alert' className='text-center text-red-600'>{searchError} <button type='button' className='underline' onClick={() => { void handleSearch(keyword, page) }}>重试</button></p>}
         {searchResults.length === 0 && keyword && !isLoading && !searchError && (
-          <div className='text-center text-gray-400 py-6'>
-            无法找到相关结果 &quot;<span className='font-semibold text-gray-600 dark:text-gray-300'>{keyword}</span>&quot;
+          <div>
+            <p className=' text-slate-600 text-center my-4 text-base'>
+              无法找到相关结果 <span className='font-semibold'>&quot;{keyword}&quot;</span>
+            </p>
           </div>
         )}
-
-        {/* 结果列表 */}
-        <ul className='flex-1 overflow-y-auto custom-scrollbar pr-1'>
+        <ul className='flex-1 overflow-auto'>
           {searchResults.map((result, index) => (
             <li
               key={result.objectID}
               onMouseEnter={() => setActiveIndex(index)}
               onClick={() => onJumpSearchResult(index)}
-              className={`cursor-pointer replace my-1 p-3 rounded-xl transition-colors duration-150 
-              ${activeIndex === index ? 'bg-blue-50 dark:bg-gray-700 text-blue-600 dark:text-yellow-500' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
-              <a className={`${activeIndex === index ? 'font-medium' : ''}`}>
+              className={`cursor-pointer replace my-2 p-2 duration-100 rounded-lg ${
+                activeIndex === index ? 'bg-blue-600 dark:bg-yellow-600' : ''
+              }`}>
+              <a className={`${activeIndex === index ? ' text-white' : ' text-black dark:text-gray-300 '}`}>
                 {result.title}
               </a>
             </li>
           ))}
         </ul>
-
-        {/* 底部极简分页 */}
+        
         <Pagination totalPage={totalPage} page={page} switchPage={switchPage} />
-
-        {/* 极简统计提示 */}
-        {totalHit > 0 && (
-          <div className='text-center text-xs text-gray-400 mt-2'>
-            共 {totalHit} 条结果，用时 {useTime} ms
+        
+        <div className='flex items-center justify-between mt-2 sm:text-sm text-xs dark:text-gray-300'>
+          {totalHit === 0 && (
+            <div className='flex items-center'>
+              {ShortCutActions.map((action, index) => (
+                <Fragment key={index}>
+                  <div className='border-gray-300 dark:text-gray-300 text-gray-600 px-2 rounded border inline-block'>
+                    {action.key}
+                  </div>
+                  <span className='ml-2 mr-4  text-gray-600 dark:text-gray-300'>
+                    {action.action}
+                  </span>
+                </Fragment>
+              ))}
+            </div>
+          )}
+          <div>
+            {totalHit > 0 && (
+              <p>共搜索到 {totalHit} 条结果，用时 {useTime} 毫秒</p>
+            )}
           </div>
-        )}
+          {/* 底部 Algolia 广告已删除 */}
+        </div>
       </div>
+
+      {/* 半透明遮罩（单独放，确保生效） */}
+      <div
+        onClick={closeModal}
+        className='absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm -z-10'
+      />
     </div>
   )
 }
 
-/**
- * 分页组件（已极简）
- */
-function Pagination({ totalPage, page, switchPage }) {
-  if (totalPage <= 1) return <></> // 只有1页时不显示分页
+function Pagination(props) {
+  const { totalPage, page, switchPage } = props
+  if (totalPage <= 0) return <></>
   return (
-    <div className='flex space-x-2 w-full justify-center mt-4 pt-4 border-t border-gray-100 dark:border-gray-800'>
+    <div className='flex space-x-1 w-full justify-center py-1'>
       {Array.from({ length: totalPage }, (_, i) => {
-        const classNames =
-          page === i
-            ? 'font-bold text-white bg-blue-500 rounded-lg shadow-sm'
-            : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg'
+        const classNames = page === i
+            ? 'font-bold text-white bg-blue-600 dark:bg-yellow-600 rounded'
+            : 'hover:text-blue-600 hover:font-bold dark:text-gray-300'
         return (
           <div
             onClick={() => switchPage(i)}
-            className={`text-center cursor-pointer w-8 h-8 flex items-center justify-center text-sm transition-all ${classNames}`}
+            className={`text-center cursor-pointer w-6 h-6 ${classNames}`}
             key={i}>
             {i + 1}
           </div>
