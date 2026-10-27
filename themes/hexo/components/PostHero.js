@@ -200,15 +200,18 @@ export default function PostHero({ post, siteInfo }) {
   const headerImage = post?.pageCover ? post.pageCover : siteInfo?.pageCover
   const episodeNumber = extractEpisodeNumber(post?.slug)
 
-  const isActive = isCurrentSrc && (isPlaying || isLoading)
+  // ✨ 修复 Bug 1：加上了 progress > 0。只要播放过（哪怕暂停或播放完毕），就保持渐变色
+  const isActive = isCurrentSrc && (isPlaying || isLoading || progress > 0)
 
+  // ✨ 修复 Bug 2：使用 boxShadow 替代 border 防止渐变边缘毛糙，并加入 translateZ(0) 开启 GPU 渲染抗锯齿
   const capsuleStyle = {
     background: isActive
       ? `linear-gradient(135deg, #7B8BC4 0%, ${primaryColor} 100%)`
       : 'rgba(255, 255, 255, 0.15)',
     backdropFilter: 'blur(12px)',
     WebkitBackdropFilter: 'blur(12px)',
-    border: '1px solid rgba(255, 255, 255, 0.1)'
+    boxShadow: isActive ? 'none' : 'inset 0 0 0 1px rgba(255, 255, 255, 0.1)',
+    transform: 'translateZ(0)'
   }
 
   return (
@@ -293,7 +296,6 @@ export default function PostHero({ post, siteInfo }) {
                       style={{ display: 'none' }}
                     />
 
-                    {/* 这里加了 text-white 确保图标全是纯白，尺寸稍微调大了容器 */}
                     <div
                       className='inline-flex items-center gap-2 sm:gap-2.5 px-4 py-1.5 sm:px-6 sm:py-2 rounded-full transition-all duration-300 cursor-pointer select-none text-white'
                       style={capsuleStyle}
