@@ -17,7 +17,6 @@ const parseExt = (ext) => {
   return null
 }
 
-// --- 微型胶囊组件开始 ---
 const PlayIcon = ({ size = 10 }) => (
   <svg viewBox='0 0 24 24' width={size} height={size} fill='currentColor' style={{ marginLeft: '1px' }}>
     <path d='M8 5v14l11-7z' />
@@ -83,10 +82,10 @@ const MiniAudioCapsule = ({ isPlaying, isLoading, remaining }) => {
     <div
       className='inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-white'
       style={{
-        backgroundColor: 'rgba(0, 0, 0, 0.45)', // 深色半透明，适合封面图
-        backdropFilter: 'blur(6px)',
-        WebkitBackdropFilter: 'blur(6px)',
-        boxShadow: 'inset 0 0 0 1px rgba(255, 255, 255, 0.15)',
+        backgroundColor: 'rgba(0, 0, 0, 0.55)', // 加深了一点点底色，代替边框，更清晰
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        // ✨ 彻底去掉了边框 boxShadow
         transform: 'translateZ(0)'
       }}
     >
@@ -105,7 +104,6 @@ const MiniAudioCapsule = ({ isPlaying, isLoading, remaining }) => {
     </div>
   )
 }
-// --- 微型胶囊组件结束 ---
 
 const BlogPostCard = ({ index, post, showSummary, siteInfo }) => {
   const router = useRouter()
@@ -124,13 +122,11 @@ const BlogPostCard = ({ index, post, showSummary, siteInfo }) => {
   const audioUrl = post?.audio || parseExt(post.ext)
   const hasAudio = !!audioUrl
   
-  // 增加了剩余时间和加载状态
   const [isPlaying, setIsPlaying] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [remaining, setRemaining] = useState(0)
 
   useEffect(() => {
-    // 初始挂载时，尝试探测一下音频时长，保证未播放时也能显示正确的总时长
     if (hasAudio) {
       const probe = new Audio()
       probe.preload = 'metadata'
@@ -205,7 +201,6 @@ const BlogPostCard = ({ index, post, showSummary, siteInfo }) => {
               className='h-56 w-full object-cover object-center group-hover:scale-110 duration-500'
             />
             {hasAudio && (
-              // 换成刚写的微型胶囊，依然定位在右下角，并保持 pointer-events-none 防止干扰封面点击
               <div className='absolute bottom-3 right-3 z-10 pointer-events-none'>
                 <MiniAudioCapsule 
                   isPlaying={isPlaying} 
