@@ -291,7 +291,6 @@ export default function PostHero({ post, siteInfo }) {
                     <div
                       className='relative inline-flex items-center gap-1.5 sm:gap-2 px-3.5 py-1.5 sm:px-5 sm:py-2 rounded-full transition-all duration-300 cursor-pointer select-none text-white overflow-hidden'
                       style={{
-                        // 永远保留毛玻璃底色和细边框
                         backgroundColor: 'rgba(255, 255, 255, 0.15)',
                         backdropFilter: 'blur(12px)',
                         WebkitBackdropFilter: 'blur(12px)',
@@ -300,23 +299,22 @@ export default function PostHero({ post, siteInfo }) {
                       }}
                       onClick={handlePlayClick}
                     >
-                      {/* 动态渐变填充层：在毛玻璃之上覆盖一层从浅到深的渐变 */}
+                      {/* 动态渐变填充层：浅色系、高透明度，呈现高级的通透感 */}
                       {progress > 0 && (
                         <div
                           className='absolute inset-0 pointer-events-none'
                           style={{
-                            // 改回浅到深：左侧浅蓝紫(#A1B1E0)，右侧深主题色
-                            background: `linear-gradient(90deg, #A1B1E0 0%, ${primaryColor} 100%)`,
-                            // 如果满了就不遮挡，没满就右侧 24px 渐隐
+                            // 从亮白色微蓝渐入到主题色，自带呼吸感和光泽
+                            background: `linear-gradient(90deg, rgba(255, 255, 255, 0.6) 0%, ${primaryColor} 100%)`,
                             WebkitMaskImage: isFilled ? 'none' : `linear-gradient(to right, #000 calc(${progress}% - 24px), transparent ${progress}%)`,
                             maskImage: isFilled ? 'none' : `linear-gradient(to right, #000 calc(${progress}% - 24px), transparent ${progress}%)`,
-                            opacity: (isPlaying || isFilled) ? 1 : 0.6,
+                            // 播放时 0.85 透出背景的高级感；暂停时 0.45 变得非常微弱；满格时 0.95 给足分量
+                            opacity: isFilled ? 0.95 : (isPlaying ? 0.85 : 0.45),
                             transition: 'opacity 0.3s ease'
                           }}
                         />
                       )}
 
-                      {/* 图标和文字全部放在 z-10，确保在最上方 */}
                       <div className='relative z-10 flex-shrink-0 flex items-center justify-center w-5 h-5 sm:w-[22px] sm:h-[22px]'>
                         {isCurrentSrc && isLoading ? (
                           <LoadingIcon size={16} />
