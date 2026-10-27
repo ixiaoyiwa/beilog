@@ -7,8 +7,9 @@ import { useEffect, useState } from 'react'
 import SharePosterModal from '@/components/SharePosterModal'
 
 const QrCode = dynamic(() => import('@/components/QrCode'), { ssr: false })
+// 基础样式保留圆形布局，去掉原本写死的 bgClass
 const BASE_BUTTON_CLASS =
-  'cursor-pointer rounded-full mx-1 w-8 h-8 flex items-center justify-center text-white'
+  'cursor-pointer rounded-full mx-1 w-8 h-8 flex items-center justify-center text-white transition-colors duration-200'
 const ICON_CLASS = 'text-sm leading-none'
 const SHARE_ICON_CLASS = {
   facebook: 'fab fa-facebook-f',
@@ -34,29 +35,26 @@ const SHARE_ICON_CLASS = {
   hatena: 'fas fa-h',
   threads: 'fas fa-at'
 }
-const SHARE_BG_CLASS = {
-  facebook: 'bg-blue-600',
-  messenger: 'bg-indigo-500',
-  line: 'bg-green-500',
-  reddit: 'bg-orange-500',
-  email: 'bg-gray-600',
-  twitter: 'bg-black',
-  telegram: 'bg-sky-500',
-  whatsapp: 'bg-green-600',
-  linkedin: 'bg-blue-700',
-  pinterest: 'bg-red-600',
-  vkshare: 'bg-blue-700',
-  okshare: 'bg-orange-500',
-  tumblr: 'bg-slate-700',
-  livejournal: 'bg-amber-600',
-  mailru: 'bg-cyan-600',
-  viber: 'bg-purple-600',
-  workplace: 'bg-blue-800',
-  weibo: 'bg-red-500',
-  pocket: 'bg-rose-600',
-  instapaper: 'bg-zinc-700',
-  hatena: 'bg-blue-500',
-  threads: 'bg-zinc-900'
+
+// 平台悬停专属色
+const SHARE_HOVER_COLORS = {
+  facebook: '#1877F2',
+  messenger: '#00B2FF',
+  line: '#00C300',
+  reddit: '#FF4500',
+  email: '#4B5563',
+  twitter: '#000000',
+  telegram: '#26A5E4',
+  whatsapp: '#25D366',
+  linkedin: '#0A66C2',
+  pinterest: '#E60023',
+  vkshare: '#4C75A3',
+  okshare: '#EE8208',
+  tumblr: '#35465C',
+  weibo: '#E6162D',
+  threads: '#000000',
+  wechat: '#07C160',
+  qq: '#12B7F5'
 }
 
 const ShareButtons = ({ post }) => {
@@ -127,9 +125,15 @@ const ShareButtons = ({ post }) => {
     const shareLink = buildShareUrl(service)
     if (!shareLink) return null
     const iconClass = SHARE_ICON_CLASS[service] || 'fas fa-share-alt'
-    const bgClass = SHARE_BG_CLASS[service] || 'bg-gray-600'
     return (
-      <button aria-label={service} key={service} onClick={() => openShareWindow(shareLink)} className={`${BASE_BUTTON_CLASS} ${bgClass}`} title={service}>
+      <button 
+        aria-label={service} 
+        key={service} 
+        onClick={() => openShareWindow(shareLink)} 
+        // ✨ 统一默认主题色背景，加上 data-service 用于 CSS 悬停匹配
+        className={`${BASE_BUTTON_CLASS} share-btn`} 
+        data-service={service}
+        title={service}>
         <i className={`${iconClass} ${ICON_CLASS}`} />
       </button>
     )
@@ -145,13 +149,26 @@ const ShareButtons = ({ post }) => {
             return renderCommonShareButton(singleService)
           case 'qq':
             return (
-              <button aria-label={singleService} key={singleService} onClick={() => openShareWindow(`http://connect.qq.com/widget/shareqq/index.html?url=${shareUrl}&sharesource=qzone&title=${title}&desc=${body}`)} className={`${BASE_BUTTON_CLASS} bg-blue-600`} title={singleService}>
+              <button 
+                aria-label={singleService} 
+                key={singleService} 
+                onClick={() => openShareWindow(`http://connect.qq.com/widget/shareqq/index.html?url=${shareUrl}&sharesource=qzone&title=${title}&desc=${body}`)} 
+                className={`${BASE_BUTTON_CLASS} share-btn`} 
+                data-service="qq"
+                title={singleService}>
                 <i className={`fab fa-qq ${ICON_CLASS}`} />
               </button>
             )
           case 'wechat':
             return (
-              <button onMouseEnter={openPopover} onMouseLeave={closePopover} aria-label={singleService} key={singleService} className={`${BASE_BUTTON_CLASS} bg-green-600`} title={singleService}>
+              <button 
+                onMouseEnter={openPopover} 
+                onMouseLeave={closePopover} 
+                aria-label={singleService} 
+                key={singleService} 
+                className={`${BASE_BUTTON_CLASS} share-btn relative`} 
+                data-service="wechat"
+                title={singleService}>
                 <i className={`fab fa-weixin ${ICON_CLASS}`} />
                 <div className='absolute'>
                   <div id='pop' className={(qrCodeShow ? 'opacity-100 ' : ' invisible opacity-0') + ' z-40 absolute bottom-10 -left-10 bg-white shadow-xl transition-all duration-200 text-center'}>
@@ -183,6 +200,21 @@ const ShareButtons = ({ post }) => {
         }
       })}
       <SharePosterModal open={sharePosterOpen} onClose={() => setSharePosterOpen(false)} post={post} shareUrl={shareUrl} />
+
+      {/* ✨ 核心注入：直接用 CSS 变量处理默认色，用 data 属性精准匹配各平台的悬浮色 */}
+      <style jsx>{`
+        .share-btn {
+          background-color: var(--theme-color) !important;
+        }
+        .share-btn:hover {
+          background-color: var(--hover-color) !important;
+        }
+        ${Object.entries(SHARE_HOVER_COLORS).map(([service, color]) => `
+          .share-btn[data-service="${service}"]:hover {
+            background-color: ${color} !important;
+          }
+        `).join('')}
+      `}</style>
     </>
   )
 }
