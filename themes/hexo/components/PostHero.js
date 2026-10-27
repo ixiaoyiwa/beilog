@@ -55,12 +55,14 @@ const LoadingIcon = ({ size = 16 }) => {
 }
 
 const Waveform = ({ isPlaying, progress }) => {
-  const baseHeights = ['40%', '75%', '100%', '55%', '85%']
+  // ✨ 增加到了 6 根，首尾都是 40%，中间最高，形成渐入渐出的效果
+  const baseHeights = ['40%', '75%', '100%', '70%', '55%', '40%']
   const bars = baseHeights.length
   const activeBars = Math.ceil((progress / 100) * bars)
 
   return (
-    <div className='flex items-center justify-center gap-[3px] h-[14px] sm:h-4 mx-1'>
+    // 稍微缩小了 gap 和两边的 mx，保证加了一根后总宽度不超
+    <div className='flex items-center justify-center gap-[2px] sm:gap-[2.5px] h-[14px] sm:h-4 mx-0.5 sm:mx-1'>
       {Array.from({ length: bars }).map((_, i) => {
         const isActive = i < activeBars;
         return (
@@ -200,10 +202,8 @@ export default function PostHero({ post, siteInfo }) {
   const headerImage = post?.pageCover ? post.pageCover : siteInfo?.pageCover
   const episodeNumber = extractEpisodeNumber(post?.slug)
 
-  // ✨ 修复 Bug 1：加上了 progress > 0。只要播放过（哪怕暂停或播放完毕），就保持渐变色
   const isActive = isCurrentSrc && (isPlaying || isLoading || progress > 0)
 
-  // ✨ 修复 Bug 2：使用 boxShadow 替代 border 防止渐变边缘毛糙，并加入 translateZ(0) 开启 GPU 渲染抗锯齿
   const capsuleStyle = {
     background: isActive
       ? `linear-gradient(135deg, #7B8BC4 0%, ${primaryColor} 100%)`
@@ -296,8 +296,9 @@ export default function PostHero({ post, siteInfo }) {
                       style={{ display: 'none' }}
                     />
 
+                    {/* ✨ 微调了外层的 px 和 gap，给新增的声波留出空间但不改变整体宽度 */}
                     <div
-                      className='inline-flex items-center gap-2 sm:gap-2.5 px-4 py-1.5 sm:px-6 sm:py-2 rounded-full transition-all duration-300 cursor-pointer select-none text-white'
+                      className='inline-flex items-center gap-1.5 sm:gap-2 px-3.5 py-1.5 sm:px-5 sm:py-2 rounded-full transition-all duration-300 cursor-pointer select-none text-white'
                       style={capsuleStyle}
                       onClick={handlePlayClick}
                     >
