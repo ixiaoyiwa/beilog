@@ -54,30 +54,37 @@ const LoadingIcon = ({ size = 14 }) => {
   )
 }
 
-// 声波跳动组件
+// ✨ 升级版声波组件：高低错落、播放时缓慢跳跃
 const Waveform = ({ isPlaying, progress }) => {
-  // 模拟 4 根声波，根据 progress 决定活跃的根数
-  const bars = 4
+  // 定义 5 根声波的基础高度比例，制造长短不一的视觉效果（像豆包那样）
+  const baseHeights = ['40%', '75%', '100%', '55%', '85%']
+  const bars = baseHeights.length
+  // 根据进度计算当前有几根亮起（保留原有的进度联动逻辑）
   const activeBars = Math.ceil((progress / 100) * bars)
 
   return (
-    <div className='flex items-center gap-[3px] h-4'>
-      {Array.from({ length: bars }).map((_, i) => (
-        <div
-          key={i}
-          className={`w-[3px] rounded-full transition-all duration-300 ${
-            i < activeBars ? 'bg-white/90' : 'bg-white/30'
-          }`}
-          style={{
-            height: isPlaying && i < activeBars ? '100%' : '30%',
-            animation: isPlaying && i < activeBars ? `wave 0.8s ease-in-out infinite alternate` : 'none',
-            animationDelay: `${i * 0.15}s`
-          }}
-        />
-      ))}
+    <div className='flex items-center justify-center gap-[3px] h-[14px] sm:h-4 mx-1'>
+      {Array.from({ length: bars }).map((_, i) => {
+        const isActive = i < activeBars;
+        return (
+          <div
+            key={i}
+            className={`w-[2px] sm:w-[2.5px] rounded-full transition-colors duration-300 ${
+              isActive ? 'bg-white/95' : 'bg-white/30'
+            }`}
+            style={{
+              height: baseHeights[i],
+              // 慢速跳动动画（1.8s 周期）
+              animation: isPlaying && isActive ? `wave 1.8s ease-in-out infinite alternate` : 'none',
+              animationDelay: `${i * 0.15}s`,
+              transformOrigin: 'center'
+            }}
+          />
+        )
+      })}
       <style jsx>{`
         @keyframes wave {
-          0% { transform: scaleY(0.3); }
+          0% { transform: scaleY(0.4); }
           100% { transform: scaleY(1); }
         }
       `}</style>
@@ -100,7 +107,6 @@ const parseExt = (ext) => {
   return null
 }
 
-// 自适应时长格式化（正计时，无负号）
 const formatDuration = (seconds) => {
   if (!Number.isFinite(seconds) || seconds < 0) return '0:00'
   const total = Math.floor(seconds)
@@ -141,7 +147,6 @@ export default function PostHero({ post, siteInfo }) {
 
   const coverUrl = post?.pageCoverThumbnail || post?.pageCover
 
-  // 保留原有的全局联动监听
   useEffect(() => {
     const onState = (e) => {
       const { src, playing, currentTime, duration, loading } = e.detail
@@ -172,7 +177,6 @@ export default function PostHero({ post, siteInfo }) {
     }
   }
 
-  // 保留原有的全局联动触发
   const handlePlayClick = (e) => {
     e.preventDefault()
     e.stopPropagation()
@@ -202,14 +206,14 @@ export default function PostHero({ post, siteInfo }) {
 
   const isActive = isCurrentSrc && (isPlaying || isLoading)
 
-  // 胶囊背景样式
+  // ✨ 调整了内边距和边框：手机端更小，PC端拉长；边框变细变淡
   const capsuleStyle = {
     background: isActive
       ? `linear-gradient(135deg, #7B8BC4 0%, ${primaryColor} 100%)`
       : 'rgba(255, 255, 255, 0.15)',
     backdropFilter: 'blur(12px)',
     WebkitBackdropFilter: 'blur(12px)',
-    border: '1px solid rgba(255, 255, 255, 0.2)'
+    border: '1px solid rgba(255, 255, 255, 0.1)' // 边框透明度从 0.2 降到 0.1
   }
 
   return (
@@ -294,27 +298,24 @@ export default function PostHero({ post, siteInfo }) {
                       style={{ display: 'none' }}
                     />
 
-                    {/* 胶囊播放器 */}
+                    {/* 胶囊播放器：调整了 px 和 py 让高度更扁、宽度更长 */}
                     <div
-                      className='inline-flex items-center gap-2.5 px-4 py-2 rounded-full transition-all duration-300 cursor-pointer select-none'
+                      className='inline-flex items-center gap-2 sm:gap-2.5 px-4 py-1.5 sm:px-6 sm:py-2 rounded-full transition-all duration-300 cursor-pointer select-none'
                       style={capsuleStyle}
                       onClick={handlePlayClick}
                     >
-                      {/* 播放/暂停/加载 图标 */}
-                      <div className='flex-shrink-0 flex items-center justify-center w-5 h-5'>
+                      <div className='flex-shrink-0 flex items-center justify-center w-4 h-4 sm:w-5 sm:h-5'>
                         {isCurrentSrc && isLoading ? (
                           <LoadingIcon size={14} />
                         ) : isCurrentSrc && isPlaying ? (
-                          <PauseIcon size={14} />
+                          <PauseIcon size={12} />
                         ) : (
-                          <PlayIcon size={14} />
+                          <PlayIcon size={12} />
                         )}
                       </div>
 
-                      {/* 声波可视化 */}
                       <Waveform isPlaying={isCurrentSrc && isPlaying} progress={progress} />
 
-                      {/* 自适应时长 */}
                       <span className='text-xs text-white/90 font-medium tabular-nums whitespace-nowrap'>
                         {formatDuration(remaining)}
                       </span>
