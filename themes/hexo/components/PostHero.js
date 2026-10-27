@@ -153,7 +153,6 @@ export default function PostHero({ post, siteInfo }) {
         const dur = duration || localDuration
         
         if (dur > 0) {
-          // 修复：防止播放完时停在 99.8% 没填满的问题
           let p = (currentTime / dur) * 100
           if (dur - currentTime < 0.5) p = 100
           
@@ -292,8 +291,8 @@ export default function PostHero({ post, siteInfo }) {
                     <div
                       className='relative inline-flex items-center gap-1.5 sm:gap-2 px-3.5 py-1.5 sm:px-5 sm:py-2 rounded-full transition-all duration-300 cursor-pointer select-none text-white overflow-hidden'
                       style={{
-                        // 修复：未播放时恢复毛玻璃背景底色
-                        backgroundColor: (isPlaying || progress > 0) ? 'transparent' : 'rgba(255, 255, 255, 0.15)',
+                        // 永远保留毛玻璃底色和细边框
+                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
                         backdropFilter: 'blur(12px)',
                         WebkitBackdropFilter: 'blur(12px)',
                         boxShadow: 'inset 0 0 0 1px rgba(255, 255, 255, 0.1)',
@@ -301,24 +300,23 @@ export default function PostHero({ post, siteInfo }) {
                       }}
                       onClick={handlePlayClick}
                     >
-                      {/* 动态渐变填充层 */}
+                      {/* 动态渐变填充层：在毛玻璃之上覆盖一层从浅到深的渐变 */}
                       {progress > 0 && (
                         <div
-                          className='absolute top-0 bottom-0 left-0 pointer-events-none'
+                          className='absolute inset-0 pointer-events-none'
                           style={{
-                            width: `${progress}%`,
-                            // 增强渐变对比度：深主题色 -> 浅紫蓝色
-                            background: `linear-gradient(90deg, ${primaryColor} 0%, #A1B1E0 100%)`,
-                            // 修复：如果是 100% 填满，就不做遮罩；没满时做右侧 24px 的柔和发散
-                            WebkitMaskImage: isFilled ? 'none' : `linear-gradient(to right, #000 calc(100% - 24px), transparent 100%)`,
-                            maskImage: isFilled ? 'none' : `linear-gradient(to right, #000 calc(100% - 24px), transparent 100%)`,
-                            // 暂停时半透明，播放或填满时全亮
+                            // 改回浅到深：左侧浅蓝紫(#A1B1E0)，右侧深主题色
+                            background: `linear-gradient(90deg, #A1B1E0 0%, ${primaryColor} 100%)`,
+                            // 如果满了就不遮挡，没满就右侧 24px 渐隐
+                            WebkitMaskImage: isFilled ? 'none' : `linear-gradient(to right, #000 calc(${progress}% - 24px), transparent ${progress}%)`,
+                            maskImage: isFilled ? 'none' : `linear-gradient(to right, #000 calc(${progress}% - 24px), transparent ${progress}%)`,
                             opacity: (isPlaying || isFilled) ? 1 : 0.6,
                             transition: 'opacity 0.3s ease'
                           }}
                         />
                       )}
 
+                      {/* 图标和文字全部放在 z-10，确保在最上方 */}
                       <div className='relative z-10 flex-shrink-0 flex items-center justify-center w-5 h-5 sm:w-[22px] sm:h-[22px]'>
                         {isCurrentSrc && isLoading ? (
                           <LoadingIcon size={16} />
