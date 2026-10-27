@@ -55,13 +55,11 @@ const LoadingIcon = ({ size = 16 }) => {
 }
 
 const Waveform = ({ isPlaying, progress }) => {
-  // ✨ 增加到了 6 根，首尾都是 40%，中间最高，形成渐入渐出的效果
   const baseHeights = ['40%', '75%', '100%', '70%', '55%', '40%']
   const bars = baseHeights.length
   const activeBars = Math.ceil((progress / 100) * bars)
 
   return (
-    // 稍微缩小了 gap 和两边的 mx，保证加了一根后总宽度不超
     <div className='flex items-center justify-center gap-[2px] sm:gap-[2.5px] h-[14px] sm:h-4 mx-0.5 sm:mx-1'>
       {Array.from({ length: bars }).map((_, i) => {
         const isActive = i < activeBars;
@@ -202,18 +200,6 @@ export default function PostHero({ post, siteInfo }) {
   const headerImage = post?.pageCover ? post.pageCover : siteInfo?.pageCover
   const episodeNumber = extractEpisodeNumber(post?.slug)
 
-  const isActive = isCurrentSrc && (isPlaying || isLoading || progress > 0)
-
-  const capsuleStyle = {
-    background: isActive
-      ? `linear-gradient(135deg, #7B8BC4 0%, ${primaryColor} 100%)`
-      : 'rgba(255, 255, 255, 0.15)',
-    backdropFilter: 'blur(12px)',
-    WebkitBackdropFilter: 'blur(12px)',
-    boxShadow: isActive ? 'none' : 'inset 0 0 0 1px rgba(255, 255, 255, 0.1)',
-    transform: 'translateZ(0)'
-  }
-
   return (
     <div
       id='header'
@@ -296,13 +282,35 @@ export default function PostHero({ post, siteInfo }) {
                       style={{ display: 'none' }}
                     />
 
-                    {/* ✨ 微调了外层的 px 和 gap，给新增的声波留出空间但不改变整体宽度 */}
+                    {/* 胶囊容器：overflow-hidden 确保内部填充不溢出 */}
                     <div
-                      className='inline-flex items-center gap-1.5 sm:gap-2 px-3.5 py-1.5 sm:px-5 sm:py-2 rounded-full transition-all duration-300 cursor-pointer select-none text-white'
-                      style={capsuleStyle}
+                      className='relative inline-flex items-center gap-1.5 sm:gap-2 px-3.5 py-1.5 sm:px-5 sm:py-2 rounded-full transition-all duration-300 cursor-pointer select-none text-white overflow-hidden'
+                      style={{
+                        backdropFilter: 'blur(12px)',
+                        WebkitBackdropFilter: 'blur(12px)',
+                        boxShadow: 'inset 0 0 0 1px rgba(255, 255, 255, 0.1)',
+                        transform: 'translateZ(0)'
+                      }}
                       onClick={handlePlayClick}
                     >
-                      <div className='flex-shrink-0 flex items-center justify-center w-5 h-5 sm:w-[22px] sm:h-[22px]'>
+                      {/* 动态渐变填充层（无硬边界蔓延） */}
+                      {progress > 0 && (
+                        <div
+                          className='absolute inset-0 pointer-events-none'
+                          style={{
+                            background: `linear-gradient(135deg, #7B8BC4 0%, ${primaryColor} 100%)`,
+                            // 利用 mask-image 制造右侧 24px 的柔和渐隐边缘，实现慢慢发散效果
+                            WebkitMaskImage: `linear-gradient(to right, #000 calc(${progress}% - 24px), transparent ${progress}%)`,
+                            maskImage: `linear-gradient(to right, #000 calc(${progress}% - 24px), transparent ${progress}%)`,
+                            // 播放时或进度100%时全亮；中途暂停时保留 0.6 透明度
+                            opacity: (isPlaying || progress >= 100) ? 1 : 0.6,
+                            transition: 'opacity 0.3s ease'
+                          }}
+                        />
+                      )}
+
+                      {/* 播放/暂停/加载按钮 */}
+                      <div className='relative z-10 flex-shrink-0 flex items-center justify-center w-5 h-5 sm:w-[22px] sm:h-[22px]'>
                         {isCurrentSrc && isLoading ? (
                           <LoadingIcon size={16} />
                         ) : isCurrentSrc && isPlaying ? (
@@ -312,9 +320,13 @@ export default function PostHero({ post, siteInfo }) {
                         )}
                       </div>
 
-                      <Waveform isPlaying={isCurrentSrc && isPlaying} progress={progress} />
+                      {/* 前景声波 */}
+                      <div className='relative z-10 flex items-center'>
+                        <Waveform isPlaying={isCurrentSrc && isPlaying} progress={progress} />
+                      </div>
 
-                      <span className='text-xs text-white/90 font-medium tabular-nums whitespace-nowrap'>
+                      {/* 时间 */}
+                      <span className='relative z-10 text-xs text-white/90 font-medium tabular-nums whitespace-nowrap'>
                         {formatDuration(remaining)}
                       </span>
                     </div>
