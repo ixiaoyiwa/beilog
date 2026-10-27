@@ -203,7 +203,7 @@ export default function AlgoliaSearchModal({ cRef }) {
           </div>
         </div>
 
-        {/* 修改了 placeholder 提示文字 */}
+        {/* 输入框 */}
         <input
           type='text'
           placeholder='搜索标题、主创等关键词...'
@@ -238,14 +238,16 @@ export default function AlgoliaSearchModal({ cRef }) {
           ))}
         </ul>
         
-        {/* 底部单行布局：左边统计，右边分页 */}
-        <div className='flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400'>
-          <div>
-            {totalHit > 0 ? `共 ${totalHit} 条 · ${useTime} ms` : ''}
+        {/* 重点修改：只有查到结果（totalHit > 0）时，才显示底部横线和分页 */}
+        {totalHit > 0 && (
+          <div className='flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400'>
+            <div>
+              共 {totalHit} 条 · {useTime} ms
+            </div>
+            
+            <Pagination totalPage={totalPage} page={page} switchPage={switchPage} />
           </div>
-          
-          <Pagination totalPage={totalPage} page={page} switchPage={switchPage} />
-        </div>
+        )}
       </div>
 
       {/* 半透明遮罩 */}
@@ -274,8 +276,6 @@ function Pagination({ totalPage, page, switchPage }) {
       </button>
       
       {Array.from({ length: totalPage }, (_, i) => {
-        // 如果页数太多（比如超过 5 页），为了不撑破排版，可以考虑只显示当前页附近的
-        // 但鉴于你目前最多也就几页，这里先直接渲染，保持代码极简
         return (
           <button
             key={i}
