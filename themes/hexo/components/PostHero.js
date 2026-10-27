@@ -151,8 +151,13 @@ export default function PostHero({ post, siteInfo }) {
         setIsPlaying(playing)
         setIsLoading(!!loading)
         const dur = duration || localDuration
+        
         if (dur > 0) {
-          setProgress((currentTime / dur) * 100)
+          // 修复：防止播放完时停在 99.8% 没填满的问题
+          let p = (currentTime / dur) * 100
+          if (dur - currentTime < 0.5) p = 100
+          
+          setProgress(p)
           setRemaining(Math.max(0, dur - currentTime))
         }
       } else {
@@ -199,6 +204,8 @@ export default function PostHero({ post, siteInfo }) {
 
   const headerImage = post?.pageCover ? post.pageCover : siteInfo?.pageCover
   const episodeNumber = extractEpisodeNumber(post?.slug)
+
+  const isFilled = progress >= 100
 
   return (
     <div
@@ -282,10 +289,11 @@ export default function PostHero({ post, siteInfo }) {
                       style={{ display: 'none' }}
                     />
 
-                    {/* 胶囊容器：overflow-hidden 确保内部填充不溢出 */}
                     <div
                       className='relative inline-flex items-center gap-1.5 sm:gap-2 px-3.5 py-1.5 sm:px-5 sm:py-2 rounded-full transition-all duration-300 cursor-pointer select-none text-white overflow-hidden'
                       style={{
+                        // 修复：未播放时恢复毛玻璃背景底色
+                        backgroundColor: (isPlaying || progress > 0) ? 'transparent' : 'rgba(255, 255, 255, 0.15)',
                         backdropFilter: 'blur(12px)',
                         WebkitBackdropFilter: 'blur(12px)',
                         boxShadow: 'inset 0 0 0 1px rgba(255, 255, 255, 0.1)',
@@ -293,23 +301,24 @@ export default function PostHero({ post, siteInfo }) {
                       }}
                       onClick={handlePlayClick}
                     >
-                      {/* 动态渐变填充层（无硬边界蔓延） */}
+                      {/* 动态渐变填充层 */}
                       {progress > 0 && (
                         <div
-                          className='absolute inset-0 pointer-events-none'
+                          className='absolute top-0 bottom-0 left-0 pointer-events-none'
                           style={{
-                            background: `linear-gradient(135deg, #7B8BC4 0%, ${primaryColor} 100%)`,
-                            // 利用 mask-image 制造右侧 24px 的柔和渐隐边缘，实现慢慢发散效果
-                            WebkitMaskImage: `linear-gradient(to right, #000 calc(${progress}% - 24px), transparent ${progress}%)`,
-                            maskImage: `linear-gradient(to right, #000 calc(${progress}% - 24px), transparent ${progress}%)`,
-                            // 播放时或进度100%时全亮；中途暂停时保留 0.6 透明度
-                            opacity: (isPlaying || progress >= 100) ? 1 : 0.6,
+                            width: `${progress}%`,
+                            // 增强渐变对比度：深主题色 -> 浅紫蓝色
+                            background: `linear-gradient(90deg, ${primaryColor} 0%, #A1B1E0 100%)`,
+                            // 修复：如果是 100% 填满，就不做遮罩；没满时做右侧 24px 的柔和发散
+                            WebkitMaskImage: isFilled ? 'none' : `linear-gradient(to right, #000 calc(100% - 24px), transparent 100%)`,
+                            maskImage: isFilled ? 'none' : `linear-gradient(to right, #000 calc(100% - 24px), transparent 100%)`,
+                            // 暂停时半透明，播放或填满时全亮
+                            opacity: (isPlaying || isFilled) ? 1 : 0.6,
                             transition: 'opacity 0.3s ease'
                           }}
                         />
                       )}
 
-                      {/* 播放/暂停/加载按钮 */}
                       <div className='relative z-10 flex-shrink-0 flex items-center justify-center w-5 h-5 sm:w-[22px] sm:h-[22px]'>
                         {isCurrentSrc && isLoading ? (
                           <LoadingIcon size={16} />
@@ -320,12 +329,10 @@ export default function PostHero({ post, siteInfo }) {
                         )}
                       </div>
 
-                      {/* 前景声波 */}
                       <div className='relative z-10 flex items-center'>
                         <Waveform isPlaying={isCurrentSrc && isPlaying} progress={progress} />
                       </div>
 
-                      {/* 时间 */}
                       <span className='relative z-10 text-xs text-white/90 font-medium tabular-nums whitespace-nowrap'>
                         {formatDuration(remaining)}
                       </span>
