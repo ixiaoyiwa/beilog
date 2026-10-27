@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { siteConfig } from '@/lib/config'
 
 const THEME = {
   primary: '#465982',
@@ -14,7 +13,6 @@ const THEME = {
 // 海报 Canvas 直接读取站点当前全局字体，避免写死系统字体；同时等待网页字体加载后再绘制。
 function getPosterFont() {
   if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-    // 有些主题只给正文容器设置落霞文楷，而 body 本身仍是系统字体；优先取站点实际正文的字体。
     const targets = [
       document.querySelector('.notion-page'),
       document.querySelector('.post-content'),
@@ -36,6 +34,9 @@ const POSTER_SIZE = {
   portrait: { width: 900, height: 1230 },
   landscape: { width: 1200, height: 720 }
 }
+
+// 用户指定的最终兜底默认封面
+const DEFAULT_COVER = 'https://up.885111.xyz/file/img/1789746781222_2027LOGO.webp'
 
 const QR_CDN_CANDIDATES = [
   process.env.NEXT_PUBLIC_QR_CODE_CDN,
@@ -108,7 +109,6 @@ function getTagNames(post) {
   return [...new Set(names)]
 }
 
-// 与 Hexo 首页卡片保持一致：集数 / 栏目 / 日期 / 主创标签，不用圆点分隔。
 function getMetaText(post) {
   const segments = []
   const episode = getEpisodeNumber(post)
@@ -140,11 +140,6 @@ function decodeRepeated(value) {
   return results
 }
 
-/**
- * NotionNext 会把 Notion 页面封面转换成可展示的图片 URL。
- * 如果 URL 形如 /image/<编码后的原始 URL>，这里优先还原 RSS 写入的 external URL，
- * 避免把 Notion 图片代理地址再交给另一个图片代理。
- */
 function expandImageUrl(rawValue) {
   if (!rawValue) return []
   if (typeof rawValue !== 'string') return []
@@ -157,7 +152,6 @@ function expandImageUrl(rawValue) {
     const parsed = new URL(raw, typeof window !== 'undefined' ? window.location.href : 'https://na.885111.xyz/')
     const imageIndex = parsed.pathname.indexOf('/image/')
     if (imageIndex >= 0) {
-      // 默认是 notion.so/image/<encoded-original-url>；也兼容项目覆盖 NOTION_HOST 后的同类路径。
       const encodedSource = parsed.pathname.slice(imageIndex + '/image/'.length)
       values.push(...decodeRepeated(encodedSource))
     }
@@ -165,7 +159,6 @@ function expandImageUrl(rawValue) {
       const queryValue = parsed.searchParams.get(key)
       if (queryValue) values.push(...decodeRepeated(queryValue))
     }
-    // 少数图片代理会把原地址放进 URL 的最后一个路径段。
     if (imageIndex < 0 && /(^|\.)notion\.so$/i.test(parsed.hostname)) {
       const lastSegment = parsed.pathname.split('/').pop()
       if (lastSegment) values.push(...decodeRepeated(lastSegment))
@@ -190,7 +183,6 @@ function expandImageUrl(rawValue) {
 function getUrlsFromValue(value, depth = 0) {
   if (!value || depth > 7) return []
   if (typeof value === 'string') {
-    // 只收集真正的图片 URL；避免把节目音频地址误当封面。
     if (!/^https?:\/\//i.test(value.trim()) && !value.trim().startsWith('/')) return []
     return expandImageUrl(value)
   }
@@ -198,8 +190,6 @@ function getUrlsFromValue(value, depth = 0) {
   if (typeof value !== 'object') return []
 
   const urls = []
-  // NotionNext / Notion API / RSS 包装结构的封面字段可能不在同一层级。
-  // 对已确认的封面对象递归读取其内部的 url、external、file 等字段。
   for (const key of [
     'url', 'external', 'file', 'src', 'originalUrl', 'original_url',
     'image', 'cover', 'value', 'files', 'thumbnail', 'pageCover',
@@ -215,251 +205,91 @@ function getUrlsFromValue(value, depth = 0) {
 
 function getCoverCandidates(post) {
   if (!post || typeof post !== 'object') return []
-
   const fieldCandidates = []
-  const liveCoverCandidates = []
-  const metaCandidates = []
   const pageCandidates = []
-
   const collect = (target, value) => {
     getUrlsFromValue(value).forEach(url => {
       if (!target.includes(url)) target.push(url)
     })
   }
   const addField = value => collect(fieldCandidates, value)
-  const addLiveCover = value => collect(liveCoverCandidates, value)
-  const addMeta = value => collect(metaCandidates, value)
   const addPage = value => collect(pageCandidates, value)
 
   const slugValue = cleanText(post.slug || post.href || post.url)
   let slug = slugValue.replace(/^\/+|\/+$/g, '').toLocaleLowerCase()
   try {
-    if (/^https?:\/\//i.test(slugValue)) {
-      slug = decodeURIComponent(new URL(slugValue).pathname)
-        .replace(/^\/+|\/+$/g, '')
-        .toLocaleLowerCase()
-    }
+    if (/^https?:\/\//i.test(slugValue)) slug = decodeURIComponent(new URL(slugValue).pathname).replace(/^\/+|\/+$/g, '').toLocaleLowerCase()
   } catch {}
 
   let currentPath = ''
   if (typeof window !== 'undefined') {
-    try {
-      currentPath = decodeURIComponent(window.location.pathname)
-        .replace(/^\/+|\/+$/g, '')
-        .toLocaleLowerCase()
-    } catch {
-      currentPath = window.location.pathname
-        .replace(/^\/+|\/+$/g, '')
-        .toLocaleLowerCase()
-    }
+    try { currentPath = decodeURIComponent(window.location.pathname).replace(/^\/+|\/+$/g, '').toLocaleLowerCase() }
+    catch { currentPath = window.location.pathname.replace(/^\/+|\/+$/g, '').toLocaleLowerCase() }
   }
+  const currentEpisodePage = Boolean(slug && currentPath && (currentPath.includes(slug) || slug.includes(currentPath)))
 
-  const currentEpisodePage = Boolean(
-    slug &&
-    currentPath &&
-    (currentPath.includes(slug) || slug.includes(currentPath))
-  )
-
-  // 第一优先级来源：原有 RSS / NotionNext 封面字段。
-  // 保留原先可以正常获取的封面来源。
   const values = [
-    post.cover,
-    post.page?.cover,
-    post.pageCoverOriginal,
-    post.originalCoverUrl,
-    post.coverOriginal,
-    post.pageCover,
-    post.page_cover,
-    post.pageCoverThumbnail,
-    post.coverUrl,
-    post.cover_url,
-    post.thumbnail,
-    post.image,
-    post.imageUrl,
-    post.image_url,
-    post.featuredImage,
-    post.featured_image,
-    post.properties?.Cover,
-    post.properties?.cover,
-    post.properties?.Image,
-    post.properties?.image,
-    post.properties?.封面,
-    post.properties?.海报,
-    post.properties?.图片
+    post.cover, post.page?.cover, post.pageCoverOriginal, post.originalCoverUrl,
+    post.coverOriginal, post.pageCover, post.page_cover, post.pageCoverThumbnail,
+    post.coverUrl, post.cover_url, post.thumbnail, post.image, post.imageUrl,
+    post.image_url, post.featuredImage, post.featured_image,
+    post.properties?.Cover, post.properties?.cover, post.properties?.Image,
+    post.properties?.image, post.properties?.封面, post.properties?.海报, post.properties?.图片
   ]
-
   values.forEach(addField)
 
   if (typeof document !== 'undefined') {
     const title = cleanText(post.title).toLocaleLowerCase()
     const images = Array.from(document.querySelectorAll('img'))
 
-    // 详情页的 OG 图片只作为后备来源，不让它直接压过原有有效封面字段。
     if (currentEpisodePage) {
-      const metaSelectors = [
+      for (const selector of [
         'meta[property="og:image"]',
         'meta[name="twitter:image"]',
         'meta[property="twitter:image"]'
-      ]
-
-      for (const selector of metaSelectors) {
-        document.querySelectorAll(selector).forEach(meta => {
-          addMeta(meta.getAttribute('content'))
-        })
+      ]) {
+        document.querySelectorAll(selector).forEach(meta => addPage(meta.getAttribute('content')))
       }
     }
 
-    // 仅当图片标题匹配，或者图片本身有链接且链接指向本期节目，才将它加入普通页面候选。
     for (const image of images) {
       const alt = cleanText(image.getAttribute('alt')).toLocaleLowerCase()
       const anchor = image.closest('a[href]')
       let anchorPath = ''
-
-      // 关键修复：没有链接的图片，不再拿当前页面 URL 冒充图片所属链接。
-      if (anchor?.href) {
-        try {
-          anchorPath = decodeURIComponent(
-            new URL(anchor.href, window.location.href).pathname
-          ).toLocaleLowerCase()
-        } catch {}
-      }
-
-      const titleMatch =
-        title.length > 3 &&
-        (alt.includes(title) || (title.includes(alt) && alt.length > 3))
-
-      const slugMatch = Boolean(
-        anchor &&
-        slug.length > 2 &&
-        anchorPath.includes(slug)
-      )
-
+      try { anchorPath = decodeURIComponent(new URL(anchor?.href || '', window.location.href).pathname).toLocaleLowerCase() } catch {}
+      const titleMatch = title.length > 3 && (alt.includes(title) || (title.includes(alt) && alt.length > 3))
+      const slugMatch = slug.length > 2 && anchorPath.includes(slug)
       if (titleMatch || slugMatch) {
-        addPage(
-          image.currentSrc ||
-          image.src ||
-          image.getAttribute('data-src') ||
-          image.getAttribute('data-original')
-        )
+        addPage(image.currentSrc || image.src || image.getAttribute('data-src') || image.getAttribute('data-original'))
         addPage(image.getAttribute('data-original'))
       }
     }
 
     if (currentEpisodePage) {
-      // 详情页明确的封面容器优先于旧字段：Notion 改封面后，详情页可能已显示新图。
-      const liveCoverSelectors = [
-        '.post-cover img',
-        '.post-header img',
-        '.notion-page-cover img'
+      const selectors = [
+        '.post-cover img', '.post-header img', '.notion-page-cover img',
+        'article img', '.notion-page img', '.post-content > img', 'main img', 'img'
       ]
-      const seenLiveImages = new Set()
-
-      for (const selector of liveCoverSelectors) {
+      const seen = new Set()
+      for (const selector of selectors) {
         for (const image of document.querySelectorAll(selector)) {
-          if (seenLiveImages.has(image)) continue
-          seenLiveImages.add(image)
-          addLiveCover(
-            image.currentSrc ||
-            image.src ||
-            image.getAttribute('data-src') ||
-            image.getAttribute('data-original')
-          )
-          addLiveCover(image.getAttribute('data-original'))
+          if (seen.has(image)) continue
+          seen.add(image)
+          addPage(image.currentSrc || image.src || image.getAttribute('data-src') || image.getAttribute('data-original'))
+          addPage(image.getAttribute('data-original'))
         }
       }
-
-      // 兼容以 CSS 背景图方式展示的节目封面，只把明确的封面容器作为高优先级来源。
-      const liveBackgroundSelectors = [
-        '.post-cover',
-        '.post-header',
-        '.notion-page-cover'
-      ]
-
-      for (const selector of liveBackgroundSelectors) {
+      for (const selector of ['article', '.post-cover', '.post-header', '.notion-page-cover', '[class*="cover"]']) {
         for (const node of document.querySelectorAll(selector)) {
           const bg = window.getComputedStyle(node).backgroundImage
           const matches = bg && [...bg.matchAll(/url\(["']?(.*?)["']?\)/g)]
-          if (matches) matches.forEach(match => addLiveCover(match[1]))
+          if (matches) matches.forEach(match => addPage(match[1]))
         }
-      }
-
-      // 普通内容图只作为后备，避免头像、推荐节目图片挤到真正封面前面。
-      const fallbackSelectors = [
-        'article img',
-        '.notion-page img',
-        '.post-content > img',
-        'main img',
-        'img'
-      ]
-      const seenFallbackImages = new Set()
-
-      for (const selector of fallbackSelectors) {
-        for (const image of document.querySelectorAll(selector)) {
-          if (seenFallbackImages.has(image)) continue
-          seenFallbackImages.add(image)
-          addPage(
-            image.currentSrc ||
-            image.src ||
-            image.getAttribute('data-src') ||
-            image.getAttribute('data-original')
-          )
-        }
-      }
-
-      // 少数主题将封面放在其他 CSS 类名的背景中，作为低优先级后备。
-      for (const node of document.querySelectorAll('[class*="cover"]')) {
-        const bg = window.getComputedStyle(node).backgroundImage
-        const matches = bg && [...bg.matchAll(/url\(["']?(.*?)["']?\)/g)]
-        if (matches) matches.forEach(match => addPage(match[1]))
       }
     }
   }
 
-  // 详情页：当前实际封面 > RSS/NotionNext 原有字段 > OG 元信息 > 普通页面图片。
-  // 首页/列表：原有字段 > 匹配到的页面图片。
-  const orderedCandidates = currentEpisodePage
-    ? [
-        ...liveCoverCandidates,
-        ...fieldCandidates,
-        ...metaCandidates,
-        ...pageCandidates
-      ]
-    : [
-        ...fieldCandidates,
-        ...pageCandidates,
-        ...metaCandidates
-      ]
-
-  return [...new Set(orderedCandidates)].slice(0, 28)
-}
-
-/**
- * 获取 NotionNext 的 HOME_BANNER_IMAGE 作为最终兜底封面。
- * 先用 siteConfig 读取运行时 Notion Config，再兼容 NEXT_PUBLIC_HOME_BANNER_IMAGE / HOME_BANNER_IMAGE。
- * siteConfig 能读取 Notion Config 表中的配置，单独读取 process.env 无法覆盖所有配置来源。
- */
-function getHomeBannerCandidates() {
-  const candidates = []
-
-  try {
-    const configuredValue = siteConfig('HOME_BANNER_IMAGE')
-    candidates.push(...getUrlsFromValue(configuredValue))
-  } catch (error) {
-    if (typeof console !== 'undefined') {
-      console.warn('[SharePoster] siteConfig 读取 HOME_BANNER_IMAGE 失败', error?.message || error)
-    }
-  }
-
-  // 兼容部署环境直接暴露给前端的变量。
-  // HOME_BANNER_IMAGE 若是未公开的服务端变量，浏览器端可能读不到；此时以上 siteConfig 为主。
-  try {
-    if (typeof process !== 'undefined') {
-      candidates.push(...getUrlsFromValue(process.env.NEXT_PUBLIC_HOME_BANNER_IMAGE))
-      candidates.push(...getUrlsFromValue(process.env.HOME_BANNER_IMAGE))
-    }
-  } catch {}
-
-  return [...new Set(candidates)].filter(Boolean)
+  return [...new Set([...pageCandidates, ...fieldCandidates])].slice(0, 28)
 }
 
 function loadImage(url, timeoutMs) {
@@ -512,7 +342,6 @@ async function tryCandidate(source, deadline) {
   const remaining = deadline - Date.now()
   if (remaining <= 0) throw new Error('封面加载总时限已到')
 
-  // 同一张图的原图和代理并行尝试；但不同候选封面仍严格按优先级逐个尝试。
   const timeoutMs = Math.max(700, Math.min(4200, remaining))
   try {
     return await Promise.any(attempts.map(url => loadImage(url, timeoutMs)))
@@ -523,113 +352,42 @@ async function tryCandidate(source, deadline) {
 
 async function loadCoverImage(post) {
   const candidates = getCoverCandidates(post)
-  const homeBannerCandidates = getHomeBannerCandidates()
-
-  if (!candidates.length && !homeBannerCandidates.length) {
-    if (typeof console !== 'undefined') {
-      console.warn('[SharePoster] 没有找到节目封面，也没有找到 HOME_BANNER_IMAGE。', {
-        postKeys: post && typeof post === 'object' ? Object.keys(post) : [],
-        propertyKeys: post?.properties && typeof post.properties === 'object'
-          ? Object.keys(post.properties)
-          : [],
-        title: post?.title || '',
-        slug: post?.slug || post?.href || post?.url || ''
-      })
-    }
-    return null
+  // 将用户指定的默认封面作为最终的兜底候选加入队列
+  if (!candidates.includes(DEFAULT_COVER)) {
+    candidates.push(DEFAULT_COVER)
   }
 
-  const key = [
-    candidates.join('|'),
-    '__HOME_BANNER_FALLBACK__',
-    homeBannerCandidates.join('|')
-  ].join('||')
-
+  const key = candidates.join('|')
   if (coverImagePromises.has(key)) return coverImagePromises.get(key)
 
   const promise = (async () => {
-    const startedAt = Date.now()
-    const deadline = startedAt + 15000
-    // 最终兜底预留最多 5 秒，避免前面失效的旧封面地址耗尽全部加载时间。
-    const primaryDeadline = homeBannerCandidates.length
-      ? deadline - 5000
-      : deadline
+    const deadline = Date.now() + 15000
     let lastError = null
-
-    // 先按优先级逐个尝试节目自己的封面。不要让无关图片以“加载更快”为由抢先获胜。
-    const prioritized = candidates.slice(0, 12)
+    // 按顺序尝试，包含了原本有效封面以及最后的默认 Logo
+    const prioritized = candidates.slice(0, 15)
     for (const candidate of prioritized) {
-      if (Date.now() >= primaryDeadline) break
+      if (Date.now() >= deadline) break
       try {
-        const image = await tryCandidate(candidate, primaryDeadline)
-        if (typeof console !== 'undefined') {
-          const describeUrl = value => {
-            try {
-              const parsed = new URL(value)
-              return `${parsed.hostname}${parsed.pathname.slice(0, 60)}`
-            } catch {
-              return '(无效 URL)'
-            }
-          }
-          console.info('[SharePoster] 节目封面加载成功', {
-            candidate: describeUrl(candidate),
-            loadedFrom: describeUrl(image.currentSrc || image.src),
-            width: image.naturalWidth,
-            height: image.naturalHeight
-          })
-        }
-        return image
+        return await tryCandidate(candidate, deadline)
       } catch (error) {
-        lastError = error?.errors?.[0] || error
+        lastError = error
       }
     }
-
-    // 所有节目封面候选均失败后，才使用 NotionNext 配置里的 HOME_BANNER_IMAGE。
-    if (homeBannerCandidates.length && Date.now() < deadline) {
-      for (const fallbackUrl of homeBannerCandidates) {
-        if (Date.now() >= deadline) break
-        try {
-          const image = await tryCandidate(fallbackUrl, deadline)
-          if (typeof console !== 'undefined') {
-            const describeUrl = value => {
-              try {
-                const parsed = new URL(value)
-                return `${parsed.hostname}${parsed.pathname.slice(0, 60)}`
-              } catch {
-                return '(无效 URL)'
-              }
-            }
-            console.info('[SharePoster] 已使用 HOME_BANNER_IMAGE 作为封面兜底', {
-              configuredUrl: describeUrl(fallbackUrl),
-              loadedFrom: describeUrl(image.currentSrc || image.src),
-              width: image.naturalWidth,
-              height: image.naturalHeight
-            })
-          }
-          return image
-        } catch (error) {
-          lastError = error?.errors?.[0] || error
-        }
-      }
-    }
-
     if (typeof console !== 'undefined') {
-      const describeUrls = urls => urls.map(value => {
+      const candidateHosts = candidates.map(candidate => {
         try {
-          const parsed = new URL(value)
+          const parsed = new URL(candidate)
           return `${parsed.hostname}${parsed.pathname.slice(0, 48)}`
         } catch {
           return '(无效 URL)'
         }
       })
-      console.warn('[SharePoster] 节目封面与 HOME_BANNER_IMAGE 均加载失败', {
-        episodeCandidateCount: candidates.length,
-        episodeCandidates: describeUrls(candidates),
-        homeBannerCandidates: describeUrls(homeBannerCandidates),
+      console.warn('[SharePoster] 所有封面地址加载失败', {
+        candidateCount: candidates.length,
+        candidateHosts,
         lastError: lastError?.message || '无可用地址'
       })
     }
-
     return null
   })()
 
@@ -664,7 +422,6 @@ function drawBackground(ctx, width, height) {
   ctx.fillStyle = gradient
   ctx.fillRect(0, 0, width, height)
 
-  // 极轻的主题色光晕，借鉴播客分享图常见渐变，但不抢封面主体。
   const glow = ctx.createRadialGradient(width * 0.88, height * 0.12, 8, width * 0.88, height * 0.12, width * 0.65)
   glow.addColorStop(0, 'rgba(112, 132, 174, 0.10)')
   glow.addColorStop(1, 'rgba(112, 132, 174, 0)')
@@ -717,7 +474,6 @@ function drawDurationPill(ctx, x, y, duration) {
   const pillWidth = 18 + 16 + 10 + textWidth + 17
 
   ctx.save()
-  // 取胶囊下方的封面局部做轻微模糊，再覆一层透明玻璃与细白边，避免实色底块。
   try {
     const glass = document.createElement('canvas')
     glass.width = Math.max(1, Math.ceil(pillWidth))
@@ -737,9 +493,7 @@ function drawDurationPill(ctx, x, y, duration) {
   roundRect(ctx, x, y, pillWidth, height, height / 2)
   ctx.fillStyle = 'rgba(255, 255, 255, 0.17)'
   ctx.fill()
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.58)'
-  ctx.lineWidth = 1.5
-  ctx.stroke()
+  // 已移除白边
 
   ctx.shadowColor = 'rgba(15, 20, 30, 0.48)'
   ctx.shadowBlur = 4
@@ -762,7 +516,6 @@ function drawDurationPill(ctx, x, y, duration) {
 function drawBrandAndQr(ctx, qrCanvas, width, height, layout) {
   const { edge, brandY, qrSize } = layout
 
-  // 底部品牌区不再画分隔横线，让海报更简洁。
   ctx.textAlign = 'left'
   ctx.textBaseline = 'top'
   ctx.fillStyle = THEME.ink
@@ -773,7 +526,6 @@ function drawBrandAndQr(ctx, qrCanvas, width, height, layout) {
   ctx.font = `400 ${layout.subFont}px ${getPosterFont()}`
   ctx.fillText('扫码收听本期', edge + 3, brandY + layout.subOffset)
 
-  // QR 外框向左微移；外框底边与“扫码收听本期”文字底部对齐。
   const qrShiftLeft = layout.qrShiftLeft ?? 8
   const qrX = width - edge - qrSize - qrShiftLeft
   const textBottom = brandY + layout.subOffset + layout.subFont
@@ -784,7 +536,6 @@ function drawBrandAndQr(ctx, qrCanvas, width, height, layout) {
     ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize)
     strokeRoundRect(ctx, qrX - 7, qrY - 7, qrSize + 14, qrSize + 14, 8, 'rgba(70, 89, 130, 0.14)', 1)
   } else {
-    // 保留相同大小的轻薄占位，不改变布局尺寸。
     fillRoundRect(ctx, qrX - 7, qrY - 7, qrSize + 14, qrSize + 14, 8, 'rgba(255,255,255,0.62)')
   }
 }
@@ -806,7 +557,7 @@ function drawPoster(canvas, { post, orientation, duration }, coverImage, qrCanva
     const coverY = 48
     const coverSize = width - edge * 2 - 44
     const coverX = Math.round((width - coverSize) / 2)
-    // 不再绘制渐变封面占位图。节目封面和 HOME_BANNER_IMAGE 都失败时，保留海报底色。
+    // 仅绘制封面，不再绘制渐变色/狗头等占位图
     cropSquare(ctx, coverImage, coverX, coverY, coverSize, 9)
     if (duration && coverImage) drawDurationPill(ctx, coverX + 18, coverY + coverSize - 59, duration)
 
@@ -825,7 +576,6 @@ function drawPoster(canvas, { post, orientation, duration }, coverImage, qrCanva
       currentY = drawLines(ctx, metaLines, contentX, currentY, 29) + 10
     }
 
-    // 这是简介区域的保留边界，不再绘制分隔线；最多保留 3 行简介。
     const footerY = 1092
     if (summary && currentY < footerY - 16) {
       ctx.fillStyle = THEME.muted
@@ -848,14 +598,12 @@ function drawPoster(canvas, { post, orientation, duration }, coverImage, qrCanva
     const coverX = 47
     const coverY = 54
     const coverSize = 410
-    // 不再绘制渐变封面占位图。节目封面和 HOME_BANNER_IMAGE 都失败时，保留海报底色。
     cropSquare(ctx, coverImage, coverX, coverY, coverSize, 9)
     if (duration && coverImage) drawDurationPill(ctx, coverX + 16, coverY + coverSize - 58, duration)
 
     const contentX = 500
     const contentWidth = width - contentX - edge - 2
 
-    // 先量出标题、元信息和简介的实际行数，再将整组内容垂直居中放在封面右侧，避免短简介时上方挤、下方空。
     ctx.font = `650 40px ${getPosterFont()}`
     const titleLines = splitLines(ctx, title, contentWidth, 2)
     ctx.font = `400 20px ${getPosterFont()}`
@@ -1044,7 +792,6 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
     }
   }, [open, onClose])
 
-  // 音频时长只作附加信息，不等待它加载就显示海报。
   useEffect(() => {
     if (!open) return undefined
     let cancelled = false
@@ -1097,7 +844,6 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
     }
   }, [open, post])
 
-  // 先同步绘制固定尺寸的完整版式，再单独加载节目封面（失败时回退 HOME_BANNER_IMAGE）和二维码。
   useEffect(() => {
     if (!open || !canvasRef.current) return undefined
     let cancelled = false
@@ -1123,7 +869,6 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
       } catch (error) {
         console.error('[SharePoster] 海报重绘失败', error)
       }
-      // 只有二维码真实生成后才允许下载，避免生成一张右下角空白的“假海报”。
       if (coverDone && qrDone) setReady(Boolean(loadedQr))
     }
 
