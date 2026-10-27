@@ -379,14 +379,14 @@ export default function GlobalAudioPlayer() {
     <div id='global-audio-player-root'>
       <audio ref={audioRef} preload='metadata' />
 
-      {/* 居中容器：用 fixed left-0 right-0 mx-auto 配合 flex justify-center 保证绝对水平居中 */}
+      {/* 居中容器 */}
       <div className='fixed bottom-6 left-0 right-0 z-[9999] flex justify-center pointer-events-none px-4'>
         <div
-          className={`w-full max-w-xl transition-all duration-500 ease-out transform origin-bottom-right ${
+          className={`w-full max-w-xl transition-all duration-700 ease-in-out transform ${
             shouldRender
-              ? 'translate-x-0 translate-y-0 opacity-100 scale-100 pointer-events-auto'
-              // 收起动效：向右下角（工具栏位置）平移、缩小并淡出
-              : 'translate-x-[40vw] translate-y-[20vh] opacity-0 scale-50 pointer-events-none'
+              ? 'translate-x-0 opacity-100 pointer-events-auto'
+              // 纯向右缓慢滑出
+              : 'translate-x-[150%] opacity-0 pointer-events-none'
           }`}
         >
           {/* 播放器主体：无粗边框，极细内阴影 Ring + 超强毛玻璃 */}
