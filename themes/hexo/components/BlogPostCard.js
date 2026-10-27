@@ -77,7 +77,6 @@ const formatDuration = (seconds) => {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-// ✨ 升级版微型胶囊
 const MiniAudioCapsule = ({ isPlaying, isLoading, remaining, progress, primaryColor }) => {
   const isFilled = progress >= 100
 
@@ -91,23 +90,18 @@ const MiniAudioCapsule = ({ isPlaying, isLoading, remaining, progress, primaryCo
         transform: 'translateZ(0)'
       }}
     >
-      {/* 动态渐变填充层：完美复刻头图的遮罩蔓延逻辑 */}
       {progress > 0 && (
         <div
           className='absolute inset-0 pointer-events-none'
           style={{
             background: `linear-gradient(90deg, rgba(255, 255, 255, 0.6) 0%, ${primaryColor} 100%)`,
-            // 微缩版的无边界蔓延（缩小到16px的距离）
             WebkitMaskImage: isFilled ? 'none' : `linear-gradient(to right, #000 calc(${progress}% - 16px), transparent ${progress}%)`,
             maskImage: isFilled ? 'none' : `linear-gradient(to right, #000 calc(${progress}% - 16px), transparent ${progress}%)`,
-            // 透明度逻辑保持一致
             opacity: isFilled ? 0.95 : (isPlaying ? 0.85 : 0.45),
             transition: 'opacity 0.3s ease'
           }}
         />
       )}
-
-      {/* 图标稍微放大到 14，容器放大到 w-4 h-4 */}
       <div className='relative z-10 flex-shrink-0 flex items-center justify-center w-4 h-4'>
         {isLoading ? (
           <LoadingIcon size={14} />
@@ -117,7 +111,6 @@ const MiniAudioCapsule = ({ isPlaying, isLoading, remaining, progress, primaryCo
           <PlayIcon size={14} />
         )}
       </div>
-      
       <span className='relative z-10 text-[11px] font-medium tabular-nums leading-none mt-[1px] drop-shadow-md'>
         {formatDuration(remaining)}
       </span>
@@ -125,10 +118,11 @@ const MiniAudioCapsule = ({ isPlaying, isLoading, remaining, progress, primaryCo
   )
 }
 
-const BlogPostCard = ({ index, post, showSummary, siteInfo }) => {
+const BlogPostCard = ({ index, post, showSummary, siteInfo, featuredType }) => {
   const router = useRouter()
   
-  const featuredType = post?.featuredType || null
+  // ✨ 最关键的一步：接住外部传的 featuredType
+  const finalFeaturedType = featuredType !== undefined ? featuredType : (post?.featuredType || null)
 
   const showPreview = siteConfig('HEXO_POST_LIST_PREVIEW', null, CONFIG) && post.blockMap
   if (post && !post.pageCoverThumbnail && siteConfig('HEXO_POST_LIST_COVER_DEFAULT', null, CONFIG)) {
@@ -169,7 +163,6 @@ const BlogPostCard = ({ index, post, showSummary, siteInfo }) => {
         setIsLoading(!!loading)
         if (duration > 0) {
           setRemaining(Math.max(0, duration - currentTime))
-          // ✨ 完美计算进度
           let p = (currentTime / duration) * 100
           if (duration - currentTime < 0.5) p = 100
           setProgress(p)
@@ -211,7 +204,7 @@ const BlogPostCard = ({ index, post, showSummary, siteInfo }) => {
         <BlogPostCardInfo
           index={index}
           post={post}
-          featuredType={featuredType}
+          featuredType={finalFeaturedType} // ✨ 把最终结果传下去
           showPageCover={showPageCover}
           showPreview={showPreview}
           showSummary={showSummary}
