@@ -43,7 +43,6 @@ import CONFIG from './config'
 import { Style } from './style'
 
 const ThemeGlobalHexo = createContext()
-
 export const useHexoGlobal = () => useContext(ThemeGlobalHexo)
 
 const LayoutBase = props => {
@@ -178,44 +177,56 @@ const LayoutBase = props => {
   )
 }
 
-const LayoutIndex = props => {
-  return <LayoutPostList {...props} />
-}
+const LayoutIndex = props => <LayoutPostList {...props} />
 
 const LayoutPostList = props => {
   const router = useRouter()
   const isHomePage = router.route === '/'
   const { posts = [], siteInfo } = props
-
   const showSummary = siteConfig('HEXO_POST_LIST_SUMMARY', null, CONFIG)
 
   if (isHomePage) {
-    // 首页精确分组排序逻辑
     const pinnedQueue = []
     const featuredQueue = []
     const memberQueue = []
-    const remainingQueue = []
+    const latestQueue = []
+    const normalQueue = []
 
+    let pinnedCount = 0
+    let featuredCount = 0
+    let memberCount = 0
+
+    // posts 默认按时间倒序排列（最新的在前面）
     posts.forEach(post => {
       const type = post?.featuredType || ''
       
-      if ((type === '置顶' || type === 'pinned') && pinnedQueue.length < 1) {
-        // 第 1 个置顶
-        pinnedQueue.push({ ...post, displayType: 'pinned' })
-      } else if ((type === '精选' || type === 'featured') && featuredQueue.length < 2) {
-        // 前 2 个精选
-        featuredQueue.push({ ...post, displayType: 'featured' })
-      } else if ((type === '会员' || type === 'Member') && memberQueue.length < 2) {
-        // 前 2 个会员
-        memberQueue.push({ ...post, displayType: '会员' })
+      if (type === '置顶' || type === 'pinned') {
+        pinnedCount++
+        if (pinnedCount <= 1) {
+          pinnedQueue.push({ ...post, displayType: 'pinned' })
+        }
+        // 如果超过1个，直接丢弃，不进入任何队列，等于在首页彻底隐藏
+      } else if (type === '精选' || type === 'featured') {
+        featuredCount++
+        if (featuredCount <= 2) {
+          featuredQueue.push({ ...post, displayType: 'featured' })
+        }
+        // 如果超过2个，直接丢弃
+      } else if (type === '会员' || type === 'Member') {
+        memberCount++
+        if (memberCount <= 2) {
+          memberQueue.push({ ...post, displayType: '会员' })
+        }
+        // 如果超过2个，直接丢弃
+      } else if (type === '最新' || type === 'latest') {
+        latestQueue.push({ ...post, displayType: 'latest' })
       } else {
-        // 超限的精选/会员，以及普通文章，放入普通队列，displayType 为 null，不显示标签
-        remainingQueue.push({ ...post, displayType: null })
+        normalQueue.push({ ...post, displayType: null })
       }
     })
 
-    // 最终合并队列：置顶 -> 精选 -> 会员 -> 其他（按原时间线）
-    const finalPosts = [...pinnedQueue, ...featuredQueue, ...memberQueue, ...remainingQueue]
+    // 合并顺序：置顶 -> 精选 -> 会员 -> 手动最新 -> 普通时间线
+    const finalPosts = [...pinnedQueue, ...featuredQueue, ...memberQueue, ...latestQueue, ...normalQueue]
 
     return (
       <div>
@@ -228,7 +239,7 @@ const LayoutPostList = props => {
               index={index}
               showSummary={showSummary}
               siteInfo={siteInfo}
-              featuredType={post.displayType} // 首页只传 displayType
+              featuredType={post.displayType}
             />
           ))}
         </div>
@@ -265,10 +276,7 @@ const LayoutSearch = props => {
       replaceSearchResult({
         doms: document.getElementsByClassName('replace'),
         search: keyword,
-        target: {
-          element: 'span',
-          className: 'text-red-500 border-b border-dashed'
-        }
+        target: { element: 'span', className: 'text-red-500 border-b border-dashed' }
       })
     }
   })
@@ -279,12 +287,11 @@ const LayoutSearch = props => {
         <SearchNav {...props} />
       ) : (
         <div id='posts-wrapper'>
-          {' '}
           {siteConfig('POST_LIST_STYLE') === 'page' ? (
             <BlogPostListPage {...props} />
           ) : (
             <BlogPostListScroll {...props} />
-          )}{' '}
+          )}
         </div>
       )}
     </div>
@@ -310,62 +317,39 @@ const LayoutArchive = props => {
   )
 }
 
-const LayoutEpisodes = props => {
-  return <EpisodesPage {...props} />
-}
-
-const LayoutFriends = props => {
-  return <FriendsPage {...props} />
-}
+const LayoutEpisodes = props => <EpisodesPage {...props} />
+const LayoutFriends = props => <FriendsPage {...props} />
 
 const LayoutSlug = props => {
   const { post, lock, validPassword } = props
   const router = useRouter()
-
   const waiting404 = siteConfig('POST_WAITING_TIME_FOR_404') * 1000
   useEffect(() => {
     if (!post) {
-      setTimeout(
-        () => {
+      setTimeout(() => {
           if (isBrowser) {
             const article = document.querySelector('#article-wrapper #notion-article')
             if (!article) {
-              router.push('/404').then(() => {
-                console.warn('找不到页面', router.asPath)
-              })
+              router.push('/404').then(() => { console.warn('找不到页面', router.asPath) })
             }
           }
-        },
-        waiting404
-      )
+        }, waiting404)
     }
   }, [post])
 
   let hasAudioField = !!post?.audio
   if (!hasAudioField && post?.ext) {
     const raw = typeof post.ext === 'string' ? post.ext.trim() : ''
-    if (raw && raw.startsWith('http')) {
-      hasAudioField = true
-    }
+    if (raw && raw.startsWith('http')) hasAudioField = true
   }
 
   const isRegularPage = post?.type === 'Page'
-  const articleBorderClass = isRegularPage
-    ? 'lg:border-x lg:border-t'
-    : 'lg:border'
+  const articleBorderClass = isRegularPage ? 'lg:border-x lg:border-t' : 'lg:border'
 
   return (
     <>
       <div
-        style={
-          isRegularPage
-            ? {
-                borderBottom: 'none',
-                borderBottomWidth: 0,
-                boxShadow: 'none'
-              }
-            : undefined
-        }
+        style={isRegularPage ? { borderBottom: 'none', borderBottomWidth: 0, boxShadow: 'none' } : undefined}
         className={`w-full ${isRegularPage ? '' : 'lg:hover:shadow'} ${articleBorderClass} rounded-t-xl lg:rounded-xl lg:px-2 lg:py-4 bg-white dark:bg-hexo-black-gray dark:border-black article`}>
         {lock && <ArticleLock validPassword={validPassword} />}
         {!lock && post && (
@@ -373,19 +357,12 @@ const LayoutSlug = props => {
             <article id='article-wrapper' className='subpixel-antialiased overflow-y-hidden'>
               <section className='px-5 justify-center mx-auto max-w-2xl lg:max-w-full'>
                 {!hasAudioField && <NotionAudioEnhancer post={post} />}
-                {post &&
-                  (post.markdownHtml ? (
-                    <MarkdownArticle html={post.markdownHtml} />
-                  ) : (
-                    <NotionPage post={post} />
-                  ))}
+                {post && (post.markdownHtml ? <MarkdownArticle html={post.markdownHtml} /> : <NotionPage post={post} />)}
                 {post && <TimestampLinker post={post} />}
               </section>
-
               <div className={post?.type === 'Post' ? 'mt-8' : ''}>
                 <ShareBar post={post} />
               </div>
-
               {post?.type === 'Post' && (
                 <>
                   <ArticleCopyright {...props} />
@@ -394,7 +371,6 @@ const LayoutSlug = props => {
                 </>
               )}
             </article>
-
             {post?.type === 'Post' && (
               <>
                 <div className='pt-4 border-dashed' />
@@ -413,57 +389,41 @@ const LayoutSlug = props => {
 const Layout404 = props => {
   const router = useRouter()
   const { locale } = useGlobal()
-
   useEffect(() => {
     setTimeout(() => {
       if (isBrowser) {
         const article = document.querySelector('#article-wrapper #notion-article')
-        if (!article) {
-          router.push('/').then(() => {})
-        }
+        if (!article) router.push('/').then(() => {})
       }
     }, 3000)
   })
-
   return (
-    <>
-      <div className='text-black w-full h-screen text-center justify-center content-center items-center flex flex-col'>
-        <div className='dark:text-gray-200'>
-          <h2 className='inline-block border-r-2 border-gray-600 mr-2 px-3 py-2 align-top'>404</h2>
-          <div className='inline-block text-left h-32 leading-10 items-center'>
-            <h2 className='m-0 p-0'>{locale.COMMON.NOT_FOUND}</h2>
-          </div>
+    <div className='text-black w-full h-screen text-center justify-center content-center items-center flex flex-col'>
+      <div className='dark:text-gray-200'>
+        <h2 className='inline-block border-r-2 border-gray-600 mr-2 px-3 py-2 align-top'>404</h2>
+        <div className='inline-block text-left h-32 leading-10 items-center'>
+          <h2 className='m-0 p-0'>{locale.COMMON.NOT_FOUND}</h2>
         </div>
       </div>
-    </>
+    </div>
   )
 }
 
 const LayoutCategoryIndex = props => {
   const { categoryOptions } = props
   const { locale, NOTION_CONFIG } = useGlobal()
-
   return (
     <div className='mx-2 md:mx-0'>
       <Card className='w-full'>
-        <div className='dark:text-gray-200 mb-5 mx-3'>
-          <i className='mr-4 fa-solid fa-layer-group' /> {locale.COMMON.CATEGORY}:
-        </div>
-
+        <div className='dark:text-gray-200 mb-5 mx-3'><i className='mr-4 fa-solid fa-layer-group' /> {locale.COMMON.CATEGORY}:</div>
         <div id='category-list' className='duration-200 flex flex-wrap mx-8'>
-          {categoryOptions?.map(category => {
-            return (
-              <SmartLink
-                key={category.name}
-                href={getCategoryUrl(category.name, NOTION_CONFIG)}
-                passHref
-                legacyBehavior>
-                <div className={' duration-300 dark:hover:text-white px-5 cursor-pointer py-2 hover:text-indigo-400'}>
-                  <i className='mr-4 fas fa-folder' /> {category.name}({category.count})
-                </div>
-              </SmartLink>
-            )
-          })}
+          {categoryOptions?.map(category => (
+            <SmartLink key={category.name} href={getCategoryUrl(category.name, NOTION_CONFIG)} passHref legacyBehavior>
+              <div className={' duration-300 dark:hover:text-white px-5 cursor-pointer py-2 hover:text-indigo-400'}>
+                <i className='mr-4 fas fa-folder' /> {category.name}({category.count})
+              </div>
+            </SmartLink>
+          ))}
         </div>
       </Card>
     </div>
@@ -473,19 +433,13 @@ const LayoutCategoryIndex = props => {
 const LayoutTagIndex = props => {
   const { tagOptions } = props
   const { locale } = useGlobal()
-
   return (
     <div className='mx-2 md:mx-0'>
       <Card className='w-full'>
-        <div className='dark:text-gray-200 mb-5 ml-4'>
-          <i className='mr-4 fas fa-users' /> {locale.COMMON.TAGS}:
-        </div>
-
+        <div className='dark:text-gray-200 mb-5 ml-4'><i className='mr-4 fas fa-users' /> {locale.COMMON.TAGS}:</div>
         <div id='tags-list' className='duration-200 flex flex-wrap ml-8'>
           {tagOptions.map(tag => (
-            <div key={tag.name} className='p-2'>
-              <TagItemMini key={tag.name} tag={tag} />
-            </div>
+            <div key={tag.name} className='p-2'><TagItemMini key={tag.name} tag={tag} /></div>
           ))}
         </div>
       </Card>
@@ -494,16 +448,7 @@ const LayoutTagIndex = props => {
 }
 
 export {
-  Layout404,
-  LayoutArchive,
-  LayoutBase,
-  LayoutCategoryIndex,
-  LayoutIndex,
-  LayoutPostList,
-  LayoutSearch,
-  LayoutSlug,
-  LayoutTagIndex,
-  LayoutEpisodes,
-  LayoutFriends,
-  CONFIG as THEME_CONFIG
+  Layout404, LayoutArchive, LayoutBase, LayoutCategoryIndex,
+  LayoutIndex, LayoutPostList, LayoutSearch, LayoutSlug,
+  LayoutTagIndex, LayoutEpisodes, LayoutFriends, CONFIG as THEME_CONFIG
 }
