@@ -153,58 +153,73 @@ const LayoutPostList = props => {
   const { posts = [], siteInfo } = props
   const showSummary = siteConfig('HEXO_POST_LIST_SUMMARY', null, CONFIG)
 
+  const getPublishTimestamp = post => {
+    const publishDate = Number(post?.publishDate)
+    if (Number.isFinite(publishDate) && publishDate > 0) return publishDate
+    const dateCandidates = [post?.date?.start_date, typeof post?.date === 'string' ? post.date : null, post?.publishDay]
+    for (const value of dateCandidates) {
+      if (!value) continue
+      const timestamp = new Date(value).getTime()
+      if (Number.isFinite(timestamp) && timestamp > 0) return timestamp
+    }
+    return 0
+  }
+
   if (isHomePage) {
     const pinnedPosts = []
     const featuredPosts = []
     const memberPosts = []
     const normalPosts = []
 
-    let pinnedCount = 0
-    let featuredCount = 0
-    let memberCount = 0
+    const sortedPosts = [...posts].sort((a, b) => getPublishTimestamp(b) - getPublishTimestamp(a))
 
-    // 1. 分类提取（不破坏原始数据）
-    posts.forEach(post => {
-      const type = String(post?.featuredType || '').trim().toLowerCase()
-      
-      if (type === '置顶' || type === 'pinned') {
-        pinnedCount++
-        if (pinnedCount <= 1) pinnedPosts.push(post)
-        else normalPosts.push({ ...post, featuredType: null })
-      } else if (type === '精选' || type === 'featured') {
-        featuredCount++
-        if (featuredCount <= 2) featuredPosts.push(post)
-        else normalPosts.push({ ...post, featuredType: null })
-      } else if (type === '会员' || type === 'member') {
-        memberCount++
-        if (memberCount <= 2) memberPosts.push(post)
-        else normalPosts.push({ ...post, featuredType: null })
+    sortedPosts.forEach(post => {
+      const originalType = String(post?.featuredType || '').trim().toLowerCase()
+      const cardPost = { ...post, featuredType: post?.featuredType || null }
+
+      if (originalType === '置顶' || originalType === 'pinned') {
+        if (pinnedPosts.length < 1) pinnedPosts.push(cardPost)
+        else normalPosts.push({ ...cardPost, featuredType: null })
+      } else if (originalType === '精选' || originalType === 'featured') {
+        if (featuredPosts.length < 2) featuredPosts.push(cardPost)
+        else normalPosts.push({ ...cardPost, featuredType: null })
+      } else if (originalType === '会员' || originalType === 'member') {
+        if (memberPosts.length < 2) memberPosts.push(cardPost)
+        else normalPosts.push({ ...cardPost, featuredType: null })
       } else {
-        normalPosts.push({ ...post, featuredType: null }) // 普通队伍，先清空标签
+        normalPosts.push({ ...cardPost, featuredType: null })
       }
     })
 
-    // 2. 对普通队伍进行强制按时间排序（降级的文章会重新归位）
-    normalPosts.sort((a, b) => {
-      const dateA = a.publishDate || new Date(a.publishDay || a.date || 0).getTime()
-      const dateB = b.publishDate || new Date(b.publishDay || b.date || 0).getTime()
-      return dateB - dateA
-    })
+    const sortNewestFirst = (a, b) => getPublishTimestamp(b) - getPublishTimestamp(a)
+    pinnedPosts.sort(sortNewestFirst)
+    featuredPosts.sort(sortNewestFirst)
+    memberPosts.sort(sortNewestFirst)
+    normalPosts.sort(sortNewestFirst)
 
-    // 3. 普通队伍的第一名，打上“最新”标签
     if (normalPosts.length > 0) {
-      normalPosts[0].featuredType = 'latest'
+      normalPosts[0] = { ...normalPosts[0], featuredType: 'latest' }
     }
 
-    // 4. 拼装组合（置顶 -> 精选 -> 会员 -> 剩下的普通时间线）
-    const finalPosts = [...pinnedPosts, ...featuredPosts, ...memberPosts, ...normalPosts]
+    const assembledPosts = [...pinnedPosts, ...featuredPosts, ...memberPosts, ...normalPosts]
+
+    const configuredLimit = Number(siteConfig('POSTS_PER_PAGE', posts.length || 6, CONFIG))
+    const homePostLimit = Number.isFinite(configuredLimit) && configuredLimit > 0 ? Math.floor(configuredLimit) : posts.length
+    const finalPosts = assembledPosts.slice(0, homePostLimit)
 
     return (
       <div>
         <SlotBar {...props} />
         <div className='space-y-6 px-2'>
           {finalPosts.map((post, index) => (
-            <BlogPostCard key={post.id} post={post} index={index} showSummary={showSummary} siteInfo={siteInfo} featuredType={post.featuredType} />
+            <BlogPostCard
+              key={post.id || post.slug || index}
+              post={post}
+              index={index}
+              showSummary={showSummary}
+              siteInfo={siteInfo}
+              featuredType={post.featuredType || null}
+            />
           ))}
         </div>
         <div className='mt-8 mb-4 text-center'>
