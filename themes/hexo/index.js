@@ -190,39 +190,47 @@ const LayoutPostList = props => {
   const showSummary = siteConfig('HEXO_POST_LIST_SUMMARY', null, CONFIG)
 
   if (isHomePage) {
-    let pinnedCount = 0
-    let featuredCount = 0
-    let memberCount = 0
+    // 首页精确分组排序逻辑
+    const pinnedQueue = []
+    const featuredQueue = []
+    const memberQueue = []
+    const remainingQueue = []
+
+    posts.forEach(post => {
+      const type = post?.featuredType || ''
+      
+      if ((type === '置顶' || type === 'pinned') && pinnedQueue.length < 1) {
+        // 第 1 个置顶
+        pinnedQueue.push({ ...post, displayType: 'pinned' })
+      } else if ((type === '精选' || type === 'featured') && featuredQueue.length < 2) {
+        // 前 2 个精选
+        featuredQueue.push({ ...post, displayType: 'featured' })
+      } else if ((type === '会员' || type === 'Member') && memberQueue.length < 2) {
+        // 前 2 个会员
+        memberQueue.push({ ...post, displayType: '会员' })
+      } else {
+        // 超限的精选/会员，以及普通文章，放入普通队列，displayType 为 null，不显示标签
+        remainingQueue.push({ ...post, displayType: null })
+      }
+    })
+
+    // 最终合并队列：置顶 -> 精选 -> 会员 -> 其他（按原时间线）
+    const finalPosts = [...pinnedQueue, ...featuredQueue, ...memberQueue, ...remainingQueue]
 
     return (
       <div>
         <SlotBar {...props} />
         <div className='space-y-6 px-2'>
-          {posts.map((post, index) => {
-            let cardFeaturedType = post.featuredType || null
-
-            if (cardFeaturedType === '置顶' || cardFeaturedType === 'pinned') {
-              pinnedCount++
-              if (pinnedCount > 1) cardFeaturedType = null
-            } else if (cardFeaturedType === '精选' || cardFeaturedType === 'featured') {
-              featuredCount++
-              if (featuredCount > 2) cardFeaturedType = null
-            } else if (cardFeaturedType === '会员' || cardFeaturedType === 'Member') {
-              memberCount++
-              if (memberCount > 2) cardFeaturedType = null
-            }
-
-            return (
-              <BlogPostCard
-                key={post.id}
-                post={post}
-                index={index}
-                showSummary={showSummary}
-                siteInfo={siteInfo}
-                featuredType={cardFeaturedType}
-              />
-            )
-          })}
+          {finalPosts.map((post, index) => (
+            <BlogPostCard
+              key={post.id}
+              post={post}
+              index={index}
+              showSummary={showSummary}
+              siteInfo={siteInfo}
+              featuredType={post.displayType} // 首页只传 displayType
+            />
+          ))}
         </div>
         <div className='mt-8 mb-4 text-center'>
           <SmartLink
