@@ -17,7 +17,8 @@ const getPublishTimestamp = post => {
   return 0
 }
 
-const getPostIdentity = post => String(post?.id || post?.slug || '')
+// ✨ 修复 1：优先用 slug 比较全站数据和当前卡片
+const getPostIdentity = post => String(post?.slug || post?.id || '')
 
 const EpisodesPage = props => {
   const { archivePosts = {}, page = 1, episodesTotalPages = 1, siteInfo, posts = [] } = props
@@ -35,19 +36,33 @@ const EpisodesPage = props => {
     }
   }, [])
 
+  // ✨ 修复 2：严格使用全站数据 props.allPages 计算最新
   const currentPagePosts = Object.keys(archivePosts).flatMap(month => {
     const monthPosts = archivePosts[month]
     return Array.isArray(monthPosts) ? monthPosts : []
   })
 
-  const allKnownPosts = Array.isArray(posts) && posts.length > 0 ? posts : currentPagePosts
+  const globalPublishedPosts = Array.isArray(props.allPages)
+    ? props.allPages.filter(
+        post => post?.type === 'Post' && post?.status === 'Published'
+      )
+    : []
+
+  const latestSourcePosts =
+    globalPublishedPosts.length > 0
+      ? globalPublishedPosts
+      : Number(page) === 1
+        ? currentPagePosts.filter(
+            post => post?.type === 'Post' && post?.status === 'Published'
+          )
+        : []
 
   let absoluteLatestId = null
-  let maxTime = 0
+  let maxTime = -1
 
-  allKnownPosts.forEach(post => {
+  latestSourcePosts.forEach(post => {
     const timestamp = getPublishTimestamp(post)
-    if (timestamp > maxTime) {
+    if (timestamp > maxTime && getPostIdentity(post)) {
       maxTime = timestamp
       absoluteLatestId = getPostIdentity(post)
     }
@@ -65,11 +80,12 @@ const EpisodesPage = props => {
               const postIdentity = getPostIdentity(post)
               const originalType = String(post?.featuredType || '').trim().toLowerCase()
 
+              // ✨ 修复 3：保留原来的标签判断逻辑，清除历史遗留标记
               let displayFeaturedType = post?.featuredType || null
 
               if (absoluteLatestId && postIdentity === absoluteLatestId) {
                 displayFeaturedType = 'latest'
-              } else if (originalType === 'latest' || originalType === '最新') {
+              } else if (['latest', '最新'].includes(originalType)) {
                 displayFeaturedType = null
               }
 
