@@ -151,67 +151,17 @@ const LayoutPostList = props => {
   const router = useRouter()
   const isHomePage = router.route === '/'
   const { posts = [], siteInfo } = props
+
   const showSummary = siteConfig('HEXO_POST_LIST_SUMMARY', null, CONFIG)
 
-  const getPublishTimestamp = post => {
-    const publishDate = Number(post?.publishDate)
-    if (Number.isFinite(publishDate) && publishDate > 0) return publishDate
-    const dateCandidates = [post?.date?.start_date, typeof post?.date === 'string' ? post.date : null, post?.publishDay]
-    for (const value of dateCandidates) {
-      if (!value) continue
-      const timestamp = new Date(value).getTime()
-      if (Number.isFinite(timestamp) && timestamp > 0) return timestamp
-    }
-    return 0
-  }
-
+  // 首页选文、优先级、数量限制和“最新”标记已统一由 pages/index.js 完成
+  // 此处仅负责渲染，不再二次分类或截断
   if (isHomePage) {
-    const pinnedPosts = []
-    const featuredPosts = []
-    const memberPosts = []
-    const normalPosts = []
-
-    const sortedPosts = [...posts].sort((a, b) => getPublishTimestamp(b) - getPublishTimestamp(a))
-
-    sortedPosts.forEach(post => {
-      const originalType = String(post?.featuredType || '').trim().toLowerCase()
-      const cardPost = { ...post, featuredType: post?.featuredType || null }
-
-      if (originalType === '置顶' || originalType === 'pinned') {
-        if (pinnedPosts.length < 1) pinnedPosts.push(cardPost)
-        else normalPosts.push({ ...cardPost, featuredType: null })
-      } else if (originalType === '精选' || originalType === 'featured') {
-        if (featuredPosts.length < 2) featuredPosts.push(cardPost)
-        else normalPosts.push({ ...cardPost, featuredType: null })
-      } else if (originalType === '会员' || originalType === 'member') {
-        if (memberPosts.length < 2) memberPosts.push(cardPost)
-        else normalPosts.push({ ...cardPost, featuredType: null })
-      } else {
-        normalPosts.push({ ...cardPost, featuredType: null })
-      }
-    })
-
-    const sortNewestFirst = (a, b) => getPublishTimestamp(b) - getPublishTimestamp(a)
-    pinnedPosts.sort(sortNewestFirst)
-    featuredPosts.sort(sortNewestFirst)
-    memberPosts.sort(sortNewestFirst)
-    normalPosts.sort(sortNewestFirst)
-
-    if (normalPosts.length > 0) {
-      normalPosts[0] = { ...normalPosts[0], featuredType: 'latest' }
-    }
-
-    const assembledPosts = [...pinnedPosts, ...featuredPosts, ...memberPosts, ...normalPosts]
-
-    const configuredLimit = Number(siteConfig('POSTS_PER_PAGE', posts.length || 6, CONFIG))
-    const homePostLimit = Number.isFinite(configuredLimit) && configuredLimit > 0 ? Math.floor(configuredLimit) : posts.length
-    const finalPosts = assembledPosts.slice(0, homePostLimit)
-
     return (
       <div>
         <SlotBar {...props} />
         <div className='space-y-6 px-2'>
-          {finalPosts.map((post, index) => (
+          {posts.map((post, index) => (
             <BlogPostCard
               key={post.id || post.slug || index}
               post={post}
