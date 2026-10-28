@@ -74,6 +74,7 @@ const EpisodesPage = props => {
   const {
     archivePosts = {},
     page = 1,
+    currentPage,
     episodesTotalPages = 1,
     siteInfo,
     posts = []
@@ -93,17 +94,25 @@ const EpisodesPage = props => {
     }
   }, [])
 
-  const currentPagePosts = Object.keys(archivePosts).flatMap(month => {
-    const monthPosts = archivePosts[month]
-    return Array.isArray(monthPosts) ? monthPosts : []
-  })
+  // 首页的 page 可能是页面对象，实际数字页码在 currentPage 中。
+  // 后续分页则使用 page 数字。
+  const currentPageNumber =
+    currentPage !== undefined && currentPage !== null
+      ? Number(currentPage)
+      : typeof page === 'number' || typeof page === 'string'
+        ? Number(page)
+        : NaN
 
-  // 因为上游 pages/episodes/[page].js 已经做过 sortEpisodes 排序，第一页第一篇必定是最新
-  const isFirstPage = Number(page) === 1
-  let absoluteLatestId = null
-  if (isFirstPage && currentPagePosts.length > 0) {
-    absoluteLatestId = getPostIdentity(currentPagePosts[0])
-  }
+  const isFirstPage = currentPageNumber === 1
+
+  // 上游 sortEpisodes 已按发布时间倒序排列。
+  // 第一页 posts[0] 就是当前列表中最新的一期。
+  const latestPost =
+    isFirstPage && Array.isArray(posts) && posts.length > 0
+      ? posts[0]
+      : null
+
+  const latestIdentity = getPostIdentity(latestPost)
 
   return (
     <div className='w-full px-2 md:px-0'>
@@ -118,15 +127,24 @@ const EpisodesPage = props => {
               const resolvedFeaturedType = getPostFeaturedType(post)
               const originalType = String(resolvedFeaturedType || '').trim().toLowerCase()
 
+              // 先保留节目原有标记
               let displayFeaturedType = resolvedFeaturedType
 
-              // 判断是否为全站最新
-              const isLatestPost = isFirstPage && absoluteLatestId && identity === absoluteLatestId
+              // 只在第一页，把标签加给真正最新的普通节目
+              const isLatestPost = Boolean(
+                isFirstPage &&
+                latestPost &&
+                latestIdentity &&
+                identity === latestIdentity
+              )
 
-              if (isLatestPost && !['pinned', 'featured', 'member'].includes(originalType)) {
+              if (
+                isLatestPost &&
+                !['pinned', 'featured', 'member'].includes(originalType)
+              ) {
                 displayFeaturedType = 'latest'
               } else if (originalType === 'latest') {
-                // 如果它不是当前最新，但字段里残留了 latest，清空
+                // 清除其余节目上残留的动态“最新”标记
                 displayFeaturedType = null
               }
 
