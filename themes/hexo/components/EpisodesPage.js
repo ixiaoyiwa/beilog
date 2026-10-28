@@ -5,58 +5,9 @@ import CONFIG from '../config'
 import BlogPostCard from './BlogPostCard'
 import PaginationNumber from './PaginationNumber'
 
-// 获取节目真实发布时间，兼容毫秒时间戳和日期字符串
-const getPublishTimestamp = post => {
-  const candidates = [
-    post?.publishDate,
-    post?.date?.start_date,
-    typeof post?.date === 'string' ? post.date : null,
-    post?.publishDay
-  ]
-
-  for (const value of candidates) {
-    if (value === null || value === undefined || value === '') {
-      continue
-    }
-
-    // Date 对象
-    if (value instanceof Date) {
-      const timestamp = value.getTime()
-      if (Number.isFinite(timestamp) && timestamp > 0) {
-        return timestamp
-      }
-      continue
-    }
-
-    // 数字时间戳或数字形式的时间戳字符串
-    if (
-      typeof value === 'number' ||
-      (typeof value === 'string' && /^\d{9,13}$/.test(value.trim()))
-    ) {
-      const numericValue = Number(value)
-
-      if (Number.isFinite(numericValue) && numericValue > 0) {
-        // 10 位左右通常是秒，13 位通常是毫秒
-        return numericValue < 100000000000
-          ? numericValue * 1000
-          : numericValue
-      }
-    }
-
-    // ISO 日期、YYYY-MM-DD 等日期字符串
-    const timestamp = new Date(value).getTime()
-
-    if (Number.isFinite(timestamp) && timestamp > 0) {
-      return timestamp
-    }
-  }
-
-  return 0
-}
-
-// 使用统一的节目标识进行比较
+// 统一获取节目标识
 const getPostIdentity = post =>
-  String(post?.slug || post?.id || '')
+  String(post?.slug || post?.id || '').trim()
 
 const EpisodesPage = props => {
   const {
@@ -94,34 +45,16 @@ const EpisodesPage = props => {
     }
   }, [])
 
-  // 将当前分页所有月份的节目合并，仅用于查找最新一期
-  const currentPagePosts = Object.keys(archivePosts).flatMap(month => {
-    const monthPosts = archivePosts[month]
-    return Array.isArray(monthPosts) ? monthPosts : []
-  })
-
-  // 只允许节目页第一页生成“最新”
+  // 只有第一页允许显示“最新”标记。
+  // 直接使用上游已排序的 posts[0]，不再重复排序或解析日期。
   const isFirstPage = Number(page) === 1
 
-  let absoluteLatestId = null
-  let maxTime = 0
+  const latestPost =
+    isFirstPage && Array.isArray(posts) && posts.length > 0
+      ? posts[0]
+      : null
 
-  if (isFirstPage) {
-    currentPagePosts.forEach(post => {
-      const timestamp = getPublishTimestamp(post)
-      const identity = getPostIdentity(post)
-
-      // 日期有效且有唯一标识时，才参与最新一期的判断
-      if (
-        identity &&
-        timestamp > 0 &&
-        timestamp > maxTime
-      ) {
-        maxTime = timestamp
-        absoluteLatestId = identity
-      }
-    })
-  }
+  const latestIdentity = getPostIdentity(latestPost)
 
   return (
     <div className='w-full px-2 md:px-0'>
@@ -139,25 +72,34 @@ const EpisodesPage = props => {
             {(archivePosts[month] || []).map((post, localIndex) => {
               const identity = getPostIdentity(post)
 
-              const originalType = String(post?.featuredType || '')
+              const originalType = String(
+                post?.featuredType || ''
+              )
                 .trim()
                 .toLowerCase()
 
-              // 默认保留 Notion 中原本设置的标签
-              let displayFeaturedType = post?.featuredType || null
+              // 先保留节目原有的标签
+              let displayFeaturedType =
+                post?.featuredType || null
 
-              // 仅第一页的全局候选最新节目显示绿色“最新”
-              if (
+              // 判断当前节目是否为上游排序后的第一期
+              const isLatestPost =
                 isFirstPage &&
-                absoluteLatestId &&
-                identity === absoluteLatestId
-              ) {
+                latestPost &&
+                (
+                  latestIdentity
+                    ? identity === latestIdentity
+                    : post === latestPost
+                )
+
+              if (isLatestPost) {
+                // 仅第一页的全站最新一期显示绿色“最新”
                 displayFeaturedType = 'latest'
               } else if (
                 originalType === 'latest' ||
                 originalType === '最新'
               ) {
-                // 清理此前每页各自生成的旧“最新”标记
+                // 清除其他节目或后续分页中残留的动态“最新”标记
                 displayFeaturedType = null
               }
 
@@ -168,8 +110,7 @@ const EpisodesPage = props => {
                   )
                 : -1
 
-              // ✨ 按照 GPT 的要求，与首页处理方式保持一致：
-              // 把最终标签写入卡片使用的节目对象副本
+              // 将最终标签写入卡片使用的对象副本
               const displayPost = {
                 ...post,
                 featuredType: displayFeaturedType
@@ -177,7 +118,11 @@ const EpisodesPage = props => {
 
               return (
                 <div
-                  key={displayPost.id || displayPost.slug || `${month}-${localIndex}`}
+                  key={
+                    displayPost.id ||
+                    displayPost.slug ||
+                    `${month}-${localIndex}`
+                  }
                   id={String(displayPost.slug || '')}
                   className='scroll-mt-24'
                 >
