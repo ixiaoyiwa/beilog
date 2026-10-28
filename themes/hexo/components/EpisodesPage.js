@@ -13,6 +13,7 @@ const EpisodesPage = props => {
   const {
     archivePosts = {},
     page = 1,
+    currentPage,
     episodesTotalPages = 1,
     siteInfo,
     posts = []
@@ -23,6 +24,17 @@ const EpisodesPage = props => {
     null,
     CONFIG
   )
+
+  // 首页使用 currentPage，因为 props.page 被页面对象占用了。
+  // 后续分页使用 [page].js 传入的数字 page。
+  const currentPageNumber =
+    currentPage !== undefined && currentPage !== null
+      ? Number(currentPage)
+      : typeof page === 'number' || typeof page === 'string'
+        ? Number(page)
+        : NaN
+
+  const isFirstPage = currentPageNumber === 1
 
   useEffect(() => {
     if (isBrowser) {
@@ -45,12 +57,11 @@ const EpisodesPage = props => {
     }
   }, [])
 
-  // 只有第一页允许显示“最新”标记。
-  // 直接使用上游已排序的 posts[0]，不再重复排序或解析日期。
-  const isFirstPage = Number(page) === 1
-
+  // 上游已按发布时间从新到旧排序，第一页第一期即为最新一期。
   const latestPost =
-    isFirstPage && Array.isArray(posts) && posts.length > 0
+    isFirstPage &&
+    Array.isArray(posts) &&
+    posts.length > 0
       ? posts[0]
       : null
 
@@ -78,11 +89,11 @@ const EpisodesPage = props => {
                 .trim()
                 .toLowerCase()
 
-              // 先保留节目原有的标签
+              // 默认保留节目原有标签
               let displayFeaturedType =
                 post?.featuredType || null
 
-              // 判断当前节目是否为上游排序后的第一期
+              // 只给第一页真正最新的节目添加“最新”标签
               const isLatestPost =
                 isFirstPage &&
                 latestPost &&
@@ -93,13 +104,12 @@ const EpisodesPage = props => {
                 )
 
               if (isLatestPost) {
-                // 仅第一页的全站最新一期显示绿色“最新”
                 displayFeaturedType = 'latest'
               } else if (
                 originalType === 'latest' ||
                 originalType === '最新'
               ) {
-                // 清除其他节目或后续分页中残留的动态“最新”标记
+                // 防止其他节目或后续分页残留旧的“最新”标记
                 displayFeaturedType = null
               }
 
@@ -110,7 +120,7 @@ const EpisodesPage = props => {
                   )
                 : -1
 
-              // 将最终标签写入卡片使用的对象副本
+              // 把最终标签交给卡片，不修改原始节目数据
               const displayPost = {
                 ...post,
                 featuredType: displayFeaturedType
@@ -145,7 +155,11 @@ const EpisodesPage = props => {
       ))}
 
       <PaginationNumber
-        page={page}
+        page={
+          Number.isFinite(currentPageNumber)
+            ? currentPageNumber
+            : 1
+        }
         totalPage={episodesTotalPages}
       />
     </div>
