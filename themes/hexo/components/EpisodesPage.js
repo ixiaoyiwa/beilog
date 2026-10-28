@@ -28,19 +28,22 @@ const EpisodesPage = props => {
     }
   }, [])
 
-  // 1. 从全部文章中找到发布时间绝对最新的一篇
-  let latestPostId = null
-  let maxDate = 0
-  
-  if (posts && posts.length > 0) {
-    posts.forEach(post => {
-      const pDate = post.publishDate || new Date(post.publishDay || post.date).getTime()
-      if (pDate > maxDate) {
-        maxDate = pDate
-        latestPostId = post.id
-      }
-    })
-  }
+  // 1. 把当前页面所有的文章全部拍平收集
+  const allPostsFlatten = []
+  Object.keys(archivePosts).forEach(month => {
+    allPostsFlatten.push(...archivePosts[month])
+  })
+
+  // 2. 找到全站唯一且绝对最新的一篇文章的 ID (按真实发布时间戳比对)
+  let absoluteLatestId = null
+  let maxTime = 0
+  allPostsFlatten.forEach(post => {
+    const pDate = post.publishDate || new Date(post.publishDay || post.date || 0).getTime()
+    if (pDate > maxTime) {
+      maxTime = pDate
+      absoluteLatestId = post.id
+    }
+  })
 
   return (
     <div className='w-full px-2 md:px-0'>
@@ -51,10 +54,14 @@ const EpisodesPage = props => {
           </div>
           <div className='space-y-6'>
             {archivePosts[month].map(post => {
-              // 2. 如果当前文章是全站最新的，或者带有最新标签，强制给 latest
               let type = post.featuredType
-              if (post.id === latestPostId || type === '最新' || type === 'latest') {
+              
+              // 如果这篇是全站唯一的最新，强制覆盖为 latest
+              if (post.id === absoluteLatestId) {
                 type = 'latest'
+              } else if (type === '最新' || type === 'latest') {
+                // 如果它不是最新，却因为后台或别的逻辑带了最新，强行去掉！
+                type = null
               }
 
               return (
@@ -64,7 +71,7 @@ const EpisodesPage = props => {
                     post={post}
                     showSummary={showSummary}
                     siteInfo={siteInfo}
-                    featuredType={type} // 强制透传最新的判断结果
+                    featuredType={type}
                   />
                 </div>
               )
