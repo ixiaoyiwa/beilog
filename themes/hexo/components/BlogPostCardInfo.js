@@ -22,6 +22,11 @@ const extractEpisodeNumber = slug => {
 
 export const BlogPostCardInfo = ({ post, showPreview, showPageCover, showSummary, featuredType = null }) => {
   const { NOTION_CONFIG } = useGlobal()
+  
+  const normalizedFeaturedType = String(featuredType ?? '')
+    .trim()
+    .toLowerCase()
+
   const guests = post?.tagItems || []
   const visibleGuests = guests.slice(0, 3)
   const extraCount = guests.length - 3
@@ -33,19 +38,31 @@ export const BlogPostCardInfo = ({ post, showPreview, showPageCover, showSummary
         <header>
           <h2>
             <SmartLink href={post?.href} passHref className={`line-clamp-2 replace cursor-pointer text-2xl ${showPreview ? 'text-center' : ''} leading-tight font-bold text-gray-600 dark:text-gray-100 hover:text-indigo-700 dark:hover:text-indigo-400`}>
-              {(featuredType === 'pinned' || featuredType === '置顶') && (
-                <span className='inline-block px-1.5 py-0.5 text-[10px] font-medium rounded mr-1.5 align-middle bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200'>置顶</span>
+              
+              {(normalizedFeaturedType === 'pinned' || normalizedFeaturedType === '置顶') && (
+                <span className='inline-block px-1.5 py-0.5 text-[10px] font-medium rounded mr-1.5 align-middle bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200'>
+                  置顶
+                </span>
               )}
-              {(featuredType === 'featured' || featuredType === '精选') && (
-                <span className='inline-block px-1.5 py-0.5 text-[10px] font-medium rounded mr-1.5 align-middle bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300'>精选</span>
+              
+              {(normalizedFeaturedType === 'featured' || normalizedFeaturedType === '精选') && (
+                <span className='inline-block px-1.5 py-0.5 text-[10px] font-medium rounded mr-1.5 align-middle bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300'>
+                  精选
+                </span>
               )}
-              {(featuredType === '会员' || featuredType === 'Member') && (
-                <span className='inline-block px-1.5 py-0.5 text-[10px] font-medium rounded mr-1.5 align-middle bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300'>会员</span>
+              
+              {(normalizedFeaturedType === 'member' || normalizedFeaturedType === '会员') && (
+                <span className='inline-block px-1.5 py-0.5 text-[10px] font-medium rounded mr-1.5 align-middle bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300'>
+                  会员
+                </span>
               )}
-              {/* 兼容手动标记的 最新 标签 */}
-              {(featuredType === 'latest' || featuredType === '最新') && (
-                <span className='inline-block px-1.5 py-0.5 text-[10px] font-medium rounded mr-1.5 align-middle bg-green-100 text-green-700 dark:bg-green-900/60 dark:text-green-300'>最新</span>
+              
+              {(normalizedFeaturedType === 'latest' || normalizedFeaturedType === '最新') && (
+                <span className='inline-block px-1.5 py-0.5 text-[10px] font-medium rounded mr-1.5 align-middle bg-green-100 text-green-700 dark:bg-green-900/60 dark:text-green-300'>
+                  最新
+                </span>
               )}
+              
               {siteConfig('POST_TITLE_ICON') && <NotionIcon icon={post.pageIcon} />}
               <span className='menu-link '>{post.title}</span>
             </SmartLink>
