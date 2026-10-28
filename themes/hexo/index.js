@@ -163,62 +163,47 @@ const LayoutPostList = props => {
     let featuredCount = 0
     let memberCount = 0
 
-    // 1. 筛选并分组（不丢弃任何文章）
+    // 1. 分类提取（不破坏原始数据）
     posts.forEach(post => {
       const type = String(post?.featuredType || '').trim().toLowerCase()
       
       if (type === '置顶' || type === 'pinned') {
         pinnedCount++
-        if (pinnedCount <= 1) {
-          pinnedPosts.push(post)
-        } else {
-          normalPosts.push({ ...post, featuredType: null }) // 降级塞回普通组
-        }
+        if (pinnedCount <= 1) pinnedPosts.push(post)
+        else normalPosts.push({ ...post, featuredType: null })
       } else if (type === '精选' || type === 'featured') {
         featuredCount++
-        if (featuredCount <= 2) {
-          featuredPosts.push(post)
-        } else {
-          normalPosts.push({ ...post, featuredType: null }) // 降级塞回普通组
-        }
+        if (featuredCount <= 2) featuredPosts.push(post)
+        else normalPosts.push({ ...post, featuredType: null })
       } else if (type === '会员' || type === 'member') {
         memberCount++
-        if (memberCount <= 2) {
-          memberPosts.push(post)
-        } else {
-          normalPosts.push({ ...post, featuredType: null }) // 降级塞回普通组
-        }
+        if (memberCount <= 2) memberPosts.push(post)
+        else normalPosts.push({ ...post, featuredType: null })
       } else {
-        normalPosts.push({ ...post, featuredType: null }) // 原本的普通组
+        normalPosts.push({ ...post, featuredType: null }) // 普通队伍，先清空标签
       }
     })
 
-    // 2. 拼接数组并强制打“最新”标签
-    // 逻辑：置顶 -> 精选 -> 会员 -> 普通(按时间倒序)
-    const finalPosts = [...pinnedPosts, ...featuredPosts, ...memberPosts, ...normalPosts]
-    
-    const processedPosts = finalPosts.map((post, index) => {
-      // 如果特权队列全空，或者普通队列排在最前面（填补空位），强制给最新
-      const isPrivileged = ['置顶', 'pinned', '精选', 'featured', '会员', 'member'].includes(String(post?.featuredType || '').trim().toLowerCase())
-      
-      if (!isPrivileged) {
-        // 检查这排在最前面的普通文章是不是空缺补位的第一篇
-        const firstPrivilegedIndex = finalPosts.findIndex(p => ['置顶', 'pinned', '精选', 'featured', '会员', 'member'].includes(String(p?.featuredType || '').trim().toLowerCase()))
-        const firstNormalIndex = firstPrivilegedIndex === -1 ? 0 : firstPrivilegedIndex
-        
-        // 如果是补位在最前面的，或者全站第一篇普通文章，打上最新
-        if (index === firstNormalIndex || (firstPrivilegedIndex === -1 && index === 0)) {
-          return { ...post, featuredType: 'latest' }
-        }
-      }
-      return post
+    // 2. 对普通队伍进行强制按时间排序（降级的文章会重新归位）
+    normalPosts.sort((a, b) => {
+      const dateA = a.publishDate || new Date(a.publishDay || a.date || 0).getTime()
+      const dateB = b.publishDate || new Date(b.publishDay || b.date || 0).getTime()
+      return dateB - dateA
     })
+
+    // 3. 普通队伍的第一名，打上“最新”标签
+    if (normalPosts.length > 0) {
+      normalPosts[0].featuredType = 'latest'
+    }
+
+    // 4. 拼装组合（置顶 -> 精选 -> 会员 -> 剩下的普通时间线）
+    const finalPosts = [...pinnedPosts, ...featuredPosts, ...memberPosts, ...normalPosts]
 
     return (
       <div>
         <SlotBar {...props} />
         <div className='space-y-6 px-2'>
-          {processedPosts.map((post, index) => (
+          {finalPosts.map((post, index) => (
             <BlogPostCard key={post.id} post={post} index={index} showSummary={showSummary} siteInfo={siteInfo} featuredType={post.featuredType} />
           ))}
         </div>
