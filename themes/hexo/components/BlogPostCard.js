@@ -79,7 +79,6 @@ const formatDuration = (seconds) => {
 
 const MiniAudioCapsule = ({ isPlaying, isLoading, remaining, progress, primaryColor }) => {
   const isFilled = progress >= 100
-
   return (
     <div
       className='relative inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-white overflow-hidden'
@@ -121,6 +120,7 @@ const MiniAudioCapsule = ({ isPlaying, isLoading, remaining, progress, primaryCo
 const BlogPostCard = ({ index, post, showSummary, siteInfo, featuredType }) => {
   const router = useRouter()
   
+  // ✨ 核心修复：只要传入了（哪怕是 null），就用传入的，绝不用 post.featuredType 回退！
   const finalFeaturedType = featuredType !== undefined ? featuredType : (post?.featuredType || null)
 
   const showPreview = siteConfig('HEXO_POST_LIST_PREVIEW', null, CONFIG) && post.blockMap
