@@ -45,7 +45,8 @@ const getFeaturedText = post => {
   for (const key of Object.keys(post)) {
     if (SCAN_SKIP_KEYS.includes(key)) continue
     const s = toText(post[key]).trim()
-    if (s === '置顶' || s === '精选') return s
+    // ✨ 修复：把“会员”也加进识别范围
+    if (s === '置顶' || s === '精选' || s === '会员') return s
   }
   return ''
 }
@@ -58,25 +59,36 @@ const getTime = p =>
 const pickHomePosts = (posts = [], size = HOME_POST_COUNT) => {
   const byDate = [...posts].sort((a, b) => getTime(b) - getTime(a))
 
-  const pinned = byDate
-    .filter(p => getFeaturedText(p).includes('置顶'))
-    .slice(0, 1)
-  const pinnedIds = new Set(pinned.map(p => p.id))
+  // 获取统一标签类型
+  const getKind = (post) => {
+    const text = getFeaturedText(post)
+    if (text.includes('置顶')) return 'pinned'
+    if (text.includes('精选')) return 'featured'
+    if (text.includes('会员')) return 'member'
+    return null
+  }
 
-  const featured = byDate
-    .filter(p => !pinnedIds.has(p.id) && getFeaturedText(p).includes('精选'))
-    .slice(0, 3)
-  const featuredIds = new Set(featured.map(p => p.id))
+  const kindMap = new Map(byDate.map(p => [p, getKind(p)]))
 
-  const rest = byDate.filter(p => !pinnedIds.has(p.id) && !featuredIds.has(p.id))
-  const latest = rest.slice(0, 1)
-  const normal = rest.slice(1)
+  // ✨ 修复：严格限制 置顶1、精选2、会员2
+  const pinned = byDate.filter(p => kindMap.get(p) === 'pinned').slice(0, 1)
+  const featured = byDate.filter(p => kindMap.get(p) === 'featured').slice(0, 2)
+  const member = byDate.filter(p => kindMap.get(p) === 'member').slice(0, 2)
 
+  // ✨ 修复：没有特权标签的纯普通文章，第一篇文章打上 latest 标签
+  const normalPosts = byDate
+    .filter(p => !kindMap.get(p))
+    .map((post, index) => ({
+      ...post,
+      featuredType: index === 0 ? 'latest' : null
+    }))
+
+  // 拼装、截断为 6 个，超出的特权标签自然被丢弃，留给节目页
   return [
     ...pinned.map(p => ({ ...p, featuredType: 'pinned' })),
     ...featured.map(p => ({ ...p, featuredType: 'featured' })),
-    ...latest.map(p => ({ ...p, featuredType: 'latest' })),
-    ...normal
+    ...member.map(p => ({ ...p, featuredType: 'member' })),
+    ...normalPosts
   ].slice(0, size)
 }
 
@@ -98,21 +110,7 @@ export async function getStaticProps(req) {
     page => page.type === 'Post' && page.status === 'Published'
   ) || []
 
-  // 调试日志
-  const marked = publishedPosts.filter(p => getFeaturedText(p))
-  console.log(
-    'FEATURED_DEBUG 已发布文章数:', publishedPosts.length,
-    '| 读到 Featured 的文章数:', marked.length
-  )
-  console.log(
-    'FEATURED_DEBUG 第一篇文章的字段名:',
-    JSON.stringify(Object.keys(publishedPosts[0] || {}))
-  )
-  marked.slice(0, 10).forEach(p =>
-    console.log('FEATURED_DEBUG 命中:', p.title, '=>', getFeaturedText(p))
-  )
-
-  // ⭐ 修复：1. 先存标记，2. 清理，3. 恢复标记，4. 选文打标签
+  // 先存标记，2. 清理，3. 恢复标记，4. 选文打标签
   const featuredMap = new Map()
   publishedPosts.forEach(p => {
     const text = getFeaturedText(p)
@@ -164,7 +162,6 @@ export async function getStaticProps(req) {
     }
   }
 
-  // ⭐ 极其重要：这里不能再清理 props.posts 了，否则刚打上的标签又没了！
   props.latestPosts = cleanPostSummaries(props.latestPosts)
 
   delete props.allPages
