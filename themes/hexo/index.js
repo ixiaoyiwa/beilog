@@ -95,7 +95,6 @@ const LayoutBase = props => {
     ) : null
 
   const isHomeWithHero = router.route === '/' && siteConfig('HEXO_HOME_BANNER_ENABLE', null, CONFIG)
-
   const drawerRight = useRef(null)
   const tocRef = isBrowser ? document.getElementById('article-wrapper') : null
 
@@ -103,11 +102,7 @@ const LayoutBase = props => {
     <>
       {post?.toc?.length > 1 && (
         <div className='block lg:hidden'>
-          <TocDrawerButton
-            onClick={() => {
-              drawerRight?.current?.handleSwitchVisible()
-            }}
-          />
+          <TocDrawerButton onClick={() => drawerRight?.current?.handleSwitchVisible()} />
         </div>
       )}
       {post && <ButtonJumpToComment />}
@@ -123,41 +118,16 @@ const LayoutBase = props => {
       <div id='theme-hexo' className={`${siteConfig('FONT_STYLE')} dark:bg-black scroll-smooth`}>
         <Style />
         <Header {...props} />
-        <Transition
-          show={!onLoading}
-          appear={true}
-          enter='transition ease-in-out duration-700 transform order-first'
-          enterFrom='opacity-0 -translate-y-16'
-          enterTo='opacity-100'
-          leave='transition ease-in-out duration-300 transform'
-          leaveFrom='opacity-100'
-          leaveTo='opacity-0 translate-y-16'
-          unmount={false}>
+        <Transition show={!onLoading} appear={true} enter='transition ease-in-out duration-700 transform order-first' enterFrom='opacity-0 -translate-y-16' enterTo='opacity-100' leave='transition ease-in-out duration-300 transform' leaveFrom='opacity-100' leaveTo='opacity-0 translate-y-16' unmount={false}>
           {headerSlot}
         </Transition>
-        <main
-          id='wrapper'
-          className={`${mainTopPadding} bg-hexo-background-gray dark:bg-black w-full md:px-8 lg:px-24 min-h-screen relative`}>
-          <div
-            id='container-inner'
-            className={
-              (JSON.parse(siteConfig('LAYOUT_SIDEBAR_REVERSE')) ? 'flex-row-reverse' : '') +
-              ' w-full mx-auto lg:flex lg:space-x-4 justify-center relative z-10'
-            }>
+        <main id='wrapper' className={`${mainTopPadding} bg-hexo-background-gray dark:bg-black w-full md:px-8 lg:px-24 min-h-screen relative`}>
+          <div id='container-inner' className={(JSON.parse(siteConfig('LAYOUT_SIDEBAR_REVERSE')) ? 'flex-row-reverse' : '') + ' w-full mx-auto lg:flex lg:space-x-4 justify-center relative z-10'}>
             <div className={`${className || ''} w-full ${fullWidth ? '' : 'max-w-4xl'} h-full overflow-hidden`}>
               {showArticleSwitchPlaceholder ? (
                 <ArticleSwitchPlaceholder />
               ) : (
-                <Transition
-                  show={isArticleSlugPage ? true : !onLoading}
-                  appear={true}
-                  enter='transition ease-in-out duration-700 transform order-first'
-                  enterFrom='opacity-0 translate-y-16'
-                  enterTo='opacity-100'
-                  leave='transition ease-in-out duration-300 transform'
-                  leaveFrom='opacity-100 translate-y-0'
-                  leaveTo='opacity-0 -translate-y-16'
-                  unmount={false}>
+                <Transition show={isArticleSlugPage ? true : !onLoading} appear={true} enter='transition ease-in-out duration-700 transform order-first' enterFrom='opacity-0 translate-y-16' enterTo='opacity-100' leave='transition ease-in-out duration-300 transform' leaveFrom='opacity-100 translate-y-0' leaveTo='opacity-0 -translate-y-16' unmount={false}>
                   {slotTop}
                   {children}
                 </Transition>
@@ -166,9 +136,7 @@ const LayoutBase = props => {
             {!hideSidebar && <SideRight {...props} />}
           </div>
         </main>
-        <div className='block lg:hidden'>
-          <TocDrawer post={post} cRef={drawerRight} targetRef={tocRef} />
-        </div>
+        <div className='block lg:hidden'><TocDrawer post={post} cRef={drawerRight} targetRef={tocRef} /></div>
         <RightFloatArea floatSlot={floatSlot} />
         <GlobalAudioPlayer />
         <Footer title={siteConfig('TITLE')} />
@@ -186,67 +154,76 @@ const LayoutPostList = props => {
   const showSummary = siteConfig('HEXO_POST_LIST_SUMMARY', null, CONFIG)
 
   if (isHomePage) {
-    const pinnedQueue = []
-    const featuredQueue = []
-    const memberQueue = []
-    const latestQueue = []
-    const normalQueue = []
+    const pinnedPosts = []
+    const featuredPosts = []
+    const memberPosts = []
+    const normalPosts = []
 
     let pinnedCount = 0
     let featuredCount = 0
     let memberCount = 0
 
-    // posts 默认按时间倒序排列（最新的在前面）
+    // 1. 筛选并分组（不丢弃任何文章）
     posts.forEach(post => {
-      const type = post?.featuredType || ''
+      const type = String(post?.featuredType || '').trim().toLowerCase()
       
       if (type === '置顶' || type === 'pinned') {
         pinnedCount++
         if (pinnedCount <= 1) {
-          pinnedQueue.push({ ...post, displayType: 'pinned' })
+          pinnedPosts.push(post)
+        } else {
+          normalPosts.push({ ...post, featuredType: null }) // 降级塞回普通组
         }
-        // 如果超过1个，直接丢弃，不进入任何队列，等于在首页彻底隐藏
       } else if (type === '精选' || type === 'featured') {
         featuredCount++
         if (featuredCount <= 2) {
-          featuredQueue.push({ ...post, displayType: 'featured' })
+          featuredPosts.push(post)
+        } else {
+          normalPosts.push({ ...post, featuredType: null }) // 降级塞回普通组
         }
-        // 如果超过2个，直接丢弃
-      } else if (type === '会员' || type === 'Member') {
+      } else if (type === '会员' || type === 'member') {
         memberCount++
         if (memberCount <= 2) {
-          memberQueue.push({ ...post, displayType: '会员' })
+          memberPosts.push(post)
+        } else {
+          normalPosts.push({ ...post, featuredType: null }) // 降级塞回普通组
         }
-        // 如果超过2个，直接丢弃
-      } else if (type === '最新' || type === 'latest') {
-        latestQueue.push({ ...post, displayType: 'latest' })
       } else {
-        normalQueue.push({ ...post, displayType: null })
+        normalPosts.push({ ...post, featuredType: null }) // 原本的普通组
       }
     })
 
-    // 合并顺序：置顶 -> 精选 -> 会员 -> 手动最新 -> 普通时间线
-    const finalPosts = [...pinnedQueue, ...featuredQueue, ...memberQueue, ...latestQueue, ...normalQueue]
+    // 2. 拼接数组并强制打“最新”标签
+    // 逻辑：置顶 -> 精选 -> 会员 -> 普通(按时间倒序)
+    const finalPosts = [...pinnedPosts, ...featuredPosts, ...memberPosts, ...normalPosts]
+    
+    const processedPosts = finalPosts.map((post, index) => {
+      // 如果特权队列全空，或者普通队列排在最前面（填补空位），强制给最新
+      const isPrivileged = ['置顶', 'pinned', '精选', 'featured', '会员', 'member'].includes(String(post?.featuredType || '').trim().toLowerCase())
+      
+      if (!isPrivileged) {
+        // 检查这排在最前面的普通文章是不是空缺补位的第一篇
+        const firstPrivilegedIndex = finalPosts.findIndex(p => ['置顶', 'pinned', '精选', 'featured', '会员', 'member'].includes(String(p?.featuredType || '').trim().toLowerCase()))
+        const firstNormalIndex = firstPrivilegedIndex === -1 ? 0 : firstPrivilegedIndex
+        
+        // 如果是补位在最前面的，或者全站第一篇普通文章，打上最新
+        if (index === firstNormalIndex || (firstPrivilegedIndex === -1 && index === 0)) {
+          return { ...post, featuredType: 'latest' }
+        }
+      }
+      return post
+    })
 
     return (
       <div>
         <SlotBar {...props} />
         <div className='space-y-6 px-2'>
-          {finalPosts.map((post, index) => (
-            <BlogPostCard
-              key={post.id}
-              post={post}
-              index={index}
-              showSummary={showSummary}
-              siteInfo={siteInfo}
-              featuredType={post.displayType}
-            />
+          {processedPosts.map((post, index) => (
+            <BlogPostCard key={post.id} post={post} index={index} showSummary={showSummary} siteInfo={siteInfo} featuredType={post.featuredType} />
           ))}
         </div>
         <div className='mt-8 mb-4 text-center'>
-          <SmartLink
-            href='/episodes'
-            className='inline-block px-6 py-2 text-sm font-semibold rounded-lg border-2 transition-colors border-[var(--theme-color)] text-[var(--theme-color)] hover:bg-[var(--theme-color)] hover:text-white'>
+          <SmartLink href='/episodes' className='inline-block px-6 py-2 text-sm font-semibold rounded-lg border-2 transition-colors border-[var(--theme-color)] text-[var(--theme-color)] hover:bg-[var(--theme-color)] hover:text-white'>
             查看更多节目 ···
           </SmartLink>
         </div>
@@ -257,11 +234,7 @@ const LayoutPostList = props => {
   return (
     <div>
       <SlotBar {...props} />
-      {siteConfig('POST_LIST_STYLE') === 'page' ? (
-        <BlogPostListPage {...props} />
-      ) : (
-        <BlogPostListScroll {...props} />
-      )}
+      {siteConfig('POST_LIST_STYLE') === 'page' ? <BlogPostListPage {...props} /> : <BlogPostListScroll {...props} />}
     </div>
   )
 }
@@ -270,28 +243,16 @@ const LayoutSearch = props => {
   const { keyword } = props
   const router = useRouter()
   const currentSearch = keyword || router?.query?.s
-
   useEffect(() => {
     if (currentSearch) {
-      replaceSearchResult({
-        doms: document.getElementsByClassName('replace'),
-        search: keyword,
-        target: { element: 'span', className: 'text-red-500 border-b border-dashed' }
-      })
+      replaceSearchResult({ doms: document.getElementsByClassName('replace'), search: keyword, target: { element: 'span', className: 'text-red-500 border-b border-dashed' } })
     }
   })
-
   return (
     <div>
-      {!currentSearch ? (
-        <SearchNav {...props} />
-      ) : (
+      {!currentSearch ? <SearchNav {...props} /> : (
         <div id='posts-wrapper'>
-          {siteConfig('POST_LIST_STYLE') === 'page' ? (
-            <BlogPostListPage {...props} />
-          ) : (
-            <BlogPostListScroll {...props} />
-          )}
+          {siteConfig('POST_LIST_STYLE') === 'page' ? <BlogPostListPage {...props} /> : <BlogPostListScroll {...props} />}
         </div>
       )}
     </div>
@@ -305,11 +266,7 @@ const LayoutArchive = props => {
       <Card className='w-full'>
         <div className='mb-10 pb-20 bg-white md:p-12 p-3 min-h-full dark:bg-hexo-black-gray'>
           {Object.keys(archivePosts).map(archiveTitle => (
-            <BlogPostArchive
-              key={archiveTitle}
-              posts={archivePosts[archiveTitle]}
-              archiveTitle={archiveTitle}
-            />
+            <BlogPostArchive key={archiveTitle} posts={archivePosts[archiveTitle]} archiveTitle={archiveTitle} />
           ))}
         </div>
       </Card>
@@ -329,9 +286,7 @@ const LayoutSlug = props => {
       setTimeout(() => {
           if (isBrowser) {
             const article = document.querySelector('#article-wrapper #notion-article')
-            if (!article) {
-              router.push('/404').then(() => { console.warn('找不到页面', router.asPath) })
-            }
+            if (!article) router.push('/404').then(() => { console.warn('找不到页面', router.asPath) })
           }
         }, waiting404)
     }
@@ -347,42 +302,32 @@ const LayoutSlug = props => {
   const articleBorderClass = isRegularPage ? 'lg:border-x lg:border-t' : 'lg:border'
 
   return (
-    <>
-      <div
-        style={isRegularPage ? { borderBottom: 'none', borderBottomWidth: 0, boxShadow: 'none' } : undefined}
-        className={`w-full ${isRegularPage ? '' : 'lg:hover:shadow'} ${articleBorderClass} rounded-t-xl lg:rounded-xl lg:px-2 lg:py-4 bg-white dark:bg-hexo-black-gray dark:border-black article`}>
-        {lock && <ArticleLock validPassword={validPassword} />}
-        {!lock && post && (
-          <div className='overflow-x-auto flex-grow mx-auto md:w-full md:px-5 '>
-            <article id='article-wrapper' className='subpixel-antialiased overflow-y-hidden'>
-              <section className='px-5 justify-center mx-auto max-w-2xl lg:max-w-full'>
-                {!hasAudioField && <NotionAudioEnhancer post={post} />}
-                {post && (post.markdownHtml ? <MarkdownArticle html={post.markdownHtml} /> : <NotionPage post={post} />)}
-                {post && <TimestampLinker post={post} />}
-              </section>
-              <div className={post?.type === 'Post' ? 'mt-8' : ''}>
-                <ShareBar post={post} />
-              </div>
-              {post?.type === 'Post' && (
-                <>
-                  <ArticleCopyright {...props} />
-                  <ArticleRecommend {...props} />
-                  <ArticleAdjacent {...props} />
-                </>
-              )}
-            </article>
+    <div style={isRegularPage ? { borderBottom: 'none', borderBottomWidth: 0, boxShadow: 'none' } : undefined} className={`w-full ${isRegularPage ? '' : 'lg:hover:shadow'} ${articleBorderClass} rounded-t-xl lg:rounded-xl lg:px-2 lg:py-4 bg-white dark:bg-hexo-black-gray dark:border-black article`}>
+      {lock && <ArticleLock validPassword={validPassword} />}
+      {!lock && post && (
+        <div className='overflow-x-auto flex-grow mx-auto md:w-full md:px-5 '>
+          <article id='article-wrapper' className='subpixel-antialiased overflow-y-hidden'>
+            <section className='px-5 justify-center mx-auto max-w-2xl lg:max-w-full'>
+              {!hasAudioField && <NotionAudioEnhancer post={post} />}
+              {post && (post.markdownHtml ? <MarkdownArticle html={post.markdownHtml} /> : <NotionPage post={post} />)}
+              {post && <TimestampLinker post={post} />}
+            </section>
+            <div className={post?.type === 'Post' ? 'mt-8' : ''}><ShareBar post={post} /></div>
             {post?.type === 'Post' && (
-              <>
-                <div className='pt-4 border-dashed' />
-                <div id='post-comment-wrapper' className='duration-200 overflow-x-auto bg-white dark:bg-hexo-black-gray px-3'>
-                  <Comment frontMatter={post} />
-                </div>
-              </>
+              <><ArticleCopyright {...props} /><ArticleRecommend {...props} /><ArticleAdjacent {...props} /></>
             )}
-          </div>
-        )}
-      </div>
-    </>
+          </article>
+          {post?.type === 'Post' && (
+            <>
+              <div className='pt-4 border-dashed' />
+              <div id='post-comment-wrapper' className='duration-200 overflow-x-auto bg-white dark:bg-hexo-black-gray px-3'>
+                <Comment frontMatter={post} />
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -401,9 +346,7 @@ const Layout404 = props => {
     <div className='text-black w-full h-screen text-center justify-center content-center items-center flex flex-col'>
       <div className='dark:text-gray-200'>
         <h2 className='inline-block border-r-2 border-gray-600 mr-2 px-3 py-2 align-top'>404</h2>
-        <div className='inline-block text-left h-32 leading-10 items-center'>
-          <h2 className='m-0 p-0'>{locale.COMMON.NOT_FOUND}</h2>
-        </div>
+        <div className='inline-block text-left h-32 leading-10 items-center'><h2 className='m-0 p-0'>{locale.COMMON.NOT_FOUND}</h2></div>
       </div>
     </div>
   )
@@ -438,9 +381,7 @@ const LayoutTagIndex = props => {
       <Card className='w-full'>
         <div className='dark:text-gray-200 mb-5 ml-4'><i className='mr-4 fas fa-users' /> {locale.COMMON.TAGS}:</div>
         <div id='tags-list' className='duration-200 flex flex-wrap ml-8'>
-          {tagOptions.map(tag => (
-            <div key={tag.name} className='p-2'><TagItemMini key={tag.name} tag={tag} /></div>
-          ))}
+          {tagOptions.map(tag => (<div key={tag.name} className='p-2'><TagItemMini key={tag.name} tag={tag} /></div>))}
         </div>
       </Card>
     </div>
