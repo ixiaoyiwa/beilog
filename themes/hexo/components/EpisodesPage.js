@@ -5,15 +5,22 @@ import CONFIG from '../config'
 import BlogPostCard from './BlogPostCard'
 import PaginationNumber from './PaginationNumber'
 
-const EpisodesPage = props => {
-  const {
-    archivePosts = {},
-    page = 1,
-    episodesTotalPages = 1,
-    siteInfo,
-    posts = []
-  } = props
+const getPublishTimestamp = post => {
+  const publishDate = Number(post?.publishDate)
+  if (Number.isFinite(publishDate) && publishDate > 0) return publishDate
+  const dateCandidates = [post?.date?.start_date, typeof post?.date === 'string' ? post.date : null, post?.publishDay]
+  for (const value of dateCandidates) {
+    if (!value) continue
+    const timestamp = new Date(value).getTime()
+    if (Number.isFinite(timestamp) && timestamp > 0) return timestamp
+  }
+  return 0
+}
 
+const getPostIdentity = post => String(post?.id || post?.slug || '')
+
+const EpisodesPage = props => {
+  const { archivePosts = {}, page = 1, episodesTotalPages = 1, siteInfo, posts = [] } = props
   const showSummary = siteConfig('HEXO_POST_LIST_SUMMARY', null, CONFIG)
 
   useEffect(() => {
@@ -28,20 +35,21 @@ const EpisodesPage = props => {
     }
   }, [])
 
-  // 1. 把当前页面所有的文章全部拍平收集
-  const allPostsFlatten = []
-  Object.keys(archivePosts).forEach(month => {
-    allPostsFlatten.push(...archivePosts[month])
+  const currentPagePosts = Object.keys(archivePosts).flatMap(month => {
+    const monthPosts = archivePosts[month]
+    return Array.isArray(monthPosts) ? monthPosts : []
   })
 
-  // 2. 找到全站唯一且绝对最新的一篇文章的 ID (按真实发布时间戳比对)
+  const allKnownPosts = Array.isArray(posts) && posts.length > 0 ? posts : currentPagePosts
+
   let absoluteLatestId = null
   let maxTime = 0
-  allPostsFlatten.forEach(post => {
-    const pDate = post.publishDate || new Date(post.publishDay || post.date || 0).getTime()
-    if (pDate > maxTime) {
-      maxTime = pDate
-      absoluteLatestId = post.id
+
+  allKnownPosts.forEach(post => {
+    const timestamp = getPublishTimestamp(post)
+    if (timestamp > maxTime) {
+      maxTime = timestamp
+      absoluteLatestId = getPostIdentity(post)
     }
   })
 
@@ -53,25 +61,30 @@ const EpisodesPage = props => {
             {month}
           </div>
           <div className='space-y-6'>
-            {archivePosts[month].map(post => {
-              let type = post.featuredType
-              
-              // 如果这篇是全站唯一的最新，强制覆盖为 latest
-              if (post.id === absoluteLatestId) {
-                type = 'latest'
-              } else if (type === '最新' || type === 'latest') {
-                // 如果它不是最新，却因为后台或别的逻辑带了最新，强行去掉！
-                type = null
+            {(archivePosts[month] || []).map((post, localIndex) => {
+              const postIdentity = getPostIdentity(post)
+              const originalType = String(post?.featuredType || '').trim().toLowerCase()
+
+              let displayFeaturedType = post?.featuredType || null
+
+              if (absoluteLatestId && postIdentity === absoluteLatestId) {
+                displayFeaturedType = 'latest'
+              } else if (originalType === 'latest' || originalType === '最新') {
+                displayFeaturedType = null
               }
 
+              const globalIndex = Array.isArray(posts)
+                ? posts.findIndex(item => getPostIdentity(item) === postIdentity)
+                : -1
+
               return (
-                <div key={post.id} id={String(post.slug)} className='scroll-mt-24'>
+                <div key={post.id || post.slug || `${month}-${localIndex}`} id={String(post.slug)} className='scroll-mt-24'>
                   <BlogPostCard
-                    index={posts.indexOf(post) + 1}
+                    index={globalIndex >= 0 ? globalIndex + 1 : localIndex + 1}
                     post={post}
                     showSummary={showSummary}
                     siteInfo={siteInfo}
-                    featuredType={type}
+                    featuredType={displayFeaturedType}
                   />
                 </div>
               )
