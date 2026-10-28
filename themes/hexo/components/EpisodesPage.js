@@ -5,122 +5,135 @@ import CONFIG from '../config'
 import BlogPostCard from './BlogPostCard'
 import PaginationNumber from './PaginationNumber'
 
-// 统一获取节目标识
-const getPostIdentity = post =>
-  String(post?.slug || post?.id || '').trim()
+// 获取节目真实发布时间，兼容毫秒时间戳和日期字符串
+const getPublishTimestamp = post => {
+  const candidates = [
+    post?.publishDate,
+    post?.date?.start_date,
+    typeof post?.date === 'string' ? post.date : null,
+    post?.publishDay
+  ]
+
+  for (const value of candidates) {
+    if (value === null || value === undefined || value === '') {
+      continue
+    }
+    if (value instanceof Date) {
+      const timestamp = value.getTime()
+      if (Number.isFinite(timestamp) && timestamp > 0) return timestamp
+      continue
+    }
+    if (typeof value === 'number' || (typeof value === 'string' && /^\d{9,13}$/.test(value.trim()))) {
+      const numericValue = Number(value)
+      if (Number.isFinite(numericValue) && numericValue > 0) {
+        return numericValue < 100000000000 ? numericValue * 1000 : numericValue
+      }
+    }
+    const timestamp = new Date(value).getTime()
+    if (Number.isFinite(timestamp) && timestamp > 0) return timestamp
+  }
+  return 0
+}
+
+const getPostIdentity = post => String(post?.slug || post?.id || '')
+
+// ✨ 统一读取节目原始标记，兼容 Featured 和 featuredType
+const getPostFeaturedType = post => {
+  const toText = value => {
+    if (value === null || value === undefined || value === '') return ''
+    if (typeof value === 'string' || typeof value === 'number') return String(value)
+    if (Array.isArray(value)) return value.map(toText).filter(Boolean).join(',')
+    if (typeof value === 'object') {
+      const direct = value.name ?? value.value ?? value.select?.name ?? value.status?.name ?? value.plain_text
+      if (direct !== undefined && direct !== null && direct !== '') return toText(direct)
+    }
+    return ''
+  }
+
+  const candidates = [
+    post?.Featured,
+    post?.featured,
+    post?.properties?.Featured,
+    post?.ext?.Featured,
+    post?.ext?.featured,
+    post?.featuredType
+  ]
+
+  for (const candidate of candidates) {
+    const value = toText(candidate).trim().toLowerCase()
+    if (value.includes('置顶') || value === 'pinned') return 'pinned'
+    if (value.includes('精选') || value === 'featured') return 'featured'
+    if (value.includes('会员') || value === 'member') return 'member'
+    if (value === 'latest' || value === '最新') return 'latest'
+  }
+
+  return null
+}
 
 const EpisodesPage = props => {
   const {
     archivePosts = {},
     page = 1,
-    currentPage,
     episodesTotalPages = 1,
     siteInfo,
     posts = []
   } = props
 
-  const showSummary = siteConfig(
-    'HEXO_POST_LIST_SUMMARY',
-    null,
-    CONFIG
-  )
-
-  // 首页使用 currentPage，因为 props.page 被页面对象占用了。
-  // 后续分页使用 [page].js 传入的数字 page。
-  const currentPageNumber =
-    currentPage !== undefined && currentPage !== null
-      ? Number(currentPage)
-      : typeof page === 'number' || typeof page === 'string'
-        ? Number(page)
-        : NaN
-
-  const isFirstPage = currentPageNumber === 1
+  const showSummary = siteConfig('HEXO_POST_LIST_SUMMARY', null, CONFIG)
 
   useEffect(() => {
     if (isBrowser) {
       const anchor = window.location.hash
-
       if (anchor) {
         setTimeout(() => {
-          const anchorElement = document.getElementById(
-            anchor.substring(1)
-          )
-
-          if (anchorElement) {
-            anchorElement.scrollIntoView({
-              block: 'start',
-              behavior: 'smooth'
-            })
-          }
+          const anchorElement = document.getElementById(anchor.substring(1))
+          if (anchorElement) anchorElement.scrollIntoView({ block: 'start', behavior: 'smooth' })
         }, 300)
       }
     }
   }, [])
 
-  // 上游已按发布时间从新到旧排序，第一页第一期即为最新一期。
-  const latestPost =
-    isFirstPage &&
-    Array.isArray(posts) &&
-    posts.length > 0
-      ? posts[0]
-      : null
+  const currentPagePosts = Object.keys(archivePosts).flatMap(month => {
+    const monthPosts = archivePosts[month]
+    return Array.isArray(monthPosts) ? monthPosts : []
+  })
 
-  const latestIdentity = getPostIdentity(latestPost)
+  // 因为上游 pages/episodes/[page].js 已经做过 sortEpisodes 排序，第一页第一篇必定是最新
+  const isFirstPage = Number(page) === 1
+  let absoluteLatestId = null
+  if (isFirstPage && currentPagePosts.length > 0) {
+    absoluteLatestId = getPostIdentity(currentPagePosts[0])
+  }
 
   return (
     <div className='w-full px-2 md:px-0'>
       {Object.keys(archivePosts).map(month => (
-        <section
-          key={month}
-          id={month}
-          className='mb-8'
-        >
+        <section key={month} id={month} className='mb-8'>
           <div className='text-2xl font-extrabold mb-4 text-gray-700 dark:text-gray-300'>
             {month}
           </div>
-
           <div className='space-y-6'>
             {(archivePosts[month] || []).map((post, localIndex) => {
               const identity = getPostIdentity(post)
+              const resolvedFeaturedType = getPostFeaturedType(post)
+              const originalType = String(resolvedFeaturedType || '').trim().toLowerCase()
 
-              const originalType = String(
-                post?.featuredType || ''
-              )
-                .trim()
-                .toLowerCase()
+              let displayFeaturedType = resolvedFeaturedType
 
-              // 默认保留节目原有标签
-              let displayFeaturedType =
-                post?.featuredType || null
+              // 判断是否为全站最新
+              const isLatestPost = isFirstPage && absoluteLatestId && identity === absoluteLatestId
 
-              // 只给第一页真正最新的节目添加“最新”标签
-              const isLatestPost =
-                isFirstPage &&
-                latestPost &&
-                (
-                  latestIdentity
-                    ? identity === latestIdentity
-                    : post === latestPost
-                )
-
-              if (isLatestPost) {
+              if (isLatestPost && !['pinned', 'featured', 'member'].includes(originalType)) {
                 displayFeaturedType = 'latest'
-              } else if (
-                originalType === 'latest' ||
-                originalType === '最新'
-              ) {
-                // 防止其他节目或后续分页残留旧的“最新”标记
+              } else if (originalType === 'latest') {
+                // 如果它不是当前最新，但字段里残留了 latest，清空
                 displayFeaturedType = null
               }
 
               const globalIndex = Array.isArray(posts)
-                ? posts.findIndex(
-                    item =>
-                      getPostIdentity(item) === identity
-                  )
+                ? posts.findIndex(item => getPostIdentity(item) === identity)
                 : -1
 
-              // 把最终标签交给卡片，不修改原始节目数据
               const displayPost = {
                 ...post,
                 featuredType: displayFeaturedType
@@ -128,20 +141,12 @@ const EpisodesPage = props => {
 
               return (
                 <div
-                  key={
-                    displayPost.id ||
-                    displayPost.slug ||
-                    `${month}-${localIndex}`
-                  }
+                  key={displayPost.id || displayPost.slug || `${month}-${localIndex}`}
                   id={String(displayPost.slug || '')}
                   className='scroll-mt-24'
                 >
                   <BlogPostCard
-                    index={
-                      globalIndex >= 0
-                        ? globalIndex + 1
-                        : localIndex + 1
-                    }
+                    index={globalIndex >= 0 ? globalIndex + 1 : localIndex + 1}
                     post={displayPost}
                     showSummary={showSummary}
                     siteInfo={siteInfo}
@@ -153,15 +158,7 @@ const EpisodesPage = props => {
           </div>
         </section>
       ))}
-
-      <PaginationNumber
-        page={
-          Number.isFinite(currentPageNumber)
-            ? currentPageNumber
-            : 1
-        }
-        totalPage={episodesTotalPages}
-      />
+      <PaginationNumber page={page} totalPage={episodesTotalPages} />
     </div>
   )
 }
