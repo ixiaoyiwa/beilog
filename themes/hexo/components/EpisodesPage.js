@@ -168,10 +168,17 @@ const EpisodesPage = props => {
                   )
                 : -1
 
+              // ✨ 按照 GPT 的要求，与首页处理方式保持一致：
+              // 把最终标签写入卡片使用的节目对象副本
+              const displayPost = {
+                ...post,
+                featuredType: displayFeaturedType
+              }
+
               return (
                 <div
-                  key={post.id || post.slug || `${month}-${localIndex}`}
-                  id={String(post.slug || '')}
+                  key={displayPost.id || displayPost.slug || `${month}-${localIndex}`}
+                  id={String(displayPost.slug || '')}
                   className='scroll-mt-24'
                 >
                   <BlogPostCard
@@ -180,10 +187,10 @@ const EpisodesPage = props => {
                         ? globalIndex + 1
                         : localIndex + 1
                     }
-                    post={post}
+                    post={displayPost}
                     showSummary={showSummary}
                     siteInfo={siteInfo}
-                    featuredType={displayFeaturedType}
+                    featuredType={displayPost.featuredType}
                   />
                 </div>
               )
