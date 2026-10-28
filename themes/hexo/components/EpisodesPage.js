@@ -22,16 +22,25 @@ const EpisodesPage = props => {
       if (anchor) {
         setTimeout(() => {
           const anchorElement = document.getElementById(anchor.substring(1))
-          if (anchorElement) {
-            anchorElement.scrollIntoView({
-              block: 'start',
-              behavior: 'smooth'
-            })
-          }
+          if (anchorElement) anchorElement.scrollIntoView({ block: 'start', behavior: 'smooth' })
         }, 300)
       }
     }
   }, [])
+
+  // 1. 从全部文章中找到发布时间绝对最新的一篇
+  let latestPostId = null
+  let maxDate = 0
+  
+  if (posts && posts.length > 0) {
+    posts.forEach(post => {
+      const pDate = post.publishDate || new Date(post.publishDay || post.date).getTime()
+      if (pDate > maxDate) {
+        maxDate = pDate
+        latestPostId = post.id
+      }
+    })
+  }
 
   return (
     <div className='w-full px-2 md:px-0'>
@@ -41,17 +50,25 @@ const EpisodesPage = props => {
             {month}
           </div>
           <div className='space-y-6'>
-            {archivePosts[month].map(post => (
-              <div key={post.id} id={String(post.slug)} className='scroll-mt-24'>
-                <BlogPostCard
-                  index={posts.indexOf(post) + 1}
-                  post={post}
-                  showSummary={showSummary}
-                  siteInfo={siteInfo}
-                  featuredType={post.featuredType} // ✨ 节目页直传原值
-                />
-              </div>
-            ))}
+            {archivePosts[month].map(post => {
+              // 2. 如果当前文章是全站最新的，或者带有最新标签，强制给 latest
+              let type = post.featuredType
+              if (post.id === latestPostId || type === '最新' || type === 'latest') {
+                type = 'latest'
+              }
+
+              return (
+                <div key={post.id} id={String(post.slug)} className='scroll-mt-24'>
+                  <BlogPostCard
+                    index={posts.indexOf(post) + 1}
+                    post={post}
+                    showSummary={showSummary}
+                    siteInfo={siteInfo}
+                    featuredType={type} // 强制透传最新的判断结果
+                  />
+                </div>
+              )
+            })}
           </div>
         </section>
       ))}
