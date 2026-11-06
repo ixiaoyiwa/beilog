@@ -84,9 +84,14 @@ const ShareButtons = ({ post }) => {
   const openPopover = e => {
     clearTimeout(qrHideTimer.current)
     const rect = e.currentTarget.getBoundingClientRect()
+    
+    // ✨ 修改处 1：获取网站微信按钮当前实际使用的字体
+    const fontFamily = window.getComputedStyle(e.currentTarget).fontFamily
+
     setQrPopoverPosition({
       left: rect.left - 40,
-      bottom: window.innerHeight - rect.top + 8
+      bottom: window.innerHeight - rect.top + 8,
+      fontFamily // 存入 state
     })
     setQrCodeShow(true)
   }
@@ -226,7 +231,9 @@ const ShareButtons = ({ post }) => {
                         position: 'fixed',
                         left: qrPopoverPosition.left,
                         bottom: qrPopoverPosition.bottom,
-                        zIndex: 99999
+                        zIndex: 99999,
+                        // ✨ 修改处 2：应用动态获取的字体
+                        fontFamily: qrPopoverPosition.fontFamily
                       }}
                     >
                       <div
