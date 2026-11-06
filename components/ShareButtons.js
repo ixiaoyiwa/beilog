@@ -40,7 +40,7 @@ const SHARE_HOVER_COLORS = {
   messenger: '#00B2FF',
   line: '#00C300',
   reddit: '#FF4500',
-  email: '#0078D4', // ✨ 改成了 Outlook 蓝
+  email: '#0078D4',
   twitter: '#000000',
   telegram: '#26A5E4',
   whatsapp: '#25D366',
@@ -53,7 +53,7 @@ const SHARE_HOVER_COLORS = {
   threads: '#000000',
   wechat: '#07C160',
   qq: '#12B7F5',
-  link: '#EAB308' // ✨ 海报按钮的黄色移到这里
+  link: '#EAB308'
 }
 
 const ShareButtons = ({ post }) => {
@@ -178,22 +178,23 @@ const ShareButtons = ({ post }) => {
                 }}
                 aria-label={singleService} 
                 key={singleService} 
-                className={`${BASE_BUTTON_CLASS} relative`}
+                className={`${BASE_BUTTON_CLASS} relative`} // 加 relative 防止绝对定位乱跑
                 style={{ backgroundColor: primaryColor }}
                 title={singleService}>
-                <i className={`fab fa-weixin ${ICON_CLASS}`} />
+                <div id='wechat-button'>
+                  <i className={`fab fa-weixin ${ICON_CLASS}`} />
+                </div>
+                {/* 以下代码完全照抄你侧边栏的 SocialButton.js，连 class 都没动 */}
                 <div className='absolute'>
-                  {/* ✨ 关键修改：bottom-full 紧贴按钮顶部，left-1/2 居中，pb-2 添加透明桥接区填满空隙，防止鼠标滑落 */}
-                  <div 
-                    id='pop' 
-                    className={(qrCodeShow ? 'opacity-100 ' : ' invisible opacity-0') + ' z-50 absolute bottom-full left-1/2 -translate-x-1/2 pb-2 bg-white shadow-xl transition-all duration-200 text-center rounded-md'}
-                  >
-                    <div className='p-2 w-28 h-28'>
+                  <div
+                    id='pop'
+                    className={
+                      (qrCodeShow ? 'opacity-100 ' : ' invisible opacity-0') +
+                      ' z-40 absolute bottom-10 -left-10 bg-white shadow-xl transition-all duration-200 text-center'
+                    }>
+                    <div className='p-2 mt-1 w-28 h-28'>
                       {qrCodeShow && <QrCode value={shareUrl} />}
                     </div>
-                    <span className='text-black font-semibold text-sm block pb-1'>
-                      {locale.COMMON.SCAN_QR_CODE}
-                    </span>
                   </div>
                 </div>
               </button>
@@ -205,8 +206,8 @@ const ShareButtons = ({ post }) => {
                 key={singleService} 
                 onClick={() => setSharePosterOpen(true)} 
                 className={BASE_BUTTON_CLASS}
-                style={{ backgroundColor: primaryColor }} // ✨ 统一底色
-                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = SHARE_HOVER_COLORS['link'] }} // ✨ 悬停变黄
+                style={{ backgroundColor: primaryColor }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = SHARE_HOVER_COLORS['link'] }}
                 onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = primaryColor }}
                 title='分享海报 / 复制链接'>
                 <i className={`fas fa-share-alt ${ICON_CLASS}`} />
