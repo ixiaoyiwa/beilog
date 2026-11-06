@@ -178,23 +178,14 @@ const ShareButtons = ({ post }) => {
                 }}
                 aria-label={singleService} 
                 key={singleService} 
-                className={`${BASE_BUTTON_CLASS} relative`} // 加 relative 防止绝对定位乱跑
+                className={`${BASE_BUTTON_CLASS} relative`}
                 style={{ backgroundColor: primaryColor }}
                 title={singleService}>
-                <div id='wechat-button'>
-                  <i className={`fab fa-weixin ${ICON_CLASS}`} />
-                </div>
-                {/* 以下代码完全照抄你侧边栏的 SocialButton.js，连 class 都没动 */}
+                <i className={`fab fa-weixin ${ICON_CLASS}`} />
                 <div className='absolute'>
-                  <div
-                    id='pop'
-                    className={
-                      (qrCodeShow ? 'opacity-100 ' : ' invisible opacity-0') +
-                      ' z-40 absolute bottom-10 -left-10 bg-white shadow-xl transition-all duration-200 text-center'
-                    }>
-                    <div className='p-2 mt-1 w-28 h-28'>
-                      {qrCodeShow && <QrCode value={shareUrl} />}
-                    </div>
+                  <div id='pop' className={(qrCodeShow ? 'opacity-100 ' : ' invisible opacity-0') + ' z-40 absolute bottom-10 -left-10 bg-white shadow-xl transition-all duration-200 text-center'}>
+                    <div className='p-2 mt-1 w-28 h-28'>{qrCodeShow && <QrCode value={shareUrl} />}</div>
+                    <span className='text-black font-semibold p-1 rounded-t-lg text-sm mx-auto mb-1'>{locale.COMMON.SCAN_QR_CODE}</span>
                   </div>
                 </div>
               </button>
