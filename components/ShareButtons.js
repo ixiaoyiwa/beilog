@@ -1,9 +1,10 @@
+import React, { useEffect, useState, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { siteConfig } from '@/lib/config'
 import { useGlobal } from '@/lib/global'
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import { useRouter } from 'next/router'
-import { useEffect, useState } from 'react'
 import SharePosterModal from '@/components/SharePosterModal'
 
 const QrCode = dynamic(() => import('@/components/QrCode'), { ssr: false })
@@ -70,13 +71,42 @@ const ShareButtons = ({ post }) => {
     .filter(Boolean)
   const titleWithSiteInfo = title + ' | ' + siteConfig('TITLE')
   const { locale } = useGlobal()
+  
   const [qrCodeShow, setQrCodeShow] = useState(false)
   const [sharePosterOpen, setSharePosterOpen] = useState(false)
+  
+  // 微信二维码弹层：独立挂载到 body，避免被文章容器裁切
+  const qrHideTimer = useRef(null)
+  const [qrPopoverPosition, setQrPopoverPosition] = useState(null)
 
   const primaryColor = siteConfig('HEXO_COLOR_PRIMARY', '#3A4A7A')
 
-  const openPopover = () => setQrCodeShow(true)
-  const closePopover = () => setQrCodeShow(false)
+  const openPopover = e => {
+    clearTimeout(qrHideTimer.current)
+    const rect = e.currentTarget.getBoundingClientRect()
+    setQrPopoverPosition({
+      left: rect.left - 40,
+      bottom: window.innerHeight - rect.top + 8
+    })
+    setQrCodeShow(true)
+  }
+
+  // 鼠标离开按钮后稍作等待，避免移动到二维码时提前关闭
+  const closePopover = () => {
+    clearTimeout(qrHideTimer.current)
+    qrHideTimer.current = setTimeout(() => {
+      setQrCodeShow(false)
+    }, 250)
+  }
+
+  // 鼠标进入二维码时取消关闭
+  const keepPopoverOpen = () => {
+    clearTimeout(qrHideTimer.current)
+  }
+
+  useEffect(() => {
+    return () => clearTimeout(qrHideTimer.current)
+  }, [])
 
   const openRedirectShare = base => {
     if (!shareUrl || typeof window === 'undefined') return
@@ -167,28 +197,59 @@ const ShareButtons = ({ post }) => {
             )
           case 'wechat':
             return (
-              <button 
-                onMouseEnter={(e) => {
-                  openPopover();
-                  e.currentTarget.style.backgroundColor = SHARE_HOVER_COLORS['wechat'];
-                }} 
-                onMouseLeave={(e) => {
-                  closePopover();
-                  e.currentTarget.style.backgroundColor = primaryColor;
-                }}
-                aria-label={singleService} 
-                key={singleService} 
-                className={`${BASE_BUTTON_CLASS} relative`}
-                style={{ backgroundColor: primaryColor }}
-                title={singleService}>
-                <i className={`fab fa-weixin ${ICON_CLASS}`} />
-                <div className='absolute'>
-                  <div id='pop' className={(qrCodeShow ? 'opacity-100 ' : ' invisible opacity-0') + ' z-40 absolute bottom-10 -left-10 bg-white shadow-xl transition-all duration-200 text-center'}>
-                    <div className='p-2 mt-1 w-28 h-28'>{qrCodeShow && <QrCode value={shareUrl} />}</div>
-                    <span className='text-black font-semibold p-1 rounded-t-lg text-sm mx-auto mb-1'>{locale.COMMON.SCAN_QR_CODE}</span>
-                  </div>
-                </div>
-              </button>
+              <React.Fragment key={singleService}>
+                <button
+                  onMouseEnter={e => {
+                    openPopover(e)
+                    e.currentTarget.style.backgroundColor = '#07C160'
+                  }}
+                  onMouseLeave={e => {
+                    closePopover()
+                    e.currentTarget.style.backgroundColor = primaryColor
+                  }}
+                  aria-label={singleService}
+                  className={BASE_BUTTON_CLASS}
+                  style={{ backgroundColor: primaryColor }}
+                  title={singleService}
+                >
+                  <i className={`fab fa-weixin ${ICON_CLASS}`} />
+                </button>
+
+                {/* 微信二维码：通过 Portal 脱离文章容器 */}
+                {qrPopoverPosition &&
+                  typeof document !== 'undefined' &&
+                  createPortal(
+                    <div
+                      onMouseEnter={keepPopoverOpen}
+                      onMouseLeave={() => setQrCodeShow(false)}
+                      style={{
+                        position: 'fixed',
+                        left: qrPopoverPosition.left,
+                        bottom: qrPopoverPosition.bottom,
+                        zIndex: 99999
+                      }}
+                    >
+                      <div
+                        id='pop'
+                        className={
+                          (qrCodeShow
+                            ? 'opacity-100 '
+                            : 'invisible opacity-0 pointer-events-none ') +
+                          'bg-white shadow-xl transition-all duration-200 text-center rounded-md'
+                        }
+                      >
+                        <div className='p-2 w-28 h-28'>
+                          {qrCodeShow && <QrCode value={shareUrl} />}
+                        </div>
+
+                        <span className='text-black font-semibold p-1 text-sm block mb-1'>
+                          {locale.COMMON.SCAN_QR_CODE}
+                        </span>
+                      </div>
+                    </div>,
+                    document.body
+                  )}
+              </React.Fragment>
             )
           case 'link':
             return (
