@@ -167,28 +167,36 @@ const ShareButtons = ({ post }) => {
             )
           case 'wechat':
             return (
-              <button 
-                onMouseEnter={(e) => {
-                  openPopover();
-                  e.currentTarget.style.backgroundColor = SHARE_HOVER_COLORS['wechat'];
-                }} 
-                onMouseLeave={(e) => {
-                  closePopover();
-                  e.currentTarget.style.backgroundColor = primaryColor;
-                }}
-                aria-label={singleService} 
-                key={singleService} 
-                className={`${BASE_BUTTON_CLASS} relative`}
-                style={{ backgroundColor: primaryColor }}
-                title={singleService}>
-                <i className={`fab fa-weixin ${ICON_CLASS}`} />
-                <div className='absolute'>
-                  <div id='pop' className={(qrCodeShow ? 'opacity-100 ' : ' invisible opacity-0') + ' z-40 absolute bottom-10 -left-10 bg-white shadow-xl transition-all duration-200 text-center'}>
-                    <div className='p-2 mt-1 w-28 h-28'>{qrCodeShow && <QrCode value={shareUrl} />}</div>
-                    <span className='text-black font-semibold p-1 rounded-t-lg text-sm mx-auto mb-1'>{locale.COMMON.SCAN_QR_CODE}</span>
+              <div 
+                key={singleService}
+                className='relative inline-block mx-1' // 外层包裹接管了原本的 mx-1 间距
+                onMouseEnter={openPopover}
+                onMouseLeave={closePopover}
+              >
+                <button 
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = SHARE_HOVER_COLORS['wechat']; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = primaryColor; }}
+                  aria-label={singleService} 
+                  className='cursor-pointer rounded-full w-8 h-8 flex items-center justify-center text-white transition-colors duration-200' // 去掉了里面的 mx-1，防止双倍间距
+                  style={{ backgroundColor: primaryColor }}
+                  title={singleService}>
+                  <i className={`fab fa-weixin ${ICON_CLASS}`} />
+                </button>
+
+                {/* 二维码绝对定位，加 p-2 作为透明连接桥 */}
+                <div className={`absolute bottom-full left-1/2 -translate-x-1/2 z-40 transition-all duration-200 ${qrCodeShow ? 'opacity-100 visible' : 'invisible opacity-0'}`}>
+                  <div className='p-2'>
+                    <div id='pop' className='bg-white shadow-xl text-center rounded-md p-1 w-32'>
+                      <div className='w-28 h-28 mx-auto p-1'>
+                        {qrCodeShow && <QrCode value={shareUrl} />}
+                      </div>
+                      <span className='text-black font-semibold text-sm block mb-1'>
+                        {locale.COMMON.SCAN_QR_CODE}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </button>
+              </div>
             )
           case 'link':
             return (
