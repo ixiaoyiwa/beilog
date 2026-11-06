@@ -30,9 +30,7 @@ function getPosterFont() {
 }
 
 const POSTER_SIZE = {
-  // 竖版高度加高到 1280，给完美对齐后的文本留出足够空间
   portrait: { width: 900, height: 1280 },
-  // 横版高度保持 620，宽度 1200
   landscape: { width: 1200, height: 620 }
 }
 
@@ -263,8 +261,6 @@ function loadImage(url, timeoutMs) {
   })
 }
 
-// 本站自己的同源取图接口(functions/api/cover.js)。同源 → canvas 不受跨域限制;
-// 它还能取回 Notion 直接上传的封面(这类图片本身没有跨域许可,且链接会过期)
 const SAME_ORIGIN_COVER_PROXY = '/api/cover?url='
 
 function getProxyUrls(source) {
@@ -280,8 +276,23 @@ function getProxyUrls(source) {
   return urls
 }
 
+// ✨ 核心修复：如果是跨域图，绝对不请求原图，强制只走代理
 async function tryCandidate(source, deadline) {
-  const attempts = [...new Set([source, ...getProxyUrls(source)])]
+  let attempts = []
+  try {
+    const parsed = new URL(source, window.location.href)
+    if (parsed.origin === window.location.origin) {
+      attempts = [source] // 同源图片直接请求
+    } else {
+      attempts = getProxyUrls(source) // 跨域图片，全部走代理
+    }
+  } catch {
+    attempts = [source]
+  }
+
+  attempts = [...new Set(attempts)]
+  if (attempts.length === 0) attempts = [source]
+
   const remaining = deadline - Date.now()
   if (remaining <= 0) throw new Error('封面加载总时限已到')
 
@@ -289,7 +300,7 @@ async function tryCandidate(source, deadline) {
   try {
     return await Promise.any(attempts.map(url => loadImage(url, timeoutMs)))
   } catch (error) {
-    throw error?.errors?.[0] || new Error('原图及图片代理均加载失败')
+    throw error?.errors?.[0] || new Error('图片代理均加载失败')
   }
 }
 
@@ -478,9 +489,8 @@ function drawPoster(canvas, { post, orientation, duration }, coverImage, qrCanva
   const meta = getMetaText(post)
 
   if (orientation === 'portrait') {
-    // 竖版：让封面宽度和文字宽度完全一致，共同居中
     const contentWidth = 700
-    const contentX = Math.round((width - contentWidth) / 2) // (900 - 700) / 2 = 100
+    const contentX = Math.round((width - contentWidth) / 2)
     
     const coverY = 50
     const coverSize = 700
@@ -489,7 +499,7 @@ function drawPoster(canvas, { post, orientation, duration }, coverImage, qrCanva
     cropSquare(ctx, coverImage, coverX, coverY, coverSize, 12)
     if (duration && coverImage) drawDurationPill(ctx, coverX + 18, coverY + coverSize - 59, duration)
 
-    let currentY = coverY + coverSize + 40 // 50 + 700 + 40 = 790
+    let currentY = coverY + coverSize + 40
     ctx.fillStyle = THEME.ink
     ctx.font = `650 41px ${getPosterFont()}`
     const titleLines = splitLines(ctx, title, contentWidth, 2)
@@ -502,7 +512,6 @@ function drawPoster(canvas, { post, orientation, duration }, coverImage, qrCanva
       currentY = drawLines(ctx, metaLines, contentX, currentY, 30) + 15
     }
 
-    // 简介最多 3 行
     if (summary) {
       ctx.fillStyle = THEME.muted
       ctx.font = `400 24px ${getPosterFont()}`
@@ -510,18 +519,16 @@ function drawPoster(canvas, { post, orientation, duration }, coverImage, qrCanva
       drawLines(ctx, summaryLines, contentX, currentY, 36)
     }
 
-    // 因为高度拉长到了 1280，底部品牌区随之下移，保证有充足的间距
     drawBrandAndQr(ctx, qrCanvas, width, height, {
-      edge: contentX, // 二维码和文字左侧对齐
+      edge: contentX,
       brandY: 1150,
       qrSize: 90,
       brandFont: 31,
       subFont: 21,
       subOffset: 41,
-      qrShiftLeft: 0 // 右侧对其，取消微调
+      qrShiftLeft: 0
     })
   } else {
-    // 横版：封面缩小至 360，与右侧文字比例更协调
     const edge = 44
     const coverSize = 360
     const coverX = 70
@@ -530,7 +537,7 @@ function drawPoster(canvas, { post, orientation, duration }, coverImage, qrCanva
     cropSquare(ctx, coverImage, coverX, coverY, coverSize, 12)
     if (duration && coverImage) drawDurationPill(ctx, coverX + 16, coverY + coverSize - 58, duration)
 
-    const contentX = 480 // 右侧文字起点稍微前移
+    const contentX = 480
     const contentWidth = width - contentX - edge - 2
 
     ctx.font = `650 40px ${getPosterFont()}`
@@ -539,7 +546,6 @@ function drawPoster(canvas, { post, orientation, duration }, coverImage, qrCanva
     const metaLines = meta ? splitLines(ctx, meta, contentWidth, 2) : []
     ctx.font = `400 23px ${getPosterFont()}`
     
-    // 简介最多 5 行
     const summaryLines = summary ? splitLines(ctx, summary, contentWidth, 5) : []
     
     const blockHeight =
@@ -547,7 +553,6 @@ function drawPoster(canvas, { post, orientation, duration }, coverImage, qrCanva
       (metaLines.length ? 13 + metaLines.length * 29 : 0) +
       (summaryLines.length ? 14 + summaryLines.length * 33 : 0)
       
-    // 右侧内容相对缩小后的封面垂直居中
     let currentY = coverY + Math.max(0, Math.floor((coverSize - blockHeight) / 2))
 
     ctx.fillStyle = THEME.ink
@@ -568,7 +573,6 @@ function drawPoster(canvas, { post, orientation, duration }, coverImage, qrCanva
       drawLines(ctx, summaryLines, contentX, currentY, 33)
     }
 
-    // 底部品牌区对齐左侧内容区起点
     drawBrandAndQr(ctx, qrCanvas, width, height, {
       edge: coverX,
       brandY: 500,
