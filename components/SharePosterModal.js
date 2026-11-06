@@ -263,12 +263,21 @@ function loadImage(url, timeoutMs) {
   })
 }
 
+// 本站自己的同源取图接口(functions/api/cover.js)。同源 → canvas 不受跨域限制;
+// 它还能取回 Notion 直接上传的封面(这类图片本身没有跨域许可,且链接会过期)
+const SAME_ORIGIN_COVER_PROXY = '/api/cover?url='
+
 function getProxyUrls(source) {
   const encoded = encodeURIComponent(source)
-  return [
-    `https://images.weserv.nl/?url=${encoded}`,
-    `https://wsrv.nl/?url=${encoded}`
-  ]
+  const urls = []
+  try {
+    const parsed = new URL(source, window.location.href)
+    if (parsed.origin !== window.location.origin && /^https?:$/.test(parsed.protocol)) {
+      urls.push(`${SAME_ORIGIN_COVER_PROXY}${encoded}`)
+    }
+  } catch (error) {}
+  urls.push(`https://images.weserv.nl/?url=${encoded}`, `https://wsrv.nl/?url=${encoded}`)
+  return urls
 }
 
 async function tryCandidate(source, deadline) {
