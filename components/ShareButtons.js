@@ -238,23 +238,23 @@ const ShareButtons = ({ post }) => {
                           'bg-white shadow-xl transition-all duration-200 text-center rounded-md w-32'
                         }
                       >
-                        {/* ✨ 终极斩断安卓兼容问题：用原生 CSS 强行锁死内部 canvas/img 尺寸 */}
+                        {/* ✨ 纯物理像素锁死正方形：强制 canvas 和 img 为 96x96，绝不拉伸变形 */}
                         <style>{`
-                          .qr-code-box img,
-                          .qr-code-box canvas,
-                          .qr-code-box svg {
-                            width: 100% !important;
-                            height: 100% !important;
-                            max-width: 100% !important;
-                            max-height: 100% !important;
+                          .qr-strict-box canvas,
+                          .qr-strict-box img {
+                            width: 96px !important;
+                            height: 96px !important;
+                            min-width: 96px !important;
+                            min-height: 96px !important;
                             display: block !important;
+                            object-fit: contain !important;
                           }
                         `}</style>
 
-                        <div className='p-2 mt-1 w-full flex items-center justify-center'>
+                        <div className='p-2 mt-1 flex items-center justify-center'>
                           <div
-                            className='qr-code-box flex items-center justify-center'
-                            style={{ width: '96px', height: '96px', overflow: 'hidden' }}
+                            className='qr-strict-box flex items-center justify-center overflow-hidden'
+                            style={{ width: '96px', height: '96px' }}
                           >
                             {qrCodeShow && <QrCode value={shareUrl} />}
                           </div>
