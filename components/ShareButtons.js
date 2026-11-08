@@ -85,13 +85,13 @@ const ShareButtons = ({ post }) => {
     clearTimeout(qrHideTimer.current)
     const rect = e.currentTarget.getBoundingClientRect()
     
-    // ✨ 修改处 1：获取网站微信按钮当前实际使用的字体
+    // 获取网站微信按钮当前实际使用的字体
     const fontFamily = window.getComputedStyle(e.currentTarget).fontFamily
 
     setQrPopoverPosition({
       left: rect.left - 40,
       bottom: window.innerHeight - rect.top + 8,
-      fontFamily // 存入 state
+      fontFamily
     })
     setQrCodeShow(true)
   }
@@ -232,7 +232,6 @@ const ShareButtons = ({ post }) => {
                         left: qrPopoverPosition.left,
                         bottom: qrPopoverPosition.bottom,
                         zIndex: 99999,
-                        // ✨ 修改处 2：应用动态获取的字体
                         fontFamily: qrPopoverPosition.fontFamily
                       }}
                     >
@@ -242,11 +241,14 @@ const ShareButtons = ({ post }) => {
                           (qrCodeShow
                             ? 'opacity-100 '
                             : 'invisible opacity-0 pointer-events-none ') +
-                          'bg-white shadow-xl transition-all duration-200 text-center rounded-md'
+                          'bg-white shadow-xl transition-all duration-200 text-center rounded-md w-32'
                         }
                       >
-                        <div className='p-2 w-28 h-28'>
-                          {qrCodeShow && <QrCode value={shareUrl} />}
+                        {/* 强制约束 QrCode 尺寸的容器 */}
+                        <div className='p-2 w-full h-28 flex items-center justify-center overflow-hidden'>
+                          <div className="w-full h-full flex items-center justify-center [&>img]:w-full [&>img]:h-full [&>canvas]:w-full [&>canvas]:h-full">
+                            {qrCodeShow && <QrCode value={shareUrl} />}
+                          </div>
                         </div>
 
                         <span className='text-black font-semibold p-1 text-sm block mb-1'>
