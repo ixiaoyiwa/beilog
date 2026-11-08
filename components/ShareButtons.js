@@ -238,26 +238,9 @@ const ShareButtons = ({ post }) => {
                           'bg-white shadow-xl transition-all duration-200 text-center rounded-md w-32'
                         }
                       >
-                        {/* ✨ 纯物理像素锁死正方形：强制 canvas 和 img 为 96x96，绝不拉伸变形 */}
-                        <style>{`
-                          .qr-strict-box canvas,
-                          .qr-strict-box img {
-                            width: 96px !important;
-                            height: 96px !important;
-                            min-width: 96px !important;
-                            min-height: 96px !important;
-                            display: block !important;
-                            object-fit: contain !important;
-                          }
-                        `}</style>
-
+                        {/* 按实际显示尺寸生成二维码，不用 CSS 拉伸 canvas 或 img */}
                         <div className='p-2 mt-1 flex items-center justify-center'>
-                          <div
-                            className='qr-strict-box flex items-center justify-center overflow-hidden'
-                            style={{ width: '96px', height: '96px' }}
-                          >
-                            {qrCodeShow && <QrCode value={shareUrl} />}
-                          </div>
+                          {qrCodeShow && <QrCode value={shareUrl} size={112} level='M' />}
                         </div>
 
                         <span className='text-black font-semibold p-1 rounded-t-lg text-sm mx-auto mb-1 block'>
