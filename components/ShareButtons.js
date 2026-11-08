@@ -75,7 +75,6 @@ const ShareButtons = ({ post }) => {
   const [qrCodeShow, setQrCodeShow] = useState(false)
   const [sharePosterOpen, setSharePosterOpen] = useState(false)
   
-  // 微信二维码弹层：独立挂载到 body，避免被文章容器裁切
   const qrHideTimer = useRef(null)
   const [qrPopoverPosition, setQrPopoverPosition] = useState(null)
 
@@ -84,8 +83,6 @@ const ShareButtons = ({ post }) => {
   const openPopover = e => {
     clearTimeout(qrHideTimer.current)
     const rect = e.currentTarget.getBoundingClientRect()
-    
-    // 获取网站微信按钮当前实际使用的字体
     const fontFamily = window.getComputedStyle(e.currentTarget).fontFamily
 
     setQrPopoverPosition({
@@ -96,7 +93,6 @@ const ShareButtons = ({ post }) => {
     setQrCodeShow(true)
   }
 
-  // 鼠标离开按钮后稍作等待，避免移动到二维码时提前关闭
   const closePopover = () => {
     clearTimeout(qrHideTimer.current)
     qrHideTimer.current = setTimeout(() => {
@@ -104,7 +100,6 @@ const ShareButtons = ({ post }) => {
     }, 250)
   }
 
-  // 鼠标进入二维码时取消关闭
   const keepPopoverOpen = () => {
     clearTimeout(qrHideTimer.current)
   }
@@ -220,7 +215,6 @@ const ShareButtons = ({ post }) => {
                   <i className={`fab fa-weixin ${ICON_CLASS}`} />
                 </button>
 
-                {/* 微信二维码：通过 Portal 脱离文章容器 */}
                 {qrPopoverPosition &&
                   typeof document !== 'undefined' &&
                   createPortal(
@@ -244,14 +238,29 @@ const ShareButtons = ({ post }) => {
                           'bg-white shadow-xl transition-all duration-200 text-center rounded-md w-32'
                         }
                       >
-                        {/* 强制约束 QrCode 尺寸的容器 */}
-                        <div className='p-2 w-full h-28 flex items-center justify-center overflow-hidden'>
-                          <div className="w-full h-full flex items-center justify-center [&>img]:w-full [&>img]:h-full [&>canvas]:w-full [&>canvas]:h-full">
+                        {/* ✨ 终极斩断安卓兼容问题：用原生 CSS 强行锁死内部 canvas/img 尺寸 */}
+                        <style>{`
+                          .qr-code-box img,
+                          .qr-code-box canvas,
+                          .qr-code-box svg {
+                            width: 100% !important;
+                            height: 100% !important;
+                            max-width: 100% !important;
+                            max-height: 100% !important;
+                            display: block !important;
+                          }
+                        `}</style>
+
+                        <div className='p-2 mt-1 w-full flex items-center justify-center'>
+                          <div
+                            className='qr-code-box flex items-center justify-center'
+                            style={{ width: '96px', height: '96px', overflow: 'hidden' }}
+                          >
                             {qrCodeShow && <QrCode value={shareUrl} />}
                           </div>
                         </div>
 
-                        <span className='text-black font-semibold p-1 text-sm block mb-1'>
+                        <span className='text-black font-semibold p-1 rounded-t-lg text-sm mx-auto mb-1 block'>
                           {locale.COMMON.SCAN_QR_CODE}
                         </span>
                       </div>
