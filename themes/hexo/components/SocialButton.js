@@ -194,23 +194,20 @@ const SocialButton = () => {
           <button
             onMouseEnter={openPopover}
             onMouseLeave={closePopover}
-            aria-label={'微信公众号'}>
+            aria-label={'微信公众号'}
+            className="relative"> {/* ✨ 加上 relative 确保绝对定位基准 */}
             <div id='wechat-button'>
               <i className='transform scale-105 hover:scale-125 duration-150 fab fa-weixin  dark:hover:text-indigo-400 hover:text-indigo-600' />
             </div>
-            {/* 二维码弹框 */}
-            <div className='absolute'>
-              <div
-                id='pop'
-                className={
-                  (qrCodeShow ? 'opacity-100 ' : ' invisible opacity-0') +
-                  ' z-40 absolute bottom-10 -left-10 bg-white shadow-xl transition-all duration-200 text-center'
-                }>
-                <div className='p-2 mt-1 w-28 h-28'>
-                  {/* ✨ 这里加了 size={112}，强制它恢复原来的大小 */}
-                  {qrCodeShow && <QrCode value={CONTACT_WEHCHAT_PUBLIC} size={112} />}
-                </div>
-              </div>
+            
+            {/* 二维码弹框 - 采用图二的白色卡片样式，居中显示，无文字 */}
+            <div
+              id='pop'
+              className={
+                (qrCodeShow ? 'opacity-100 ' : ' invisible opacity-0') +
+                ' z-40 absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white p-2 rounded-lg shadow-xl transition-all duration-200'
+              }>
+              {qrCodeShow && <QrCode value={CONTACT_WEHCHAT_PUBLIC} size={112} />}
             </div>
           </button>
         )}
