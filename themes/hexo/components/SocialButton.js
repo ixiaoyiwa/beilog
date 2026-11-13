@@ -207,7 +207,8 @@ const SocialButton = () => {
                   ' z-40 absolute bottom-10 -left-10 bg-white shadow-xl transition-all duration-200 text-center'
                 }>
                 <div className='p-2 mt-1 w-28 h-28'>
-                  {qrCodeShow && <QrCode value={CONTACT_WEHCHAT_PUBLIC} />}
+                  {/* ✨ 这里加了 size={112}，强制它恢复原来的大小 */}
+                  {qrCodeShow && <QrCode value={CONTACT_WEHCHAT_PUBLIC} size={112} />}
                 </div>
               </div>
             </div>
@@ -220,8 +221,6 @@ const SocialButton = () => {
           rel='noreferrer'
           title={'赞赏'}
           href='https://na.885111.xyz/sponsor'>
-          {/* 将原来的 far fa-hand-holding-heart 换成了标准的实心爱心 fas fa-heart，
-              并去掉了多余的样式，使其大小与旁边图标完全一致 */}
           <i className='transform hover:scale-125 duration-150 fas fa-heart dark:hover:text-indigo-400 hover:text-indigo-600' />
         </a>
       </div>
