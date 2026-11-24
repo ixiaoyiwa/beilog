@@ -218,21 +218,23 @@ export default function PostHero({ post, siteInfo }) {
   return (
     <div
       id='header'
-      className='w-full h-96 md:h-[80vh] relative md:flex-shrink-0 z-10 mb-8 overflow-hidden'
+      className={`w-full ${
+        hasGradientTheme ? 'min-h-[430px] pt-24 pb-10 lg:py-0 lg:h-[80vh]' : 'h-96 md:h-[80vh]'
+      } relative md:flex-shrink-0 z-10 mb-8 overflow-hidden flex items-center`}
       style={{ '--theme-primary': primaryColor }}>
       <div
-        className={`absolute inset-0 ${hasGradientTheme ? 'lg-hero-feather-mask' : ''}`}>
+        className={`absolute inset-0 ${hasGradientTheme ? 'hero-feather-mask' : ''}`}>
         <LazyImage
           priority={true}
           src={headerImage}
           className={`w-full h-full object-cover object-center absolute top-0 ${
-            hasGradientTheme ? 'lg:opacity-20 lg:blur-2xl lg:scale-110' : ''
+            hasGradientTheme ? 'opacity-20 blur-2xl scale-110' : ''
           }`}
         />
 
         {hasGradientTheme && (
           <div
-            className='hidden lg:block absolute inset-0 pointer-events-none'
+            className='block absolute inset-0 pointer-events-none'
             style={{
               background: `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`
             }}
@@ -240,30 +242,50 @@ export default function PostHero({ post, siteInfo }) {
         )}
 
         <div
-          className={`bg-black bg-opacity-70 ${
-            hasGradientTheme ? 'lg:bg-opacity-20' : ''
+          className={`bg-black ${
+            hasGradientTheme ? 'bg-opacity-20' : 'bg-opacity-70'
           } absolute inset-0 pointer-events-none`}
         />
       </div>
 
       <header
         id='article-header-cover'
-        className='relative z-10 w-full h-full flex items-center'>
+        className='relative z-10 w-full flex items-center'>
         <div className='w-full px-4 md:px-8 lg:px-24'>
           <div className='w-full mx-auto lg:flex lg:space-x-4 lg:items-center justify-center'>
+            {/* 手机/平板端居中方形小封面（黄金比例 156px，不撑高首屏） */}
+            {hasGradientTheme && headerImage && (
+              <div className='flex lg:hidden justify-center mb-5'>
+                <div className='podcast-cover-card relative w-[156px] h-[156px] rounded-[16px] overflow-hidden select-none'>
+                  <LazyImage
+                    priority={true}
+                    src={headerImage}
+                    alt={post.title}
+                    className='w-full h-full object-cover object-center'
+                  />
+                </div>
+              </div>
+            )}
+
             <div className='w-full max-w-4xl md:pl-5'>
-              <div className='md:pl-5'>
-                <div className='leading-snug font-bold text-3xl sm:text-4xl md:leading-snug shadow-text-md text-white mb-4'>
+              <div
+                className={`md:pl-5 ${
+                  hasGradientTheme ? 'text-center lg:text-left' : ''
+                }`}>
+                <div className='leading-snug font-bold text-2xl sm:text-3xl lg:text-4xl md:leading-snug shadow-text-md text-white mb-3 lg:mb-4'>
                   {siteConfig('POST_TITLE_ICON') && (
                     <NotionIcon
                       icon={post.pageIcon}
-                      className='text-3xl sm:text-4xl mr-1 inline-block'
+                      className='text-2xl sm:text-3xl lg:text-4xl mr-1 inline-block'
                     />
                   )}
                   {post.title}
                 </div>
 
-                <div className='flex flex-wrap items-center gap-x-1.5 gap-y-1 mb-6 text-sm font-light text-white/70'>
+                <div
+                  className={`flex flex-wrap items-center ${
+                    hasGradientTheme ? 'justify-center lg:justify-start' : ''
+                  } gap-x-1.5 gap-y-1 mb-5 lg:mb-6 text-sm font-light text-white/70`}>
                   {episodeNumber && (
                     <span className='whitespace-nowrap text-white/70'>
                       E{episodeNumber}
@@ -363,6 +385,7 @@ export default function PostHero({ post, siteInfo }) {
               </div>
             </div>
 
+            {/* 桌面大屏右侧 240px 方形封面 */}
             <div className='hidden lg:flex lg:w-80 flex-shrink-0 items-center justify-center'>
               {hasGradientTheme && headerImage && (
                 <div className='podcast-cover-card relative w-[240px] h-[240px] rounded-[18px] overflow-hidden select-none'>
@@ -388,27 +411,25 @@ export default function PostHero({ post, siteInfo }) {
         .hero-meta-link:hover {
           color: var(--theme-primary);
         }
-        @media (min-width: 1024px) {
-          .lg-hero-feather-mask {
-            -webkit-mask-image: linear-gradient(
-              to bottom,
-              rgba(0, 0, 0, 1) 0%,
-              rgba(0, 0, 0, 0.96) 28%,
-              rgba(0, 0, 0, 0.82) 52%,
-              rgba(0, 0, 0, 0.52) 74%,
-              rgba(0, 0, 0, 0.18) 90%,
-              rgba(0, 0, 0, 0) 100%
-            );
-            mask-image: linear-gradient(
-              to bottom,
-              rgba(0, 0, 0, 1) 0%,
-              rgba(0, 0, 0, 0.96) 28%,
-              rgba(0, 0, 0, 0.82) 52%,
-              rgba(0, 0, 0, 0.52) 74%,
-              rgba(0, 0, 0, 0.18) 90%,
-              rgba(0, 0, 0, 0) 100%
-            );
-          }
+        .hero-feather-mask {
+          -webkit-mask-image: linear-gradient(
+            to bottom,
+            rgba(0, 0, 0, 1) 0%,
+            rgba(0, 0, 0, 0.96) 28%,
+            rgba(0, 0, 0, 0.82) 52%,
+            rgba(0, 0, 0, 0.52) 74%,
+            rgba(0, 0, 0, 0.18) 90%,
+            rgba(0, 0, 0, 0) 100%
+          );
+          mask-image: linear-gradient(
+            to bottom,
+            rgba(0, 0, 0, 1) 0%,
+            rgba(0, 0, 0, 0.96) 28%,
+            rgba(0, 0, 0, 0.82) 52%,
+            rgba(0, 0, 0, 0.52) 74%,
+            rgba(0, 0, 0, 0.18) 90%,
+            rgba(0, 0, 0, 0) 100%
+          );
         }
         .podcast-cover-card {
           box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.14);
