@@ -209,12 +209,8 @@ export default function PostHero({ post, siteInfo }) {
     .map(c => c.trim())
     .filter(c => /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(c))
 
-  const [color1, color2] =
-    parsedColors.length >= 2
-      ? [parsedColors[0], parsedColors[1]]
-      : parsedColors.length === 1
-        ? [parsedColors[0], '#1e2433']
-        : ['#3A4A7A', '#1f2947']
+  const color1 = parsedColors.at(0) || '#3A4A7A'
+  const color2 = parsedColors.at(1) || (parsedColors.at(0) ? '#1e2433' : '#1f2947')
   const hasGradientTheme = true
 
   const isFilled = progress >= 100
