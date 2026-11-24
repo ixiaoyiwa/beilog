@@ -390,8 +390,24 @@ export default function PostHero({ post, siteInfo }) {
         }
         @media (min-width: 1024px) {
           .lg-hero-feather-mask {
-            -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 62%, transparent 100%);
-            mask-image: linear-gradient(to bottom, #000 0%, #000 62%, transparent 100%);
+            -webkit-mask-image: linear-gradient(
+              to bottom,
+              rgba(0, 0, 0, 1) 0%,
+              rgba(0, 0, 0, 0.96) 28%,
+              rgba(0, 0, 0, 0.82) 52%,
+              rgba(0, 0, 0, 0.52) 74%,
+              rgba(0, 0, 0, 0.18) 90%,
+              rgba(0, 0, 0, 0) 100%
+            );
+            mask-image: linear-gradient(
+              to bottom,
+              rgba(0, 0, 0, 1) 0%,
+              rgba(0, 0, 0, 0.96) 28%,
+              rgba(0, 0, 0, 0.82) 52%,
+              rgba(0, 0, 0, 0.52) 74%,
+              rgba(0, 0, 0, 0.18) 90%,
+              rgba(0, 0, 0, 0) 100%
+            );
           }
         }
         .podcast-cover-card {
