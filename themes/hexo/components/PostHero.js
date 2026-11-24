@@ -219,7 +219,7 @@ export default function PostHero({ post, siteInfo }) {
     <div
       id='header'
       className={`w-full ${
-        hasGradientTheme ? 'min-h-[430px] pt-24 pb-10 lg:py-0 lg:h-[80vh]' : 'h-96 md:h-[80vh]'
+        hasGradientTheme ? 'min-h-[460px] pt-24 pb-14 lg:py-0 lg:h-[80vh]' : 'h-96 md:h-[80vh]'
       } relative md:flex-shrink-0 z-10 mb-8 overflow-hidden flex items-center`}
       style={{ '--theme-primary': primaryColor }}>
       <div
@@ -415,19 +415,19 @@ export default function PostHero({ post, siteInfo }) {
           -webkit-mask-image: linear-gradient(
             to bottom,
             rgba(0, 0, 0, 1) 0%,
-            rgba(0, 0, 0, 0.96) 28%,
-            rgba(0, 0, 0, 0.82) 52%,
-            rgba(0, 0, 0, 0.52) 74%,
-            rgba(0, 0, 0, 0.18) 90%,
+            rgba(0, 0, 0, 1) 58%,
+            rgba(0, 0, 0, 0.85) 72%,
+            rgba(0, 0, 0, 0.45) 86%,
+            rgba(0, 0, 0, 0.12) 95%,
             rgba(0, 0, 0, 0) 100%
           );
           mask-image: linear-gradient(
             to bottom,
             rgba(0, 0, 0, 1) 0%,
-            rgba(0, 0, 0, 0.96) 28%,
-            rgba(0, 0, 0, 0.82) 52%,
-            rgba(0, 0, 0, 0.52) 74%,
-            rgba(0, 0, 0, 0.18) 90%,
+            rgba(0, 0, 0, 1) 58%,
+            rgba(0, 0, 0, 0.85) 72%,
+            rgba(0, 0, 0, 0.45) 86%,
+            rgba(0, 0, 0, 0.12) 95%,
             rgba(0, 0, 0, 0) 100%
           );
         }
