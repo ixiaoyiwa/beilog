@@ -7,7 +7,7 @@ import { getCategoryUrl } from '@/lib/utils/category'
 import { useEffect, useRef, useState } from 'react'
 
 const EPISODE_THEME_COLORS = {
-  '990': ['#5c4338', '#2a2226'],
+  '990': ['#5b738b', '#34465a'],
   '989': ['#364b5e', '#1e2836'],
   '988': ['#4d543e', '#232820']
 }
@@ -125,7 +125,7 @@ const formatDuration = (seconds) => {
 const extractEpisodeNumber = (slug) => {
   if (!slug) return ''
   const match = String(slug).match(/(\d+)(?!.*\d)/)
-  return match ? match[1] : ''
+  return match ? match.at(1) : ''
 }
 
 export default function PostHero({ post, siteInfo }) {
@@ -211,54 +211,44 @@ export default function PostHero({ post, siteInfo }) {
   const episodeNumber = extractEpisodeNumber(post?.slug)
   const themeColors = episodeNumber ? EPISODE_THEME_COLORS[episodeNumber] : null
   const hasGradientTheme = Array.isArray(themeColors) && themeColors.length === 2
+  const [color1, color2] = hasGradientTheme ? themeColors : ['', '']
 
   const isFilled = progress >= 100
 
   return (
     <div
       id='header'
-      className={`w-full h-96 md:h-[80vh] relative md:flex-shrink-0 z-10 mb-8 overflow-hidden ${
-        hasGradientTheme ? 'podcast-hero-gradient' : ''
-      }`}
-      style={{
-        '--theme-primary': primaryColor,
-        ...(hasGradientTheme
-          ? {
-              '--hero-color-1': themeColors[0],
-              '--hero-color-2': themeColors[1]
-            }
-          : {})
-      }}>
-      <LazyImage
-        priority={true}
-        src={headerImage}
-        className={`w-full h-full object-cover object-center absolute top-0 transition-opacity duration-500 ${
-          hasGradientTheme ? 'lg:opacity-15 lg:blur-2xl lg:scale-110' : ''
-        }`}
-      />
+      className='w-full h-96 md:h-[80vh] relative md:flex-shrink-0 z-10 mb-8 overflow-hidden'
+      style={{ '--theme-primary': primaryColor }}>
+      <div
+        className={`absolute inset-0 ${hasGradientTheme ? 'lg-hero-feather-mask' : ''}`}>
+        <LazyImage
+          priority={true}
+          src={headerImage}
+          className={`w-full h-full object-cover object-center absolute top-0 ${
+            hasGradientTheme ? 'lg:opacity-20 lg:blur-2xl lg:scale-110' : ''
+          }`}
+        />
 
-      {hasGradientTheme && (
-        <>
+        {hasGradientTheme && (
           <div
             className='hidden lg:block absolute inset-0 pointer-events-none'
             style={{
-              background: 'linear-gradient(135deg, var(--hero-color-1) 0%, var(--hero-color-2) 70%, #0b0d12 100%)'
+              background: `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`
             }}
           />
-          <div
-            className='hidden lg:block absolute inset-x-0 bottom-0 h-32 pointer-events-none'
-            style={{
-              background: 'linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.85) 100%)'
-            }}
-          />
-        </>
-      )}
+        )}
+
+        <div
+          className={`bg-black bg-opacity-70 ${
+            hasGradientTheme ? 'lg:bg-opacity-20' : ''
+          } absolute inset-0 pointer-events-none`}
+        />
+      </div>
 
       <header
         id='article-header-cover'
-        className={`bg-black bg-opacity-70 ${
-          hasGradientTheme ? 'lg:bg-opacity-15' : ''
-        } absolute top-0 w-full h-full flex items-center`}>
+        className='relative z-10 w-full h-full flex items-center'>
         <div className='w-full px-4 md:px-8 lg:px-24'>
           <div className='w-full mx-auto lg:flex lg:space-x-4 lg:items-center justify-center'>
             <div className='w-full max-w-4xl md:pl-5'>
@@ -318,55 +308,73 @@ export default function PostHero({ post, siteInfo }) {
                 </div>
 
                 {audioUrl && (
-                  <div
-                    className='relative inline-flex items-center gap-1.5 sm:gap-2 px-3.5 py-1.5 sm:px-5 sm:py-2 rounded-full transition-all duration-300 cursor-pointer select-none text-white overflow-hidden'
-                    style={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                      backdropFilter: 'blur(12px)',
-                      WebkitBackdropFilter: 'blur(12px)',
-                      transform: 'translateZ(0)'
-                    }}
-                    onClick={handlePlayClick}>
-                    {progress > 0 && (
-                      <div
-                        className='absolute inset-0 pointer-events-none'
-                        style={{
-                          background: `linear-gradient(90deg, rgba(255, 255, 255, 0.6) 0%, ${primaryColor} 100%)`,
-                          WebkitMaskImage: isFilled
-                            ? 'none'
-                            : `linear-gradient(to right, #000 calc(${progress}% - 24px), transparent ${progress}%)`,
-                          maskImage: isFilled
-                            ? 'none'
-                            : `linear-gradient(to right, #000 calc(${progress}% - 24px), transparent ${progress}%)`,
-                          opacity: isFilled ? 0.95 : (isPlaying ? 0.85 : 0.45),
-                          transition: 'opacity 0.3s ease'
-                        }}
-                      />
-                    )}
-                    {isCurrentSrc && isLoading ? (
-                      <LoadingIcon size={16} />
-                    ) : isCurrentSrc && isPlaying ? (
-                      <PauseIcon size={16} />
-                    ) : (
-                      <PlayIcon size={16} />
-                    )}
-                    <Waveform isPlaying={isCurrentSrc && isPlaying} progress={progress} />
-                    {formatDuration(remaining)}
+                  <div className='w-full'>
+                    <audio
+                      ref={localAudioRef}
+                      src={audioUrl}
+                      preload='metadata'
+                      onLoadedMetadata={handleMetadata}
+                      style={{ display: 'none' }}
+                    />
+
+                    <div
+                      className='relative inline-flex items-center gap-1.5 sm:gap-2 px-3.5 py-1.5 sm:px-5 sm:py-2 rounded-full transition-all duration-300 cursor-pointer select-none text-white overflow-hidden'
+                      style={{
+                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                        backdropFilter: 'blur(12px)',
+                        WebkitBackdropFilter: 'blur(12px)',
+                        transform: 'translateZ(0)'
+                      }}
+                      onClick={handlePlayClick}
+                    >
+                      {progress > 0 && (
+                        <div
+                          className='absolute inset-0 pointer-events-none'
+                          style={{
+                            background: `linear-gradient(90deg, rgba(255, 255, 255, 0.6) 0%, ${primaryColor} 100%)`,
+                            WebkitMaskImage: isFilled ? 'none' : `linear-gradient(to right, #000 calc(${progress}% - 24px), transparent ${progress}%)`,
+                            maskImage: isFilled ? 'none' : `linear-gradient(to right, #000 calc(${progress}% - 24px), transparent ${progress}%)`,
+                            opacity: isFilled ? 0.95 : (isPlaying ? 0.85 : 0.45),
+                            transition: 'opacity 0.3s ease'
+                          }}
+                        />
+                      )}
+
+                      <div className='relative z-10 flex-shrink-0 flex items-center justify-center w-5 h-5 sm:w-[22px] sm:h-[22px]'>
+                        {isCurrentSrc && isLoading ? (
+                          <LoadingIcon size={16} />
+                        ) : isCurrentSrc && isPlaying ? (
+                          <PauseIcon size={16} />
+                        ) : (
+                          <PlayIcon size={16} />
+                        )}
+                      </div>
+
+                      <div className='relative z-10 flex items-center'>
+                        <Waveform isPlaying={isCurrentSrc && isPlaying} progress={progress} />
+                      </div>
+
+                      <span className='relative z-10 text-xs text-white/90 font-medium tabular-nums whitespace-nowrap'>
+                        {formatDuration(remaining)}
+                      </span>
+                    </div>
                   </div>
                 )}
               </div>
             </div>
 
-            {hasGradientTheme && headerImage && (
-              <div className='hidden lg:flex lg:w-80 flex-shrink-0 items-center justify-center'>
-                <div className='w-[240px] h-[240px] rounded-[18px] overflow-hidden podcast-cover-card'>
+            <div className='hidden lg:flex lg:w-80 flex-shrink-0 items-center justify-center'>
+              {hasGradientTheme && headerImage && (
+                <div className='podcast-cover-card relative w-[240px] h-[240px] rounded-[18px] overflow-hidden select-none'>
                   <LazyImage
-                    src={coverUrl || headerImage}
+                    priority={true}
+                    src={headerImage}
+                    alt={post.title}
                     className='w-full h-full object-cover object-center'
                   />
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -380,16 +388,19 @@ export default function PostHero({ post, siteInfo }) {
         .hero-meta-link:hover {
           color: var(--theme-primary);
         }
+        @media (min-width: 1024px) {
+          .lg-hero-feather-mask {
+            -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 62%, transparent 100%);
+            mask-image: linear-gradient(to bottom, #000 0%, #000 62%, transparent 100%);
+          }
+        }
         .podcast-cover-card {
-          box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.55),
-            0 0 0 1px rgba(255, 255, 255, 0.12);
-          transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
-            box-shadow 0.35s ease;
+          box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.14);
+          transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease;
         }
         .podcast-cover-card:hover {
           transform: translateY(-3px) scale(1.025);
-          box-shadow: 0 26px 48px -12px rgba(0, 0, 0, 0.65),
-            0 0 0 1px rgba(255, 255, 255, 0.22);
+          box-shadow: 0 26px 48px -12px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.24);
         }
       `}</style>
     </div>
