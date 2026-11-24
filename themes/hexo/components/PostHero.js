@@ -6,12 +6,6 @@ import SmartLink from '@/components/SmartLink'
 import { getCategoryUrl } from '@/lib/utils/category'
 import { useEffect, useRef, useState } from 'react'
 
-const EPISODE_THEME_COLORS = {
-  '990': ['#5b738b', '#34465a'],
-  '989': ['#364b5e', '#1e2836'],
-  '988': ['#4d543e', '#232820']
-}
-
 const PlayIcon = ({ size = 16 }) => (
   <svg viewBox='0 0 24 24' width={size} height={size} fill='currentColor' style={{ marginLeft: '2px' }}>
     <path d='M8 5v14l11-7z' />
@@ -209,9 +203,19 @@ export default function PostHero({ post, siteInfo }) {
 
   const headerImage = post?.pageCover ? post.pageCover : siteInfo?.pageCover
   const episodeNumber = extractEpisodeNumber(post?.slug)
-  const themeColors = episodeNumber ? EPISODE_THEME_COLORS[episodeNumber] : null
-  const hasGradientTheme = Array.isArray(themeColors) && themeColors.length === 2
-  const [color1, color2] = hasGradientTheme ? themeColors : ['', '']
+  const rawThemeColor = (post?.themeColor || post?.ThemeColor || '').trim()
+  const parsedColors = rawThemeColor
+    .split(',')
+    .map(c => c.trim())
+    .filter(c => /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(c))
+
+  const [color1, color2] =
+    parsedColors.length >= 2
+      ? [parsedColors[0], parsedColors[1]]
+      : parsedColors.length === 1
+        ? [parsedColors[0], '#1e2433']
+        : ['#3A4A7A', '#1f2947']
+  const hasGradientTheme = true
 
   const isFilled = progress >= 100
 
@@ -253,7 +257,6 @@ export default function PostHero({ post, siteInfo }) {
         className='relative z-10 w-full flex items-center'>
         <div className='w-full px-4 md:px-8 lg:px-24'>
           <div className='w-full mx-auto lg:flex lg:space-x-4 lg:items-center justify-center'>
-            {/* 手机/平板端居中方形小封面（黄金比例 156px，不撑高首屏） */}
             {hasGradientTheme && headerImage && (
               <div className='flex lg:hidden justify-center mb-5'>
                 <div className='podcast-cover-card relative w-[156px] h-[156px] rounded-[16px] overflow-hidden select-none'>
@@ -385,7 +388,6 @@ export default function PostHero({ post, siteInfo }) {
               </div>
             </div>
 
-            {/* 桌面大屏右侧 240px 方形封面 */}
             <div className='hidden lg:flex lg:w-80 flex-shrink-0 items-center justify-center'>
               {hasGradientTheme && headerImage && (
                 <div className='podcast-cover-card relative w-[240px] h-[240px] rounded-[18px] overflow-hidden select-none'>
