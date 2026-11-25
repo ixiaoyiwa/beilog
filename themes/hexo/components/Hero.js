@@ -1,8 +1,7 @@
 import LazyImage from '@/components/LazyImage'
 import SmartLink from '@/components/SmartLink'
 import { siteConfig } from '@/lib/config'
-import { loadExternalResource } from '@/lib/utils'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 const parseExt = (ext) => {
   if (!ext) return null
@@ -17,81 +16,104 @@ const parseExt = (ext) => {
 }
 
 /**
- * 跳过置顶节目，精准提取按发布时间最新的那一期播客
+ * 提取集数编号（如 episode/990 -> 990）
+ */
+const getEpNum = (post) => {
+  const slug = String(post?.slug || post?.href || '')
+  const match = slug.match(/(\d+)(?!.*\d)/)
+  return match ? Number(match.at(1)) : 0
+}
+
+/**
+ * 精准提取全部节目中最新的一期（跳过置顶，按集数编号 & 发布时间降序取最大值）
  */
 const getTrueLatestEpisode = (posts = [], latestPosts = []) => {
   const validPosts = Array.isArray(posts) ? posts : []
   const validLatest = Array.isArray(latestPosts) ? latestPosts : []
 
-  const taggedLatest = validPosts.find(
+  // 合并所有可用的文章列表并去重
+  const merged = []
+  const seen = new Set()
+  for (const p of [...validPosts, ...validLatest]) {
+    if (!p) continue
+    if (p.type && p.type !== 'Post') continue
+    const key = p.id || p.slug || p.href || p.title
+    if (key && !seen.has(key)) {
+      seen.add(key)
+      merged.push(p)
+    }
+  }
+
+  if (merged.length === 0) return null
+
+  // 优先匹配标记为“最新”的节目
+  const taggedLatest = merged.find(
     p => p?.featuredType && String(p.featuredType).includes('最新')
   )
   if (taggedLatest) return taggedLatest
 
-  const globalFirst = validLatest.find(p => !p?.type || p.type === 'Post') || validLatest.at(0)
-  if (globalFirst) {
-    const matchedFull = validPosts.find(
-      p => (p.id && p.id === globalFirst.id) || (p.slug && p.slug === globalFirst.slug)
-    )
-    return matchedFull || globalFirst
-  }
-
-  const nonPinned = validPosts.filter(
+  // 排除置顶，按“集数编号最大”优先，其次按“发布时间最新”降序排列
+  const nonPinned = merged.filter(
     p => !p?.featuredType || !String(p.featuredType).includes('置顶')
   )
-  const pool = nonPinned.length > 0 ? nonPinned : validPosts
-  return [...pool].sort((a, b) => {
+  const pool = nonPinned.length > 0 ? nonPinned : merged
+
+  const sorted = [...pool].sort((a, b) => {
+    const epA = getEpNum(a)
+    const epB = getEpNum(b)
+    if (epA !== epB) return epB - epA
+
     const timeA = new Date(a?.publishDay || a?.date || 0).getTime()
     const timeB = new Date(b?.publishDay || b?.date || 0).getTime()
     return timeB - timeA
-  }).at(0) || null
+  })
+
+  const best = sorted.at(0)
+  // 若 best 来自 latestPosts 缺音频字段，尝试从 validPosts 补充完整对象
+  if (best && !best.ext && !best.audio) {
+    const fullObj = validPosts.find(
+      p => (p.id && p.id === best.id) || (p.slug && p.slug === best.slug)
+    )
+    if (fullObj) return fullObj
+  }
+  return best || null
 }
 
 /**
- * 首页顶部聚光灯暖光播客 Hero（大字打字机轮播 + 精简电台简介 + 统一双按钮）
+ * 首页顶部聚光灯暖光播客 Hero（缓慢淡入淡出双句轮播 + 精准最新一期播放）
  */
 const Hero = props => {
   const { siteInfo, posts = [], latestPosts = [] } = props
 
   const primaryColor = siteConfig('HEXO_COLOR_PRIMARY', '#3A4A7A') || '#3A4A7A'
   const GREETING_WORDS = siteConfig('GREETING_WORDS') || ''
-  const GREETING_WORDS_TYPE_SPEED =
-    Number(siteConfig('GREETING_WORDS_TYPE_SPEED')) || 180
-  const GREETING_WORDS_BACK_SPEED =
-    Number(siteConfig('GREETING_WORDS_BACK_SPEED')) || 90
+
+  const slogans = GREETING_WORDS.trim()
+    ? GREETING_WORDS.split(',').map(s => s.trim()).filter(Boolean)
+    : ['有人念，有处安', '听，有你的故事；等，有故事的你']
+
+  const [sloganIndex, setSloganIndex] = useState(0)
+  const [visible, setVisible] = useState(true)
 
   useEffect(() => {
-    let disposed = false
-    let typedInstance
+    if (slogans.length <= 1) return
 
-    // 默认两句大字轮播（若你在 Notion/环境变量 GREETING_WORDS 里填了自定义句子则优先使用）
-    const stringsList = GREETING_WORDS.trim()
-      ? GREETING_WORDS.split(',').map(s => s.trim()).filter(Boolean)
-      : ['有人念，有处安', '听，有你的故事；等，有故事的你']
-
-    if (document.getElementById('hero-typed-title') && stringsList.length > 0) {
-      loadExternalResource('/js/typed.min.js', 'js')
-        .then(() => {
-          if (!disposed && window.Typed) {
-            typedInstance = new window.Typed('#hero-typed-title', {
-              strings: stringsList,
-              typeSpeed: GREETING_WORDS_TYPE_SPEED,
-              backSpeed: GREETING_WORDS_BACK_SPEED,
-              backDelay: 2200,
-              loop: true,
-              showCursor: false,
-              smartBackspace: false
-            })
-          }
-        })
-        .catch(() => {})
-    }
+    let fadeTimer = null
+    const interval = setInterval(() => {
+      // 先缓慢隐去（耗时 800ms）
+      setVisible(false)
+      fadeTimer = setTimeout(() => {
+        setSloganIndex(prev => (prev + 1) % slogans.length)
+        // 切换文字后再缓慢浮现
+        setVisible(true)
+      }, 850)
+    }, 5200) // 每句停留约 4.3 秒，节奏舒缓不急促
 
     return () => {
-      disposed = true
-      typedInstance?.destroy()
+      clearInterval(interval)
+      if (fadeTimer) clearTimeout(fadeTimer)
     }
-  }, [GREETING_WORDS, GREETING_WORDS_TYPE_SPEED, GREETING_WORDS_BACK_SPEED])
+  }, [slogans.length])
 
   const latestPost = getTrueLatestEpisode(posts, latestPosts)
   const latestAudioUrl = latestPost?.audio || parseExt(latestPost?.ext)
@@ -152,11 +174,17 @@ const Hero = props => {
         />
       </div>
 
-      {/* 前景内容区：大字打字机轮播 + 精简两行简介 + 双按钮 */}
+      {/* 前景内容区：缓慢淡入淡出主标题 + 精简两行简介 + 双按钮 */}
       <div className='relative z-10 text-white flex flex-col items-center justify-center w-full max-w-2xl mx-auto px-5 text-center'>
-        {/* 大字打字机主标题（固定最小高度防止退格换行时下方文字上下跳动） */}
+        {/* 大字标题：缓慢淡入淡出轮播（800ms 柔和平滑过渡） */}
         <h1 className='min-h-[44px] sm:min-h-[52px] md:min-h-[60px] flex items-center justify-center font-bold text-2xl sm:text-4xl md:text-[42px] tracking-wider text-white mb-4 leading-tight'>
-          <span id='hero-typed-title'>有人念，有处安</span>
+          <span
+            className={`inline-block transition-all duration-700 ease-in-out ${
+              visible ? 'opacity-100 translate-y-0 blur-0' : 'opacity-0 translate-y-1.5 blur-[2px]'
+            }`}
+          >
+            {slogans.at(sloganIndex)}
+          </span>
         </h1>
 
         {/* 精简版电台简介 */}
