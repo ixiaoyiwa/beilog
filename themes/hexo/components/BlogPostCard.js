@@ -207,9 +207,9 @@ const BlogPostCard = ({ index, post, showSummary, siteInfo, featuredType }) => {
         id='blog-post-card'
         className='group relative md:h-56 w-full flex justify-start md:gap-2 md:flex-row-reverse flex-col-reverse shadow-sm overflow-hidden border dark:border-black rounded-xl bg-white dark:bg-hexo-black-gray'>
         <div
-          className='hidden md:block absolute inset-0 pointer-events-none opacity-20 dark:opacity-35 transition-opacity duration-500 group-hover:opacity-30 dark:group-hover:opacity-45'
+          className='hidden md:block absolute inset-0 pointer-events-none opacity-25 dark:opacity-55 transition-opacity duration-500 group-hover:opacity-35 dark:group-hover:opacity-70'
           style={{
-            background: `linear-gradient(95deg, ${cardTint} 0%, ${cardTint}66 42%, transparent 88%)`
+            background: `radial-gradient(circle at 25% 50%, ${cardTint}cc 0%, ${cardTint}44 45%, transparent 82%)`
           }}
         />
 
@@ -229,8 +229,8 @@ const BlogPostCard = ({ index, post, showSummary, siteInfo, featuredType }) => {
             <div
               className='w-full h-full overflow-hidden'
               style={{
-                WebkitMaskImage: 'linear-gradient(to right, #000 0%, #000 84%, transparent 100%)',
-                maskImage: 'linear-gradient(to right, #000 0%, #000 84%, transparent 100%)'
+                WebkitMaskImage: 'linear-gradient(108deg, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 58%, rgba(0,0,0,0.65) 78%, rgba(0,0,0,0.2) 92%, rgba(0,0,0,0) 100%)',
+                maskImage: 'linear-gradient(108deg, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 58%, rgba(0,0,0,0.65) 78%, rgba(0,0,0,0.2) 92%, rgba(0,0,0,0) 100%)'
               }}>
               <LazyImage
                 priority={index === 1}
