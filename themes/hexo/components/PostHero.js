@@ -219,33 +219,29 @@ export default function PostHero({ post, siteInfo }) {
     <div
       id='header'
       className={`w-full ${
-        hasGradientTheme ? 'min-h-[460px] pt-24 pb-14 lg:py-0 lg:h-[80vh]' : 'h-96 md:h-[80vh]'
-      } relative md:flex-shrink-0 z-10 mb-8 overflow-hidden flex items-center`}
+        hasGradientTheme ? 'min-h-[460px] pt-24 pb-12 lg:py-0 lg:h-[78vh]' : 'h-96 md:h-[80vh]'
+      } relative md:flex-shrink-0 z-10 mb-6 flex items-center`}
       style={{ '--theme-primary': primaryColor }}>
       
-      {/* 背景层：复刻 astro-theme-pure 的清透弥散光晕 + 双模式无灰带平滑过渡 */}
-      <div className='absolute inset-0 pointer-events-none select-none overflow-hidden'>
-        {/* 1. 极淡封面底纹（增加细腻纹理感，不生硬） */}
+      {/* 背景层：向下延伸 176px 铺到正文卡片背后，渐隐曲线直接融进网页真实底色，彻底消除白线 */}
+      <div className='hero-ambient-bg absolute inset-x-0 top-0 -bottom-44 pointer-events-none select-none overflow-hidden'>
+        {/* 1. 极淡封面纹理 */}
         <LazyImage
           priority={true}
           src={headerImage}
           className='w-full h-full object-cover object-center absolute top-0 opacity-20 blur-3xl scale-125'
         />
 
-        {/* 2. 主色调斜向氛围渐变（通透有质感，不死黑） */}
+        {/* 2. 主色调弥散光晕 + 斜向渐变 */}
         <div
           className='absolute inset-0 opacity-90 dark:opacity-95'
           style={{
-            background: `radial-gradient(circle at 80% 35%, ${color1}cc 0%, transparent 60%), linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`
+            background: `radial-gradient(circle at 78% 30%, ${color1}dd 0%, transparent 58%), linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`
           }}
         />
 
-        {/* 3. 轻柔压暗保护层，确保白色标题与胶囊播放器高对比度 */}
+        {/* 3. 轻柔压暗保护层，保证白天/夜间白字和播放器清晰 */}
         <div className='absolute inset-0 bg-black/15 dark:bg-black/30' />
-
-        {/* 4. 底部多段平滑融底（白天融进浅灰白底，夜间融进深黑底，彻底消除白蒙蒙脏带） */}
-        <div className='hero-bottom-dissolve-light dark:hidden absolute inset-x-0 bottom-0 h-44' />
-        <div className='hero-bottom-dissolve-dark hidden dark:block absolute inset-x-0 bottom-0 h-44' />
       </div>
 
       <header
@@ -409,24 +405,24 @@ export default function PostHero({ post, siteInfo }) {
         .hero-meta-link:hover {
           color: var(--theme-primary);
         }
-        .hero-bottom-dissolve-light {
-          background: linear-gradient(
+        .hero-ambient-bg {
+          -webkit-mask-image: linear-gradient(
             to bottom,
-            rgba(247, 249, 254, 0) 0%,
-            rgba(247, 249, 254, 0.18) 32%,
-            rgba(247, 249, 254, 0.52) 62%,
-            rgba(247, 249, 254, 0.86) 85%,
-            rgba(247, 249, 254, 1) 100%
+            rgba(0, 0, 0, 1) 0%,
+            rgba(0, 0, 0, 1) 48%,
+            rgba(0, 0, 0, 0.82) 64%,
+            rgba(0, 0, 0, 0.48) 78%,
+            rgba(0, 0, 0, 0.16) 90%,
+            rgba(0, 0, 0, 0) 100%
           );
-        }
-        .hero-bottom-dissolve-dark {
-          background: linear-gradient(
+          mask-image: linear-gradient(
             to bottom,
-            rgba(0, 0, 0, 0) 0%,
-            rgba(0, 0, 0, 0.22) 32%,
-            rgba(0, 0, 0, 0.58) 62%,
-            rgba(0, 0, 0, 0.88) 85%,
-            rgba(0, 0, 0, 1) 100%
+            rgba(0, 0, 0, 1) 0%,
+            rgba(0, 0, 0, 1) 48%,
+            rgba(0, 0, 0, 0.82) 64%,
+            rgba(0, 0, 0, 0.48) 78%,
+            rgba(0, 0, 0, 0.16) 90%,
+            rgba(0, 0, 0, 0) 100%
           );
         }
         .podcast-cover-card {
