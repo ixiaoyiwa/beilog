@@ -141,13 +141,6 @@ const BlogPostCard = ({ index, post, showSummary, siteInfo, featuredType }) => {
 
   const primaryColor = siteConfig('HEXO_COLOR_PRIMARY', '#3A4A7A') || '#3A4A7A'
 
-  const rawThemeColor = (post?.themeColor || post?.ThemeColor || '').trim()
-  const parsedColors = rawThemeColor
-    .split(',')
-    .map(c => c.trim())
-    .filter(c => /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(c))
-  const cardTint = parsedColors.at(0) || primaryColor
-
   useEffect(() => {
     if (hasAudio) {
       const probe = new Audio()
@@ -205,14 +198,7 @@ const BlogPostCard = ({ index, post, showSummary, siteInfo, featuredType }) => {
       <div
         key={post.id}
         id='blog-post-card'
-        className='group relative md:h-56 w-full flex justify-start md:gap-2 md:flex-row-reverse flex-col-reverse shadow-sm overflow-hidden border dark:border-black rounded-xl bg-white dark:bg-hexo-black-gray'>
-        <div
-          className='hidden md:block absolute inset-0 pointer-events-none opacity-25 dark:opacity-55 transition-opacity duration-500 group-hover:opacity-35 dark:group-hover:opacity-70'
-          style={{
-            background: `radial-gradient(circle at 25% 50%, ${cardTint}cc 0%, ${cardTint}44 45%, transparent 82%)`
-          }}
-        />
-
+        className='group md:h-56 w-full flex justify-start md:gap-2 md:flex-row-reverse flex-col-reverse shadow-sm overflow-hidden border dark:border-black rounded-xl bg-white dark:bg-hexo-black-gray'>
         <BlogPostCardInfo
           index={index}
           post={post}
@@ -226,19 +212,12 @@ const BlogPostCard = ({ index, post, showSummary, siteInfo, featuredType }) => {
           <div
             className='md:w-[38%] h-56 flex-shrink-0 overflow-hidden relative cursor-pointer'
             onClick={handleCoverClick}>
-            <div
-              className='w-full h-full overflow-hidden'
-              style={{
-                WebkitMaskImage: 'linear-gradient(108deg, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 58%, rgba(0,0,0,0.65) 78%, rgba(0,0,0,0.2) 92%, rgba(0,0,0,0) 100%)',
-                maskImage: 'linear-gradient(108deg, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 58%, rgba(0,0,0,0.65) 78%, rgba(0,0,0,0.2) 92%, rgba(0,0,0,0) 100%)'
-              }}>
-              <LazyImage
-                priority={index === 1}
-                alt={post?.title}
-                src={post?.pageCoverThumbnail}
-                className='h-56 w-full object-cover object-center group-hover:scale-110 duration-500'
-              />
-            </div>
+            <LazyImage
+              priority={index === 1}
+              alt={post?.title}
+              src={post?.pageCoverThumbnail}
+              className='h-56 w-full object-cover object-center group-hover:scale-110 duration-500'
+            />
             {hasAudio && (
               <div className='absolute bottom-3 right-3 z-10 pointer-events-none'>
                 <MiniAudioCapsule
