@@ -121,7 +121,7 @@ const LayoutBase = props => {
         <Transition show={!onLoading} appear={true} enter='transition ease-in-out duration-700 transform order-first' enterFrom='opacity-0 -translate-y-16' enterTo='opacity-100' leave='transition ease-in-out duration-300 transform' leaveFrom='opacity-100' leaveTo='opacity-0 translate-y-16' unmount={false}>
           {headerSlot}
         </Transition>
-        <main id='wrapper' className={`${mainTopPadding} ${post?.type === 'Post' ? 'bg-transparent' : 'bg-hexo-background-gray dark:bg-black'} w-full md:px-8 lg:px-24 min-h-screen relative`}>
+        <main id='wrapper' className={`${mainTopPadding} ${(post?.type === 'Post' || isHomeWithHero) ? 'bg-transparent' : 'bg-hexo-background-gray dark:bg-black'} w-full md:px-8 lg:px-24 min-h-screen relative`}>
           <div id='container-inner' className={(JSON.parse(siteConfig('LAYOUT_SIDEBAR_REVERSE')) ? 'flex-row-reverse' : '') + ' w-full mx-auto lg:flex lg:space-x-4 justify-center relative z-10'}>
             <div className={`${className || ''} w-full ${fullWidth ? '' : 'max-w-4xl'} h-full overflow-hidden`}>
               {showArticleSwitchPlaceholder ? (
