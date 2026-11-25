@@ -133,7 +133,11 @@ const LayoutBase = props => {
                 </Transition>
               )}
             </div>
-            {!hideSidebar && <SideRight {...props} />}
+            {!hideSidebar && (
+              <div className={isEpisodesPage ? 'lg:pt-[42px]' : ''}>
+                <SideRight {...props} />
+              </div>
+            )}
           </div>
         </main>
         <div className='block lg:hidden'><TocDrawer post={post} cRef={drawerRight} targetRef={tocRef} /></div>
