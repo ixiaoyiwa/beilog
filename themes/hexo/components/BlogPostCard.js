@@ -81,11 +81,11 @@ const MiniAudioCapsule = ({ isPlaying, isLoading, remaining, progress, primaryCo
   const isFilled = progress >= 100
   return (
     <div
-      className='relative inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-white overflow-hidden'
+      className='relative inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-white overflow-hidden shadow-sm'
       style={{
-        backgroundColor: 'rgba(255, 255, 255, 0.15)', 
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
+        backgroundColor: 'rgba(18, 22, 32, 0.42)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
         transform: 'translateZ(0)'
       }}
     >
@@ -120,7 +120,6 @@ const MiniAudioCapsule = ({ isPlaying, isLoading, remaining, progress, primaryCo
 const BlogPostCard = ({ index, post, showSummary, siteInfo, featuredType }) => {
   const router = useRouter()
   
-  // ✨ 核心修复：只要传入了（哪怕是 null），就用传入的，绝不用 post.featuredType 回退！
   const finalFeaturedType = featuredType !== undefined ? featuredType : (post?.featuredType || null)
 
   const showPreview = siteConfig('HEXO_POST_LIST_PREVIEW', null, CONFIG) && post.blockMap
@@ -199,21 +198,26 @@ const BlogPostCard = ({ index, post, showSummary, siteInfo, featuredType }) => {
       <div
         key={post.id}
         id='blog-post-card'
-        className='group md:h-56 w-full flex justify-start md:gap-2 md:flex-row-reverse flex-col-reverse shadow-sm overflow-hidden border dark:border-black rounded-xl bg-white dark:bg-hexo-black-gray'>
-        <BlogPostCardInfo
-          index={index}
-          post={post}
-          featuredType={finalFeaturedType}
-          showPageCover={showPageCover}
-          showPreview={showPreview}
-          showSummary={showSummary}
-        />
+        className='group relative md:h-56 w-full flex justify-start md:flex-row-reverse flex-col-reverse shadow-sm overflow-hidden border dark:border-black rounded-xl bg-white dark:bg-hexo-black-gray'>
+        
+        {/* 文字信息层：在桌面端从 38% 处开始排布，自然浮在向右蔓延的淡淡光影上方 */}
+        <div className={`relative z-10 w-full ${showPageCover ? 'md:w-[62%]' : ''} flex flex-col justify-center`}>
+          <BlogPostCardInfo
+            index={index}
+            post={post}
+            featuredType={finalFeaturedType}
+            showPageCover={showPageCover}
+            showPreview={showPreview}
+            showSummary={showSummary}
+          />
+        </div>
 
+        {/* 封面图：桌面端向右蔓延至 58% 宽度，大跨度斜向羽化融底，彻底打破垂直分割线 */}
         {showPageCover && (
           <div
-            className='md:w-[38%] h-56 flex-shrink-0 overflow-hidden relative cursor-pointer'
+            className='relative md:static w-full md:w-[38%] h-56 flex-shrink-0 cursor-pointer'
             onClick={handleCoverClick}>
-            <div className='card-cover-feather w-full h-full overflow-hidden'>
+            <div className='card-cover-spread w-full h-56 md:absolute md:inset-y-0 md:left-0 md:w-[58%] overflow-hidden pointer-events-none'>
               <LazyImage
                 priority={index === 1}
                 alt={post?.title}
@@ -221,8 +225,9 @@ const BlogPostCard = ({ index, post, showSummary, siteInfo, featuredType }) => {
                 className='h-56 w-full object-cover object-center group-hover:scale-110 duration-500'
               />
             </div>
+
             {hasAudio && (
-              <div className='absolute bottom-3 right-3 z-10 pointer-events-none'>
+              <div className='absolute bottom-3 right-3 md:right-auto md:left-[38%] md:-translate-x-[calc(100%+12px)] z-20 pointer-events-none'>
                 <MiniAudioCapsule 
                   isPlaying={isPlaying} 
                   isLoading={isLoading} 
@@ -232,23 +237,26 @@ const BlogPostCard = ({ index, post, showSummary, siteInfo, featuredType }) => {
                 />
               </div>
             )}
+
             <style jsx>{`
               @media (min-width: 768px) {
-                .card-cover-feather {
+                .card-cover-spread {
                   -webkit-mask-image: linear-gradient(
-                    to right,
+                    102deg,
                     rgba(0, 0, 0, 1) 0%,
-                    rgba(0, 0, 0, 1) 76%,
-                    rgba(0, 0, 0, 0.72) 86%,
-                    rgba(0, 0, 0, 0.3) 94%,
+                    rgba(0, 0, 0, 1) 42%,
+                    rgba(0, 0, 0, 0.72) 60%,
+                    rgba(0, 0, 0, 0.32) 78%,
+                    rgba(0, 0, 0, 0.08) 91%,
                     rgba(0, 0, 0, 0) 100%
                   );
                   mask-image: linear-gradient(
-                    to right,
+                    102deg,
                     rgba(0, 0, 0, 1) 0%,
-                    rgba(0, 0, 0, 1) 76%,
-                    rgba(0, 0, 0, 0.72) 86%,
-                    rgba(0, 0, 0, 0.3) 94%,
+                    rgba(0, 0, 0, 1) 42%,
+                    rgba(0, 0, 0, 0.72) 60%,
+                    rgba(0, 0, 0, 0.32) 78%,
+                    rgba(0, 0, 0, 0.08) 91%,
                     rgba(0, 0, 0, 0) 100%
                   );
                 }
