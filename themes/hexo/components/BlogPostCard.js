@@ -213,12 +213,14 @@ const BlogPostCard = ({ index, post, showSummary, siteInfo, featuredType }) => {
           <div
             className='md:w-[38%] h-56 flex-shrink-0 overflow-hidden relative cursor-pointer'
             onClick={handleCoverClick}>
-            <LazyImage
-              priority={index === 1}
-              alt={post?.title}
-              src={post?.pageCoverThumbnail}
-              className='h-56 w-full object-cover object-center group-hover:scale-110 duration-500'
-            />
+            <div className='card-cover-feather w-full h-full overflow-hidden'>
+              <LazyImage
+                priority={index === 1}
+                alt={post?.title}
+                src={post?.pageCoverThumbnail}
+                className='h-56 w-full object-cover object-center group-hover:scale-110 duration-500'
+              />
+            </div>
             {hasAudio && (
               <div className='absolute bottom-3 right-3 z-10 pointer-events-none'>
                 <MiniAudioCapsule 
@@ -230,6 +232,28 @@ const BlogPostCard = ({ index, post, showSummary, siteInfo, featuredType }) => {
                 />
               </div>
             )}
+            <style jsx>{`
+              @media (min-width: 768px) {
+                .card-cover-feather {
+                  -webkit-mask-image: linear-gradient(
+                    to right,
+                    rgba(0, 0, 0, 1) 0%,
+                    rgba(0, 0, 0, 1) 76%,
+                    rgba(0, 0, 0, 0.72) 86%,
+                    rgba(0, 0, 0, 0.3) 94%,
+                    rgba(0, 0, 0, 0) 100%
+                  );
+                  mask-image: linear-gradient(
+                    to right,
+                    rgba(0, 0, 0, 1) 0%,
+                    rgba(0, 0, 0, 1) 76%,
+                    rgba(0, 0, 0, 0.72) 86%,
+                    rgba(0, 0, 0, 0.3) 94%,
+                    rgba(0, 0, 0, 0) 100%
+                  );
+                }
+              }
+            `}</style>
           </div>
         )}
       </div>
