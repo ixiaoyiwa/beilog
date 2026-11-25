@@ -76,7 +76,7 @@ const getTrueLatestEpisode = (posts = [], latestPosts = []) => {
 }
 
 /**
- * 首页顶部聚光灯暖光播客 Hero（#DF7236 暖灯琥珀主题 + 1:1 还原透明细边框次按钮）
+ * 首页顶部聚光灯暖光播客 Hero（#DF7236 暖灯琥珀主题 + 内联微光细边框次按钮）
  */
 const Hero = props => {
   const { siteInfo, posts = [], latestPosts = [] } = props
@@ -143,7 +143,7 @@ const Hero = props => {
             'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 48%, rgba(0,0,0,0.84) 66%, rgba(0,0,0,0.46) 80%, rgba(0,0,0,0.14) 91%, rgba(0,0,0,0) 100%)'
         }}
       >
-        {/* 1. 深暖咖啡夜色底（与参考站一致的温暖暗调基底） */}
+        {/* 1. 深暖咖啡夜色底 */}
         <div
           className='absolute inset-0'
           style={{
@@ -210,25 +210,16 @@ const Hero = props => {
 
           <SmartLink
             href='/episodes'
-            className='hero-ghost-btn inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-medium backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5'
+            className='inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-medium text-white/95 backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/15'
+            style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.07)',
+              border: '1px solid rgba(255, 255, 255, 0.28)'
+            }}
           >
             <span>浏览全部节目</span>
           </SmartLink>
         </div>
       </div>
-
-      <style jsx>{`
-        .hero-ghost-btn {
-          color: rgba(255, 255, 255, 0.9);
-          background-color: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.14);
-        }
-        .hero-ghost-btn:hover {
-          color: #ffffff;
-          background-color: rgba(255, 255, 255, 0.09);
-          border-color: rgba(255, 255, 255, 0.24);
-        }
-      `}</style>
     </header>
   )
 }
