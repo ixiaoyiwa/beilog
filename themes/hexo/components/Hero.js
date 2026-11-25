@@ -53,7 +53,7 @@ const Hero = props => {
     <header
       id='header'
       style={{ zIndex: 10, '--theme-primary': primaryColor }}
-      className='w-full min-h-[380px] pt-20 pb-8 lg:py-0 lg:h-[460px] relative flex items-center justify-center'
+      className='w-full min-h-[350px] pt-20 pb-8 lg:py-0 lg:h-[420px] relative flex items-center justify-center'
     >
       {/* 背景层：原酒馆插画高斯模糊 + 暖暗调氛围遮罩 + 底部平滑羽化融底 */}
       <div
