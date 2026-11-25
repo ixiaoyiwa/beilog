@@ -220,17 +220,17 @@ export default function PostHero({ post, siteInfo }) {
       id='header'
       className={`w-full ${
         hasGradientTheme ? 'min-h-[460px] pt-24 pb-12 lg:py-0 lg:h-[78vh]' : 'h-96 md:h-[80vh]'
-      } relative md:flex-shrink-0 z-10 mb-6 overflow-hidden flex items-center`}
+      } relative md:flex-shrink-0 z-10 mb-6 flex items-center`}
       style={{ '--theme-primary': primaryColor }}>
       
-      {/* 背景层：留在头部容器内 + 内联五段平滑渐隐（首帧秒出、零白边、零闪烁） */}
+      {/* 背景层：向下延伸 176px 铺到透明 <main> 下的正文卡片背后（首帧秒出、零白边、零延迟） */}
       <div
-        className='absolute inset-0 pointer-events-none select-none overflow-hidden'
+        className='absolute inset-x-0 top-0 -bottom-44 pointer-events-none select-none overflow-hidden'
         style={{
           WebkitMaskImage:
-            'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 52%, rgba(0,0,0,0.82) 68%, rgba(0,0,0,0.45) 82%, rgba(0,0,0,0.14) 92%, rgba(0,0,0,0) 100%)',
+            'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 48%, rgba(0,0,0,0.82) 64%, rgba(0,0,0,0.48) 78%, rgba(0,0,0,0.16) 90%, rgba(0,0,0,0) 100%)',
           maskImage:
-            'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 52%, rgba(0,0,0,0.82) 68%, rgba(0,0,0,0.45) 82%, rgba(0,0,0,0.14) 92%, rgba(0,0,0,0) 100%)'
+            'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 48%, rgba(0,0,0,0.82) 64%, rgba(0,0,0,0.48) 78%, rgba(0,0,0,0.16) 90%, rgba(0,0,0,0) 100%)'
         }}>
         {/* 1. 极淡封面纹理 */}
         <LazyImage
