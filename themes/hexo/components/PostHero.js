@@ -209,8 +209,8 @@ export default function PostHero({ post, siteInfo }) {
     .map(c => c.trim())
     .filter(c => /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(c))
 
-  const color1 = parsedColors.at(0) || '#3A4A7A'
-  const color2 = parsedColors.at(1) || (parsedColors.at(0) ? '#1e2433' : '#1f2947')
+  const color1 = parsedColors.at(0) || '#4A5D94'
+  const color2 = parsedColors.at(1) || (parsedColors.at(0) ? '#2C364F' : '#2E3B63')
   const hasGradientTheme = true
 
   const isFilled = progress >= 100
@@ -222,30 +222,30 @@ export default function PostHero({ post, siteInfo }) {
         hasGradientTheme ? 'min-h-[460px] pt-24 pb-14 lg:py-0 lg:h-[80vh]' : 'h-96 md:h-[80vh]'
       } relative md:flex-shrink-0 z-10 mb-8 overflow-hidden flex items-center`}
       style={{ '--theme-primary': primaryColor }}>
-      <div
-        className={`absolute inset-0 ${hasGradientTheme ? 'hero-feather-mask' : ''}`}>
+      
+      {/* 背景层：复刻 astro-theme-pure 的清透弥散光晕 + 双模式无灰带平滑过渡 */}
+      <div className='absolute inset-0 pointer-events-none select-none overflow-hidden'>
+        {/* 1. 极淡封面底纹（增加细腻纹理感，不生硬） */}
         <LazyImage
           priority={true}
           src={headerImage}
-          className={`w-full h-full object-cover object-center absolute top-0 ${
-            hasGradientTheme ? 'opacity-20 blur-2xl scale-110' : ''
-          }`}
+          className='w-full h-full object-cover object-center absolute top-0 opacity-20 blur-3xl scale-125'
         />
 
-        {hasGradientTheme && (
-          <div
-            className='block absolute inset-0 pointer-events-none'
-            style={{
-              background: `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`
-            }}
-          />
-        )}
-
+        {/* 2. 主色调斜向氛围渐变（通透有质感，不死黑） */}
         <div
-          className={`bg-black ${
-            hasGradientTheme ? 'bg-opacity-20' : 'bg-opacity-70'
-          } absolute inset-0 pointer-events-none`}
+          className='absolute inset-0 opacity-90 dark:opacity-95'
+          style={{
+            background: `radial-gradient(circle at 80% 35%, ${color1}cc 0%, transparent 60%), linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`
+          }}
         />
+
+        {/* 3. 轻柔压暗保护层，确保白色标题与胶囊播放器高对比度 */}
+        <div className='absolute inset-0 bg-black/15 dark:bg-black/30' />
+
+        {/* 4. 底部多段平滑融底（白天融进浅灰白底，夜间融进深黑底，彻底消除白蒙蒙脏带） */}
+        <div className='hero-bottom-dissolve-light dark:hidden absolute inset-x-0 bottom-0 h-44' />
+        <div className='hero-bottom-dissolve-dark hidden dark:block absolute inset-x-0 bottom-0 h-44' />
       </div>
 
       <header
@@ -409,24 +409,24 @@ export default function PostHero({ post, siteInfo }) {
         .hero-meta-link:hover {
           color: var(--theme-primary);
         }
-        .hero-feather-mask {
-          -webkit-mask-image: linear-gradient(
+        .hero-bottom-dissolve-light {
+          background: linear-gradient(
             to bottom,
-            rgba(0, 0, 0, 1) 0%,
-            rgba(0, 0, 0, 1) 58%,
-            rgba(0, 0, 0, 0.85) 72%,
-            rgba(0, 0, 0, 0.45) 86%,
-            rgba(0, 0, 0, 0.12) 95%,
-            rgba(0, 0, 0, 0) 100%
+            rgba(247, 249, 254, 0) 0%,
+            rgba(247, 249, 254, 0.18) 32%,
+            rgba(247, 249, 254, 0.52) 62%,
+            rgba(247, 249, 254, 0.86) 85%,
+            rgba(247, 249, 254, 1) 100%
           );
-          mask-image: linear-gradient(
+        }
+        .hero-bottom-dissolve-dark {
+          background: linear-gradient(
             to bottom,
-            rgba(0, 0, 0, 1) 0%,
-            rgba(0, 0, 0, 1) 58%,
-            rgba(0, 0, 0, 0.85) 72%,
-            rgba(0, 0, 0, 0.45) 86%,
-            rgba(0, 0, 0, 0.12) 95%,
-            rgba(0, 0, 0, 0) 100%
+            rgba(0, 0, 0, 0) 0%,
+            rgba(0, 0, 0, 0.22) 32%,
+            rgba(0, 0, 0, 0.58) 62%,
+            rgba(0, 0, 0, 0.88) 85%,
+            rgba(0, 0, 0, 1) 100%
           );
         }
         .podcast-cover-card {
