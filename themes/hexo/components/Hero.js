@@ -76,7 +76,32 @@ const getTrueLatestEpisode = (posts = [], latestPosts = []) => {
 }
 
 /**
- * 首页顶部聚光灯暖光播客 Hero（#DF7236 暖灯琥珀主题 + 内联微光细边框次按钮）
+ * 渲染带有 #DF7236 暖灯琥珀橙高亮关键词的标题文本
+ */
+const renderHighlightedSlogan = (text) => {
+  if (!text) return null
+  const highlightChars = new Set(['念', '安', '听', '等'])
+
+  return Array.from(text).map((char, idx) => {
+    if (highlightChars.has(char)) {
+      return (
+        <span
+          key={idx}
+          style={{
+            color: '#F0884D',
+            textShadow: '0 2px 14px rgba(223, 114, 54, 0.42)'
+          }}
+        >
+          {char}
+        </span>
+      )
+    }
+    return <span key={idx}>{char}</span>
+  })
+}
+
+/**
+ * 首页顶部聚光灯暖光播客 Hero（#DF7236 暖灯琥珀主题 + 关键词高亮）
  */
 const Hero = props => {
   const { siteInfo, posts = [], latestPosts = [] } = props
@@ -173,14 +198,14 @@ const Hero = props => {
 
       {/* 前景内容区 */}
       <div className='relative z-10 text-white flex flex-col items-center justify-center w-full max-w-2xl mx-auto px-5 text-center'>
-        {/* 大字标题：缓慢淡入淡出轮播 */}
+        {/* 大字标题：缓慢淡入淡出轮播 + 核心关键词琥珀橙高亮 */}
         <h1 className='min-h-[44px] sm:min-h-[52px] md:min-h-[60px] flex items-center justify-center font-bold text-2xl sm:text-4xl md:text-[42px] tracking-wider text-white mb-4 leading-tight'>
           <span
             className={`inline-block transition-all duration-700 ease-in-out ${
               visible ? 'opacity-100 translate-y-0 blur-0' : 'opacity-0 translate-y-1.5 blur-[2px]'
             }`}
           >
-            {slogans.at(sloganIndex)}
+            {renderHighlightedSlogan(slogans.at(sloganIndex))}
           </span>
         </h1>
 
