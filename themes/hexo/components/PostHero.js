@@ -224,7 +224,15 @@ export default function PostHero({ post, siteInfo }) {
       style={{ '--theme-primary': primaryColor }}>
       
       {/* 背景层：向下延伸 176px 铺到正文卡片背后，渐隐曲线直接融进网页真实底色，彻底消除白线 */}
-      <div className='hero-ambient-bg absolute inset-x-0 top-0 -bottom-44 pointer-events-none select-none overflow-hidden'>
+      {/* 使用内联 maskImage 保证 SSR 直出，杜绝 FOUC 闪白线 */}
+      <div
+        className='absolute inset-x-0 top-0 -bottom-44 pointer-events-none select-none overflow-hidden'
+        style={{
+          WebkitMaskImage:
+            'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 48%, rgba(0,0,0,0.82) 64%, rgba(0,0,0,0.48) 78%, rgba(0,0,0,0.16) 90%, rgba(0,0,0,0) 100%)',
+          maskImage:
+            'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 48%, rgba(0,0,0,0.82) 64%, rgba(0,0,0,0.48) 78%, rgba(0,0,0,0.16) 90%, rgba(0,0,0,0) 100%)'
+        }}>
         {/* 1. 极淡封面纹理 */}
         <LazyImage
           priority={true}
@@ -404,26 +412,6 @@ export default function PostHero({ post, siteInfo }) {
         }
         .hero-meta-link:hover {
           color: var(--theme-primary);
-        }
-        .hero-ambient-bg {
-          -webkit-mask-image: linear-gradient(
-            to bottom,
-            rgba(0, 0, 0, 1) 0%,
-            rgba(0, 0, 0, 1) 48%,
-            rgba(0, 0, 0, 0.82) 64%,
-            rgba(0, 0, 0, 0.48) 78%,
-            rgba(0, 0, 0, 0.16) 90%,
-            rgba(0, 0, 0, 0) 100%
-          );
-          mask-image: linear-gradient(
-            to bottom,
-            rgba(0, 0, 0, 1) 0%,
-            rgba(0, 0, 0, 1) 48%,
-            rgba(0, 0, 0, 0.82) 64%,
-            rgba(0, 0, 0, 0.48) 78%,
-            rgba(0, 0, 0, 0.16) 90%,
-            rgba(0, 0, 0, 0) 100%
-          );
         }
         .podcast-cover-card {
           box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.14);
