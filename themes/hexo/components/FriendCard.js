@@ -11,24 +11,30 @@ const FriendCard = ({ member }) => {
   const avatarSrc = member.avatar || fallbackAvatar
   const showImage = avatarSrc && !imgFailed
 
+  const avatarFrameStyle = {
+    border: '1px solid rgba(200, 122, 56, 0.48)',
+    boxShadow: '0 0 12px rgba(200, 122, 56, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.16)'
+  }
+
   return (
     <div className='flex flex-col items-center p-2 rounded-xl bg-[var(--hexo-color-card)] transition-all duration-200 hover:shadow-md'>
-      {/* 头像 + 状态点 */}
+      {/* 头像 + 极细暗金琥珀微光边框 + 状态点 */}
       <SmartLink
         href={`/tag/${encodeURIComponent(member.name)}`}
-        className='relative mb-2 cursor-pointer block'>
+        className='relative mb-2 cursor-pointer block group'>
         {showImage ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={avatarSrc}
             alt=''
             onError={() => setImgFailed(true)}
-            className='w-16 h-16 rounded-full object-cover'
+            style={avatarFrameStyle}
+            className='w-16 h-16 rounded-full object-cover transition-transform duration-300 group-hover:scale-105'
           />
         ) : (
           <div
-            className='w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold text-white select-none'
-            style={{ backgroundColor: 'var(--theme-color)' }}>
+            className='w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold text-white select-none transition-transform duration-300 group-hover:scale-105'
+            style={{ backgroundColor: 'var(--theme-color)', ...avatarFrameStyle }}>
             {member.name.charAt(0)}
           </div>
         )}
