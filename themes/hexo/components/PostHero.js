@@ -282,7 +282,7 @@ export default function PostHero({ post, siteInfo }) {
 
           {/* 左栏：标题、元数据与播放器（严格对齐下方 max-w-4xl 卡片内正文文字左右 1、2 号线） */}
           <div className='order-2 lg:order-1 w-full max-w-4xl'>
-            <div className='w-full max-w-[92%] mx-auto md:max-w-none md:mx-0 lg:px-8 text-left'>
+            <div className='w-full max-w-[92%] mx-auto md:max-w-none md:mx-0 lg:pl-8 lg:pr-12 text-left'>
               <div className='leading-snug font-bold text-2xl sm:text-3xl md:text-4xl md:leading-snug shadow-text-md text-white text-left'>
                 {siteConfig('POST_TITLE_ICON') &&
                   post.pageIcon && (
