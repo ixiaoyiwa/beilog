@@ -4,7 +4,7 @@ import { siteConfig } from '@/lib/config'
 
 /**
  * 普通页面 / 节目页 / 栏目页 Hero
- * 收紧至 220px 紧凑黄金高度 + 双模式无缝融底（彻底消除半透明黑叠加产生的灰白脏雾）
+ * 照猫画虎单期页（PostHero）的“向下延伸 + 15% 起 7 段超长慢渐变消散”公式，白天与黑夜模式均自然融底
  */
 export default function PageHero({ post, siteInfo }) {
   if (!post) {
@@ -18,32 +18,23 @@ export default function PageHero({ post, siteInfo }) {
   return (
     <div
       id='header'
-      className='w-full h-40 md:h-[220px] relative md:flex-shrink-0 z-10 mb-2 overflow-hidden'>
-      {/* 背景层：酒馆插画 + 双模式底色平滑融底，绝不产生灰白脏雾带 */}
-      <div className='absolute inset-0 pointer-events-none select-none overflow-hidden'>
+      className='w-full h-40 md:h-[220px] relative md:flex-shrink-0 z-10 mb-2'>
+      {/* 背景层：向下延伸 176px 铺进下方卡片背后，采用单期页同款 15% 起 7 段超长慢渐变消散 */}
+      <div
+        className='absolute inset-x-0 top-0 -bottom-44 pointer-events-none select-none overflow-hidden'
+        style={{
+          WebkitMaskImage:
+            'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.92) 15%, rgba(0,0,0,0.74) 36%, rgba(0,0,0,0.5) 56%, rgba(0,0,0,0.26) 74%, rgba(0,0,0,0.08) 89%, rgba(0,0,0,0) 100%)',
+          maskImage:
+            'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.92) 15%, rgba(0,0,0,0.74) 36%, rgba(0,0,0,0.5) 56%, rgba(0,0,0,0.26) 74%, rgba(0,0,0,0.08) 89%, rgba(0,0,0,0) 100%)'
+        }}>
         <LazyImage
           priority={true}
           src={headerImage}
           className='w-full h-full object-cover object-center absolute top-0'
         />
-        {/* 暗调文字保护遮罩 */}
-        <div className='bg-black/55 dark:bg-black/65 absolute inset-0' />
-
-        {/* 底部平滑融底：白天直接融进网页暖米色底，夜间直接融进纯黑底 */}
-        <div
-          className='dark:hidden absolute inset-x-0 bottom-0 h-16'
-          style={{
-            background:
-              'linear-gradient(to bottom, rgba(245, 244, 240, 0) 0%, rgba(245, 244, 240, 0.65) 60%, rgba(245, 244, 240, 1) 100%)'
-          }}
-        />
-        <div
-          className='hidden dark:block absolute inset-x-0 bottom-0 h-16'
-          style={{
-            background:
-              'linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.65) 60%, rgba(0, 0, 0, 1) 100%)'
-          }}
-        />
+        {/* 白天清透文字保护层 + 夜间暗调层（避免白天半透明过黑产生灰白脏雾） */}
+        <div className='bg-black/45 dark:bg-black/60 absolute inset-0' />
       </div>
 
       {/* 前景内容层：保持左对齐排版，与下方主内容栏严格对齐 */}
