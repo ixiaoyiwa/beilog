@@ -322,7 +322,7 @@ export default function PostHero({ post, siteInfo }) {
                 ))}
               </div>
 
-              {/* 播放器胶囊：恢复为最初的无外框纯净半透明白玻璃（与卡片右下角播控同款），手机端居中、电脑端左对齐 */}
+              {/* 播放器胶囊：恢复为最初的无外框纯净半透明白玻璃，手机端居中、电脑端左对齐 */}
               {audioUrl && (
                 <div className='mt-6 flex justify-center lg:justify-start'>
                   <button
