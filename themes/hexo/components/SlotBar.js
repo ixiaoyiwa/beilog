@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import SmartLink from '@/components/SmartLink'
+import { siteConfig } from '@/lib/config'
 
 /**
  * 博客列表上方嵌入条
@@ -13,6 +15,8 @@ export default function SlotBar(props) {
     categories = [],
     categoryOptions = []
   } = props
+
+  const [imgFailed, setImgFailed] = useState(false)
 
   // 分类简介映射表
   const introMap = {
@@ -71,17 +75,48 @@ export default function SlotBar(props) {
     const friendData = friends.find(f => f.name === tag)
     const title = friendData?.title
     const titleColor = colorMap[friendData?.color] || colorMap.default
+    const fallbackAvatar = siteConfig('HOME_BANNER_IMAGE') || ''
+    const avatarSrc = friendData?.avatar || fallbackAvatar
+    const showImage = avatarSrc && !imgFailed
+
+    const avatarFrameStyle = {
+      border: '1px solid rgba(200, 122, 56, 0.48)',
+      boxShadow: '0 0 10px rgba(200, 122, 56, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.16)'
+    }
+
     return (
-      <div className="cursor-pointer px-3 py-2 mb-2 font-light hover:text-[#C87A38] dark:hover:text-[#D68744] transform dark:text-white">
+      <div className="px-3 py-2 mb-3">
         <SmartLink
           key={tag}
           href={`/tag/${encodeURIComponent(tag)}`}
           passHref
-          className={'cursor-pointer inline-block rounded duration-200 mr-2 py-0.5 px-1 text-xl whitespace-nowrap '}>
-          <div className='font-light dark:text-gray-400 dark:hover:text-white'>
-            <i className='fa fa-user mr-1' />{tag}
+          className="inline-flex items-center gap-3 group cursor-pointer rounded-xl py-1 px-1.5 transition-colors duration-200"
+        >
+          {/* 36px 圆形头像 + 极细暗金琥珀微光边框（100% 同步 FriendCard 头像源与兜底） */}
+          {showImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={avatarSrc}
+              alt={tag}
+              onError={() => setImgFailed(true)}
+              style={avatarFrameStyle}
+              className="w-9 h-9 rounded-full object-cover flex-shrink-0 transition-transform duration-300 group-hover:scale-105"
+            />
+          ) : (
+            <div
+              className="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-bold text-white select-none transition-transform duration-300 group-hover:scale-105"
+              style={{ backgroundColor: 'var(--theme-color)', ...avatarFrameStyle }}
+            >
+              {String(tag).charAt(0)}
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            <span className="text-xl font-medium tracking-wide text-gray-800 dark:text-gray-100 group-hover:text-[var(--theme-color)] transition-colors">
+              {tag}
+            </span>
             {title && (
-              <span className={`ml-1 text-xs px-1.5 py-0.5 rounded ${titleColor}`}>
+              <span className={`text-xs px-2 py-0.5 rounded-md font-normal ${titleColor}`}>
                 {title}
               </span>
             )}
