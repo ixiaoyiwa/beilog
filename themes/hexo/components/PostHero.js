@@ -86,8 +86,8 @@ const formatDuration = (seconds) => {
 
 const Waveform = ({ isPlaying, progress }) => {
   const bars = [
-    28, 45, 62, 38, 80, 95, 55, 40, 72, 88, 60, 35, 50, 90, 76, 42, 65, 84, 52, 30,
-    58, 78, 92, 48, 36, 68, 85, 60, 44, 70, 50, 32
+    28, 45, 72, 90, 62, 38, 82, 95, 55, 40, 76, 88, 50, 32, 68, 92, 74, 42,
+    60, 85, 96, 58, 36, 78, 86, 48, 30, 64, 80, 52, 35, 70, 84, 46, 30
   ]
 
   return (
@@ -195,7 +195,6 @@ export default function PostHero({ post, siteInfo }) {
     )
   }
 
-  // 直接通过内联事件切换主题色悬停，彻底避免 Tailwind 优先级覆盖
   const handleMetaEnter = (e) => {
     e.currentTarget.style.color = 'var(--theme-color, #C87A38)'
     e.currentTarget.style.textShadow = '0 1px 10px rgba(0, 0, 0, 0.35)'
@@ -262,28 +261,28 @@ export default function PostHero({ post, siteInfo }) {
         />
       )}
 
-      {/* 横跨整排双栏总宽（max-w-[1232px]），封面图严丝合缝对齐右侧边栏右边缘 */}
+      {/* 1:1 复刻图一双栏网格：左栏(max-w-4xl)对齐正文文字 1、2 号线；右栏(lg:w-80)居中放置封面图对齐侧边栏 10、11 号线 */}
       <header
         id='article-header-cover'
         className='relative z-10 w-full px-4 md:px-8 lg:px-24'>
-        <div className='w-full max-w-[1232px] mx-auto'>
-          <div className='w-full max-w-[92%] mx-auto md:max-w-none md:mx-0 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 lg:gap-10'>
-            {/* 右侧封面图（严格对齐右侧边栏右边缘） */}
-            {hasGradientTheme && headerImage && (
-              <div className='order-1 lg:order-2 flex-shrink-0 flex justify-center lg:justify-end'>
-                <div className='w-44 h-44 sm:w-52 sm:h-52 lg:w-56 lg:h-56 rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.45)] ring-1 ring-white/20 bg-white/5'>
-                  <LazyImage
-                    priority={true}
-                    src={headerImage}
-                    alt={post.title}
-                    className='w-full h-full object-cover object-center'
-                  />
-                </div>
+        <div className='w-full mx-auto flex flex-col lg:flex-row lg:space-x-4 justify-center items-center gap-6 lg:gap-0'>
+          {/* 右栏：封面图（移动端在上方；桌面端严格落在右侧边栏 lg:w-80 列宽正中，两侧留出 10、11 边距） */}
+          {hasGradientTheme && headerImage && (
+            <div className='order-1 lg:order-2 w-full lg:w-80 flex-shrink-0 flex justify-center'>
+              <div className='w-44 h-44 sm:w-52 sm:h-52 lg:w-56 lg:h-56 rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.45)] ring-1 ring-white/20 bg-white/5'>
+                <LazyImage
+                  priority={true}
+                  src={headerImage}
+                  alt={post.title}
+                  className='w-full h-full object-cover object-center'
+                />
               </div>
-            )}
+            </div>
+          )}
 
-            {/* 左侧标题、集数元数据与播放器（严格对齐下方正文卡片左边缘） */}
-            <div className='order-2 lg:order-1 flex-1 min-w-0 text-left lg:pl-7'>
+          {/* 左栏：标题、元数据与播放器（严格对齐下方 max-w-4xl 卡片内正文文字左右 1、2 号线） */}
+          <div className='order-2 lg:order-1 w-full max-w-4xl'>
+            <div className='w-full max-w-[92%] mx-auto md:max-w-none md:mx-0 lg:px-12 text-left'>
               <div className='leading-snug font-bold text-2xl sm:text-3xl md:text-4xl md:leading-snug shadow-text-md text-white text-left'>
                 {siteConfig('POST_TITLE_ICON') &&
                   post.pageIcon && (
@@ -292,11 +291,10 @@ export default function PostHero({ post, siteInfo }) {
                       className='text-3xl mr-1 inline-block'
                     />
                   )}
-
                 {post.title}
               </div>
 
-              {/* 元数据行：悬停栏目与人物标签时 100% 变为全局主题色 */}
+              {/* 元数据行 */}
               <div className='mt-3 flex flex-wrap items-center justify-start gap-x-2 gap-y-1 text-xs sm:text-sm text-white/80 font-light tracking-wide'>
                 {episodeNumber && (
                   <>
