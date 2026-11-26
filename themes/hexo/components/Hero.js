@@ -76,7 +76,7 @@ const getTrueLatestEpisode = (posts = [], latestPosts = []) => {
 }
 
 /**
- * 渲染带有 #DF7236 暖灯琥珀橙高亮关键词的标题文本
+ * 渲染带有 #C87A38 焦糖暖琥珀高亮关键词的标题文本
  */
 const renderHighlightedSlogan = (text) => {
   if (!text) return null
@@ -88,8 +88,8 @@ const renderHighlightedSlogan = (text) => {
         <span
           key={idx}
           style={{
-            color: '#F0884D',
-            textShadow: '0 2px 14px rgba(223, 114, 54, 0.42)'
+            color: '#C87A38',
+            textShadow: '0 2px 16px rgba(200, 122, 56, 0.35)'
           }}
         >
           {char}
@@ -101,12 +101,12 @@ const renderHighlightedSlogan = (text) => {
 }
 
 /**
- * 首页顶部聚光灯暖光播客 Hero（#DF7236 暖灯琥珀主题 + 关键词高亮）
+ * 首页顶部聚光灯播客 Hero（1:1 参考 Velixa Podcast 聚光灯晕 + #C87A38 主题色 + 手机端自适应折行）
  */
 const Hero = props => {
   const { siteInfo, posts = [], latestPosts = [] } = props
 
-  const primaryColor = siteConfig('HEXO_COLOR_PRIMARY', '#DF7236') || '#DF7236'
+  const primaryColor = siteConfig('HEXO_COLOR_PRIMARY', '#C87A38') || '#C87A38'
   const GREETING_WORDS = siteConfig('GREETING_WORDS') || ''
 
   const slogans = GREETING_WORDS.trim()
@@ -156,50 +156,55 @@ const Hero = props => {
     <header
       id='header'
       style={{ zIndex: 10, '--theme-primary': primaryColor }}
-      className='w-full min-h-[360px] pt-24 pb-8 lg:py-0 lg:h-[430px] relative flex items-center justify-center'
+      className='w-full pt-28 pb-12 sm:pt-32 sm:pb-14 lg:pt-36 lg:pb-16 relative flex items-center justify-center overflow-hidden'
     >
-      {/* 背景层：深暖夜底色 + #DF7236 暖灯琥珀聚光晕 + 底部平滑羽化融底 */}
-      <div
-        className='absolute inset-x-0 top-0 -bottom-44 pointer-events-none select-none overflow-hidden'
-        style={{
-          WebkitMaskImage:
-            'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 48%, rgba(0,0,0,0.84) 66%, rgba(0,0,0,0.46) 80%, rgba(0,0,0,0.14) 91%, rgba(0,0,0,0) 100%)',
-          maskImage:
-            'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 48%, rgba(0,0,0,0.84) 66%, rgba(0,0,0,0.46) 80%, rgba(0,0,0,0.14) 91%, rgba(0,0,0,0) 100%)'
-        }}
-      >
-        {/* 1. 深暖咖啡夜色底 */}
+      {/* 背景层：1:1 复刻 Velixa Podcast 聚光灯晕（自身衰减至 0%，杜绝半透明黑底叠加白底产生的泛白脏雾） */}
+      <div className='absolute inset-0 pointer-events-none select-none overflow-hidden'>
+        {/* 浅色模式底层：柔和暖咖夜幕渐变，底部在容器内自然透明融入暖米白背景 */}
         <div
-          className='absolute inset-0'
+          className='dark:hidden absolute inset-0'
           style={{
-            background: 'linear-gradient(180deg, #171210 0%, #120E0C 100%)'
+            background:
+              'linear-gradient(180deg, rgba(28, 22, 18, 0.92) 0%, rgba(28, 22, 18, 0.78) 55%, rgba(28, 22, 18, 0.25) 84%, rgba(28, 22, 18, 0) 100%)'
           }}
         />
 
-        {/* 2. 极淡酒馆插画肌理 */}
+        {/* 深色模式底层：1:1 还原参考站的纯黑暖调基底 */}
+        <div
+          className='hidden dark:block absolute inset-0'
+          style={{
+            background: 'linear-gradient(180deg, #0D0B0A 0%, #000000 100%)'
+          }}
+        />
+
+        {/* 极淡酒馆插画肌理 */}
         {siteInfo?.pageCover && (
           <LazyImage
             priority
             src={siteInfo.pageCover}
             alt={siteInfo?.title}
             className='w-full h-full object-cover object-center absolute inset-0 opacity-10 blur-2xl scale-110'
+            style={{
+              WebkitMaskImage: 'linear-gradient(to bottom, #000 0%, #000 50%, transparent 100%)',
+              maskImage: 'linear-gradient(to bottom, #000 0%, #000 50%, transparent 100%)'
+            }}
           />
         )}
 
-        {/* 3. 统一 #DF7236 暖灯琥珀聚光灯晕 */}
+        {/* 核心灵魂：顶部中央 #C87A38 焦糖暖琥珀聚光灯晕（参考站同款径向光斑） */}
         <div
           className='absolute inset-0'
           style={{
             background:
-              'radial-gradient(ellipse 68% 62% at 50% 0%, rgba(223, 114, 54, 0.36) 0%, rgba(223, 114, 54, 0.14) 48%, rgba(18, 14, 12, 0) 85%)'
+              'radial-gradient(ellipse 65% 70% at 50% 0%, rgba(200, 122, 56, 0.34) 0%, rgba(200, 122, 56, 0.12) 48%, rgba(200, 122, 56, 0) 82%)'
           }}
         />
       </div>
 
-      {/* 前景内容区 */}
+      {/* 前景内容区：手机端自适应换行，完整展示长句 */}
       <div className='relative z-10 text-white flex flex-col items-center justify-center w-full max-w-2xl mx-auto px-5 text-center'>
-        {/* 大字标题：缓慢淡入淡出轮播 + 核心关键词琥珀橙高亮 */}
-        <h1 className='min-h-[44px] sm:min-h-[52px] md:min-h-[60px] flex items-center justify-center font-bold text-2xl sm:text-4xl md:text-[42px] tracking-wider text-white mb-4 leading-tight'>
+        {/* 大字标题：手机端自适应字号与多行高度，完整显示两句轮播 */}
+        <h1 className='min-h-[68px] sm:min-h-[56px] md:min-h-[64px] flex items-center justify-center font-bold text-[22px] sm:text-3xl md:text-[42px] tracking-wide sm:tracking-wider text-white mb-4 leading-snug break-words'>
           <span
             className={`inline-block transition-all duration-700 ease-in-out ${
               visible ? 'opacity-100 translate-y-0 blur-0' : 'opacity-0 translate-y-1.5 blur-[2px]'
@@ -210,7 +215,7 @@ const Hero = props => {
         </h1>
 
         {/* 精简版电台简介 */}
-        <p className='font-light tracking-wide text-white/75 text-sm sm:text-base leading-relaxed max-w-xl mb-7'>
+        <p className='font-light tracking-wide text-white/80 dark:text-white/75 text-sm sm:text-base leading-relaxed max-w-xl mb-7'>
           这里是「念安酒馆」，一档深夜陪伴播客。有时郑重展开一封来信，有时一个人碎碎念；有人来了，就坐下慢慢聊。
         </p>
 
@@ -222,8 +227,8 @@ const Hero = props => {
               onClick={latestAudioUrl ? handlePlayLatest : undefined}
               className='inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium text-white transition-all duration-300 hover:-translate-y-0.5'
               style={{
-                background: 'linear-gradient(135deg, #E87D42 0%, #DF7236 52%, #C45B24 100%)',
-                boxShadow: '0 10px 24px -6px rgba(223, 114, 54, 0.48)'
+                background: 'linear-gradient(135deg, #D48542 0%, #C87A38 55%, #A86228 100%)',
+                boxShadow: '0 10px 24px -6px rgba(200, 122, 56, 0.45)'
               }}
             >
               <svg viewBox='0 0 24 24' width='15' height='15' fill='currentColor'>
@@ -237,7 +242,7 @@ const Hero = props => {
             href='/episodes'
             className='inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-medium text-white/95 backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/15'
             style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.07)',
+              backgroundColor: 'rgba(255, 255, 255, 0.08)',
               border: '1px solid rgba(255, 255, 255, 0.28)'
             }}
           >
