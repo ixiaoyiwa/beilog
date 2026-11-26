@@ -86,9 +86,8 @@ const formatDuration = (seconds) => {
 
 const Waveform = ({ isPlaying, progress }) => {
   const bars = [
-    35, 62, 48, 85, 70, 40, 92, 58, 76, 44,
-    88, 65, 50, 95, 72, 38, 82, 60, 45, 90,
-    68, 52, 78, 42, 86, 64, 48, 74, 55, 36
+    28, 45, 62, 38, 80, 95, 55, 40, 72, 88, 60, 35, 50, 90, 76, 42, 65, 84, 52, 30,
+    58, 78, 92, 48, 36, 68, 85, 60, 44, 70, 50, 32
   ]
 
   return (
@@ -196,6 +195,16 @@ export default function PostHero({ post, siteInfo }) {
     )
   }
 
+  // 直接通过内联事件切换主题色悬停，彻底避免 Tailwind 优先级覆盖
+  const handleMetaEnter = (e) => {
+    e.currentTarget.style.color = 'var(--theme-color, #C87A38)'
+    e.currentTarget.style.textShadow = '0 1px 10px rgba(0, 0, 0, 0.35)'
+  }
+  const handleMetaLeave = (e) => {
+    e.currentTarget.style.color = ''
+    e.currentTarget.style.textShadow = ''
+  }
+
   const isFilled = progress >= 100
 
   return (
@@ -253,144 +262,135 @@ export default function PostHero({ post, siteInfo }) {
         />
       )}
 
-      {/* 100% 还原原始对齐结构，与下方白色文章卡片左右边缘严格齐平 */}
+      {/* 横跨整排双栏总宽（max-w-[1232px]），封面图严丝合缝对齐右侧边栏右边缘 */}
       <header
         id='article-header-cover'
         className='relative z-10 w-full px-4 md:px-8 lg:px-24'>
-        <div className='w-full mx-auto lg:flex lg:space-x-4 justify-center'>
-          <div className='w-full max-w-4xl lg:px-7'>
-            <div className='w-full max-w-[92%] mx-auto md:max-w-none md:mx-0 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 lg:gap-10'>
-              
-              {/* 右侧封面图（移动端在上方） */}
-              {hasGradientTheme && headerImage && (
-                <div className='order-1 lg:order-2 flex-shrink-0 flex justify-center lg:justify-end'>
-                  <div className='w-44 h-44 sm:w-52 sm:h-52 lg:w-56 lg:h-56 rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.45)] ring-1 ring-white/20 bg-white/5'>
-                    <LazyImage
-                      priority={true}
-                      src={headerImage}
-                      alt={post.title}
-                      className='w-full h-full object-cover object-center'
-                    />
-                  </div>
+        <div className='w-full max-w-[1232px] mx-auto'>
+          <div className='w-full max-w-[92%] mx-auto md:max-w-none md:mx-0 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 lg:gap-10'>
+            {/* 右侧封面图（严格对齐右侧边栏右边缘） */}
+            {hasGradientTheme && headerImage && (
+              <div className='order-1 lg:order-2 flex-shrink-0 flex justify-center lg:justify-end'>
+                <div className='w-44 h-44 sm:w-52 sm:h-52 lg:w-56 lg:h-56 rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.45)] ring-1 ring-white/20 bg-white/5'>
+                  <LazyImage
+                    priority={true}
+                    src={headerImage}
+                    alt={post.title}
+                    className='w-full h-full object-cover object-center'
+                  />
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* 左侧标题、集数元数据与播放器（移动端在下方） */}
-              <div className='order-2 lg:order-1 flex-1 min-w-0 text-left'>
-                <div className='leading-snug font-bold text-2xl sm:text-3xl md:text-4xl md:leading-snug shadow-text-md text-white text-left'>
-                  {siteConfig('POST_TITLE_ICON') && post.pageIcon && (
+            {/* 左侧标题、集数元数据与播放器（严格对齐下方正文卡片左边缘） */}
+            <div className='order-2 lg:order-1 flex-1 min-w-0 text-left lg:pl-7'>
+              <div className='leading-snug font-bold text-2xl sm:text-3xl md:text-4xl md:leading-snug shadow-text-md text-white text-left'>
+                {siteConfig('POST_TITLE_ICON') &&
+                  post.pageIcon && (
                     <NotionIcon
                       icon={post.pageIcon}
                       className='text-3xl mr-1 inline-block'
                     />
                   )}
-                  {post.title}
-                </div>
 
-                {/* 元数据行：悬停栏目与人物标签时自动变为全局主题色 */}
-                <div className='mt-3 flex flex-wrap items-center justify-start gap-x-2 gap-y-1 text-xs sm:text-sm text-white/80 font-light tracking-wide'>
-                  {episodeNumber && (
-                    <>
-                      <span className='font-medium text-white'>E{episodeNumber}</span>
-                      <span className='opacity-40'>/</span>
-                    </>
-                  )}
-                  {post?.category && (
-                    <>
-                      <SmartLink
-                        href={getCategoryUrl(post.category, NOTION_CONFIG)}
-                        passHref
-                        className='hero-meta-link transition-colors duration-200'>
-                        {post.category}
-                      </SmartLink>
-                      <span className='opacity-40'>/</span>
-                    </>
-                  )}
-                  {post?.publishDay && (
-                    <>
-                      <span>{post.publishDay}</span>
-                      {post?.tagItems?.length > 0 && <span className='opacity-40'>/</span>}
-                    </>
-                  )}
-                  {post?.tagItems?.map((tag, index) => (
-                    <span key={tag.name} className='inline-flex items-center'>
-                      <SmartLink
-                        href={`/tag/${encodeURIComponent(tag.name)}`}
-                        passHref
-                        className='hero-meta-link transition-colors duration-200'>
-                        {tag.name}
-                      </SmartLink>
-                      {index < post.tagItems.length - 1 && (
-                        <span className='mx-1.5 opacity-40'>·</span>
-                      )}
-                    </span>
-                  ))}
-                </div>
-
-                {/* 播放器胶囊 */}
-                {audioUrl && (
-                  <div className='mt-6'>
-                    <button
-                      type='button'
-                      onClick={handlePlayClick}
-                      className='relative inline-flex items-center gap-3 px-4 py-2 rounded-full text-white transition-all duration-300 shadow-lg cursor-pointer overflow-hidden'
-                      style={{
-                        backgroundColor: 'rgba(20, 18, 16, 0.28)',
-                        border: '1px solid rgba(255, 255, 255, 0.18)',
-                        backdropFilter: 'blur(12px)',
-                        WebkitBackdropFilter: 'blur(12px)',
-                        boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 8px 20px -4px rgba(0, 0, 0, 0.25)',
-                        transform: 'translateZ(0)'
-                      }}>
-                      {progress > 0 && (
-                        <div
-                          className='absolute inset-0 pointer-events-none'
-                          style={{
-                            background: `linear-gradient(90deg, color-mix(in srgb, var(--theme-primary) 88%, #ffffff) 0%, var(--theme-primary) 65%, color-mix(in srgb, var(--theme-primary) 75%, transparent) 100%)`,
-                            WebkitMaskImage: isFilled ? 'none' : `linear-gradient(to right, #000 calc(${progress}% - 36px), transparent ${progress}%)`,
-                            maskImage: isFilled ? 'none' : `linear-gradient(to right, #000 calc(${progress}% - 36px), transparent ${progress}%)`,
-                            opacity: isFilled ? 0.92 : isPlaying ? 0.85 : 0.55,
-                            transition: 'opacity 0.3s ease'
-                          }}
-                        />
-                      )}
-                      <div className='relative z-10 flex-shrink-0 flex items-center justify-center w-6 h-6'>
-                        {isLoading ? (
-                          <LoadingIcon size={16} />
-                        ) : isPlaying ? (
-                          <PauseIcon size={16} />
-                        ) : (
-                          <PlayIcon size={16} />
-                        )}
-                      </div>
-                      <div className='relative z-10'>
-                        <Waveform isPlaying={isPlaying} progress={progress} />
-                      </div>
-                      <span className='relative z-10 text-xs font-medium tabular-nums pr-1 opacity-90'>
-                        {formatDuration(remaining)}
-                      </span>
-                    </button>
-                  </div>
-                )}
+                {post.title}
               </div>
 
+              {/* 元数据行：悬停栏目与人物标签时 100% 变为全局主题色 */}
+              <div className='mt-3 flex flex-wrap items-center justify-start gap-x-2 gap-y-1 text-xs sm:text-sm text-white/80 font-light tracking-wide'>
+                {episodeNumber && (
+                  <>
+                    <span className='font-medium text-white'>E{episodeNumber}</span>
+                    <span className='opacity-40'>/</span>
+                  </>
+                )}
+                {post?.category && (
+                  <>
+                    <SmartLink
+                      href={getCategoryUrl(post.category, NOTION_CONFIG)}
+                      passHref
+                      onMouseEnter={handleMetaEnter}
+                      onMouseLeave={handleMetaLeave}>
+                      <span className='cursor-pointer transition-colors duration-200'>
+                        {post.category}
+                      </span>
+                    </SmartLink>
+                    <span className='opacity-40'>/</span>
+                  </>
+                )}
+                {post?.publishDay && (
+                  <>
+                    <span>{post.publishDay}</span>
+                    {post?.tagItems?.length > 0 && <span className='opacity-40'>/</span>}
+                  </>
+                )}
+                {post?.tagItems?.map((tag, index) => (
+                  <span key={tag.name} className='inline-flex items-center'>
+                    <SmartLink
+                      href={`/tag/${encodeURIComponent(tag.name)}`}
+                      passHref
+                      onMouseEnter={handleMetaEnter}
+                      onMouseLeave={handleMetaLeave}>
+                      <span className='cursor-pointer transition-colors duration-200'>
+                        {tag.name}
+                      </span>
+                    </SmartLink>
+                    {index < post.tagItems.length - 1 && (
+                      <span className='mx-1.5 opacity-40'>·</span>
+                    )}
+                  </span>
+                ))}
+              </div>
+
+              {/* 播放器胶囊 */}
+              {audioUrl && (
+                <div className='mt-6'>
+                  <button
+                    type='button'
+                    onClick={handlePlayClick}
+                    className='relative inline-flex items-center gap-3 px-4 py-2 rounded-full text-white transition-all duration-300 shadow-lg cursor-pointer overflow-hidden'
+                    style={{
+                      backgroundColor: 'rgba(20, 18, 16, 0.28)',
+                      border: '1px solid rgba(255, 255, 255, 0.18)',
+                      backdropFilter: 'blur(12px)',
+                      WebkitBackdropFilter: 'blur(12px)',
+                      boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 8px 20px -4px rgba(0, 0, 0, 0.25)',
+                      transform: 'translateZ(0)'
+                    }}>
+                    {progress > 0 && (
+                      <div
+                        className='absolute inset-0 pointer-events-none'
+                        style={{
+                          background: `linear-gradient(90deg, color-mix(in srgb, var(--theme-color, #C87A38) 88%, #ffffff) 0%, var(--theme-color, #C87A38) 65%, color-mix(in srgb, var(--theme-color, #C87A38) 75%, transparent) 100%)`,
+                          WebkitMaskImage: isFilled ? 'none' : `linear-gradient(to right, #000 calc(${progress}% - 36px), transparent ${progress}%)`,
+                          maskImage: isFilled ? 'none' : `linear-gradient(to right, #000 calc(${progress}% - 36px), transparent ${progress}%)`,
+                          opacity: isFilled ? 0.92 : isPlaying ? 0.85 : 0.55,
+                          transition: 'opacity 0.3s ease'
+                        }}
+                      />
+                    )}
+                    <div className='relative z-10 flex-shrink-0 flex items-center justify-center w-6 h-6'>
+                      {isLoading ? (
+                        <LoadingIcon size={16} />
+                      ) : isPlaying ? (
+                        <PauseIcon size={16} />
+                      ) : (
+                        <PlayIcon size={16} />
+                      )}
+                    </div>
+                    <div className='relative z-10'>
+                      <Waveform isPlaying={isPlaying} progress={progress} />
+                    </div>
+                    <span className='relative z-10 text-xs font-medium tabular-nums pr-1 opacity-90'>
+                      {formatDuration(remaining)}
+                    </span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
-
-          <div className='hidden lg:block lg:w-80 flex-shrink-0'></div>
         </div>
       </header>
-
-      <style jsx>{`
-        .hero-meta-link {
-          color: inherit;
-          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-        }
-        .hero-meta-link:hover {
-          color: var(--theme-primary, #C87A38);
-          text-shadow: 0 1px 10px rgba(0, 0, 0, 0.35);
-        }
-      `}</style>
     </div>
   )
 }
