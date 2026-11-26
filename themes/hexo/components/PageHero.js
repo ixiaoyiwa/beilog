@@ -3,8 +3,8 @@ import NotionIcon from '@/components/NotionIcon'
 import { siteConfig } from '@/lib/config'
 
 /**
- * 普通页面 / 节目页 Hero
- * 保持原有紧凑高度与酒馆插画背景，底部轻微向下延伸并做平缓透明羽化，消除硬分割线
+ * 普通页面 / 节目页 / 栏目页 Hero
+ * 收紧底部多余留白（约收一行高度），保持紧凑比例与底部柔和微羽化
  */
 export default function PageHero({ post, siteInfo }) {
   if (!post) {
@@ -18,7 +18,7 @@ export default function PageHero({ post, siteInfo }) {
   return (
     <div
       id='header'
-      className='w-full h-48 md:h-[40vh] relative md:flex-shrink-0 z-10 mb-8'>
+      className='w-full h-44 md:h-[30vh] md:min-h-[260px] relative md:flex-shrink-0 z-10 mb-4'>
       {/* 背景层：轻微向下延伸 96px 铺到正文卡片背后，内联多段透明羽化（零白边、零延迟） */}
       <div
         className='absolute inset-x-0 top-0 -bottom-24 pointer-events-none select-none overflow-hidden'
@@ -36,10 +36,10 @@ export default function PageHero({ post, siteInfo }) {
         <div className='bg-black bg-opacity-65 absolute inset-0' />
       </div>
 
-      {/* 前景内容层：保持原有紧凑高度与左对齐排版一像素不变 */}
+      {/* 前景内容层：保持左对齐排版，微调顶部内边距使标题在导航栏下方视觉居中 */}
       <header
         id='article-header-cover'
-        className='relative z-10 w-full h-full flex items-center'>
+        className='relative z-10 w-full h-full flex items-center pt-6 md:pt-8'>
         <div className='w-full px-4 md:px-8 lg:px-24'>
           <div className='w-full mx-auto lg:flex lg:space-x-4 justify-center'>
             <div className='w-full max-w-4xl md:pl-5'>
