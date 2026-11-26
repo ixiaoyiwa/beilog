@@ -86,9 +86,9 @@ const formatDuration = (seconds) => {
 
 const Waveform = ({ isPlaying, progress }) => {
   const bars = [
-    18, 30, 52, 74, 42, 64, 92, 56, 36, 80,
-    98, 48, 70, 86, 40, 62, 90, 54, 34, 76,
-    60, 44, 82, 50, 32, 68, 46, 26, 20
+    35, 62, 48, 85, 70, 40, 92, 58, 76, 44,
+    88, 65, 50, 95, 72, 38, 82, 60, 45, 90,
+    68, 52, 78, 42, 86, 64, 48, 74, 55, 36
   ]
 
   return (
@@ -102,7 +102,7 @@ const Waveform = ({ isPlaying, progress }) => {
             className='w-[2px] rounded-full transition-colors duration-150'
             style={{
               height: `${height}%`,
-              backgroundColor: isPassed ? '#ffffff' : 'rgba(255, 255, 255, 0.45)',
+              backgroundColor: isPassed ? '#ffffff' : 'rgba(255, 255, 255, 0.42)',
               transformOrigin: 'center',
               animation: isPlaying
                 ? `wave-pulse ${0.5 + (i % 5) * 0.12}s ease-in-out infinite alternate`
@@ -216,14 +216,12 @@ export default function PostHero({ post, siteInfo }) {
             maskImage:
               'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.92) 15%, rgba(0,0,0,0.74) 36%, rgba(0,0,0,0.5) 56%, rgba(0,0,0,0.26) 74%, rgba(0,0,0,0.08) 89%, rgba(0,0,0,0) 100%)'
           }}>
-          {/* 主渐变底色 */}
           <div
             className='absolute inset-0 opacity-95 dark:opacity-100'
             style={{
               background: `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`
             }}
           />
-          {/* 封面弥散光晕 */}
           {headerImage && (
             <LazyImage
               priority={true}
@@ -232,7 +230,6 @@ export default function PostHero({ post, siteInfo }) {
               className='w-full h-full object-cover object-center absolute inset-0 opacity-20 dark:opacity-25 blur-3xl scale-125 mix-blend-soft-light'
             />
           )}
-          {/* 白天清透保护层 + 夜间氛围压暗层 */}
           <div className='absolute inset-0 bg-black/[0.04] dark:bg-black/30' />
         </div>
       ) : (
@@ -256,12 +253,14 @@ export default function PostHero({ post, siteInfo }) {
         />
       )}
 
+      {/* 100% 还原原始对齐结构，与下方白色文章卡片左右边缘严格齐平 */}
       <header
         id='article-header-cover'
         className='relative z-10 w-full px-4 md:px-8 lg:px-24'>
         <div className='w-full mx-auto lg:flex lg:space-x-4 justify-center'>
-          <div className='w-full max-w-4xl md:pl-5'>
-            <div className='w-full max-w-[92%] mx-auto md:max-w-none md:mx-0 md:pl-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 lg:gap-8'>
+          <div className='w-full max-w-4xl lg:px-7'>
+            <div className='w-full max-w-[92%] mx-auto md:max-w-none md:mx-0 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 lg:gap-10'>
+              
               {/* 右侧封面图（移动端在上方） */}
               {hasGradientTheme && headerImage && (
                 <div className='order-1 lg:order-2 flex-shrink-0 flex justify-center lg:justify-end'>
@@ -279,18 +278,16 @@ export default function PostHero({ post, siteInfo }) {
               {/* 左侧标题、集数元数据与播放器（移动端在下方） */}
               <div className='order-2 lg:order-1 flex-1 min-w-0 text-left'>
                 <div className='leading-snug font-bold text-2xl sm:text-3xl md:text-4xl md:leading-snug shadow-text-md text-white text-left'>
-                  {siteConfig('POST_TITLE_ICON') &&
-                    post.pageIcon && (
-                      <NotionIcon
-                        icon={post.pageIcon}
-                        className='text-3xl mr-1 inline-block'
-                      />
-                    )}
-
+                  {siteConfig('POST_TITLE_ICON') && post.pageIcon && (
+                    <NotionIcon
+                      icon={post.pageIcon}
+                      className='text-3xl mr-1 inline-block'
+                    />
+                  )}
                   {post.title}
                 </div>
 
-                {/* 元数据行 */}
+                {/* 元数据行：悬停栏目与人物标签时自动变为全局主题色 */}
                 <div className='mt-3 flex flex-wrap items-center justify-start gap-x-2 gap-y-1 text-xs sm:text-sm text-white/80 font-light tracking-wide'>
                   {episodeNumber && (
                     <>
@@ -303,7 +300,7 @@ export default function PostHero({ post, siteInfo }) {
                       <SmartLink
                         href={getCategoryUrl(post.category, NOTION_CONFIG)}
                         passHref
-                        className='hover:text-white transition-colors'>
+                        className='hero-meta-link transition-colors duration-200'>
                         {post.category}
                       </SmartLink>
                       <span className='opacity-40'>/</span>
@@ -320,7 +317,7 @@ export default function PostHero({ post, siteInfo }) {
                       <SmartLink
                         href={`/tag/${encodeURIComponent(tag.name)}`}
                         passHref
-                        className='hover:text-white transition-colors'>
+                        className='hero-meta-link transition-colors duration-200'>
                         {tag.name}
                       </SmartLink>
                       {index < post.tagItems.length - 1 && (
@@ -338,29 +335,25 @@ export default function PostHero({ post, siteInfo }) {
                       onClick={handlePlayClick}
                       className='relative inline-flex items-center gap-3 px-4 py-2 rounded-full text-white transition-all duration-300 shadow-lg cursor-pointer overflow-hidden'
                       style={{
-                        backgroundColor: 'rgba(255, 255, 255, 0.14)',
+                        backgroundColor: 'rgba(20, 18, 16, 0.28)',
+                        border: '1px solid rgba(255, 255, 255, 0.18)',
                         backdropFilter: 'blur(12px)',
                         WebkitBackdropFilter: 'blur(12px)',
+                        boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 8px 20px -4px rgba(0, 0, 0, 0.25)',
                         transform: 'translateZ(0)'
                       }}>
                       {progress > 0 && (
                         <div
                           className='absolute inset-0 pointer-events-none'
                           style={{
-                            background:
-                              'linear-gradient(90deg, rgba(255, 255, 255, 0.5) 0%, var(--theme-primary) 100%)',
-                            WebkitMaskImage: isFilled
-                              ? 'none'
-                              : `linear-gradient(to right, #000 calc(${progress}% - 24px), transparent ${progress}%)`,
-                            maskImage: isFilled
-                              ? 'none'
-                              : `linear-gradient(to right, #000 calc(${progress}% - 24px), transparent ${progress}%)`,
-                            opacity: isFilled ? 0.95 : isPlaying ? 0.85 : 0.45,
+                            background: `linear-gradient(90deg, color-mix(in srgb, var(--theme-primary) 88%, #ffffff) 0%, var(--theme-primary) 65%, color-mix(in srgb, var(--theme-primary) 75%, transparent) 100%)`,
+                            WebkitMaskImage: isFilled ? 'none' : `linear-gradient(to right, #000 calc(${progress}% - 36px), transparent ${progress}%)`,
+                            maskImage: isFilled ? 'none' : `linear-gradient(to right, #000 calc(${progress}% - 36px), transparent ${progress}%)`,
+                            opacity: isFilled ? 0.92 : isPlaying ? 0.85 : 0.55,
                             transition: 'opacity 0.3s ease'
                           }}
                         />
                       )}
-
                       <div className='relative z-10 flex-shrink-0 flex items-center justify-center w-6 h-6'>
                         {isLoading ? (
                           <LoadingIcon size={16} />
@@ -370,11 +363,9 @@ export default function PostHero({ post, siteInfo }) {
                           <PlayIcon size={16} />
                         )}
                       </div>
-
                       <div className='relative z-10'>
                         <Waveform isPlaying={isPlaying} progress={progress} />
                       </div>
-
                       <span className='relative z-10 text-xs font-medium tabular-nums pr-1 opacity-90'>
                         {formatDuration(remaining)}
                       </span>
@@ -382,12 +373,24 @@ export default function PostHero({ post, siteInfo }) {
                   </div>
                 )}
               </div>
+
             </div>
           </div>
 
           <div className='hidden lg:block lg:w-80 flex-shrink-0'></div>
         </div>
       </header>
+
+      <style jsx>{`
+        .hero-meta-link {
+          color: inherit;
+          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+        }
+        .hero-meta-link:hover {
+          color: var(--theme-primary, #C87A38);
+          text-shadow: 0 1px 10px rgba(0, 0, 0, 0.35);
+        }
+      `}</style>
     </div>
   )
 }
