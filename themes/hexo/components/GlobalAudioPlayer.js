@@ -474,11 +474,12 @@ export default function GlobalAudioPlayer() {
                     style={{ transform: 'translateZ(0)' }}
                     className='flex-1 h-[5px] bg-gray-200/80 dark:bg-gray-700/80 rounded-full overflow-hidden cursor-pointer relative min-w-[50px]'>
                     <div
-                      className='h-full rounded-full transition-[width] duration-150 ease-linear'
+                      className='h-full rounded-full'
                       style={{
                         width: `${progress}%`,
-                        backgroundColor: themeColor,
-                        willChange: 'width'
+                        backgroundColor: 'var(--theme-color, #C87A38)',
+                        backgroundImage:
+                          'linear-gradient(90deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.12) 55%, rgba(0, 0, 0, 0.06) 100%)'
                       }}
                     />
                   </div>
