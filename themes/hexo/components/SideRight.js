@@ -61,7 +61,7 @@ export default function SideRight(props) {
   return (
     <div
       id='sideRight'
-      className='lg:w-80 lg:min-w-[320px] lg:max-w-[320px] lg:flex-shrink-0 min-w-0 px-2 md:px-0 mt-8 lg:mt-0 pt-0 lg:pt-0'>
+      className='lg:w-72 lg:min-w-[288px] lg:max-w-[288px] lg:flex-shrink-0 min-w-0 px-2 md:px-0 mt-8 lg:mt-0 pt-0 lg:pt-0'>
       <div className='sticky top-24 space-y-4 w-full min-w-0'>
         {post && post.toc && post.toc.length > 1 && (
           <Card>
