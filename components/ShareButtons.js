@@ -9,7 +9,7 @@ import SharePosterModal from '@/components/SharePosterModal'
 
 const QrCode = dynamic(() => import('@/components/QrCode'), { ssr: false })
 const BASE_BUTTON_CLASS =
-  'cursor-pointer rounded-full mx-1 w-8 h-8 flex items-center justify-center text-white transition-colors duration-200'
+  'cursor-pointer rounded-full mx-1 w-8 h-8 flex items-center justify-center text-white bg-gray-400 dark:bg-gray-600 transition-colors duration-200'
 const ICON_CLASS = 'text-sm leading-none'
 const SHARE_ICON_CLASS = {
   facebook: 'fab fa-facebook-f',
@@ -126,28 +126,28 @@ const ShareButtons = ({ post }) => {
     const encodedHashTags = encodeURIComponent(hashTags)
     const appId = siteConfig('FACEBOOK_APP_ID') || ''
     switch (service) {
-      case 'facebook': return `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&hashtag=${encodedHashTags}`
-      case 'messenger': return `https://www.facebook.com/dialog/send?app_id=${appId}&link=${encodedUrl}&redirect_uri=${encodedUrl}`
-      case 'line': return `https://social-plugins.line.me/lineit/share?url=${encodedUrl}`
-      case 'reddit': return `https://www.reddit.com/submit?url=${encodedUrl}&title=${encodedTitle}`
+      case 'facebook': return `https://facebook.com{encodedUrl}&hashtag=${encodedHashTags}`
+      case 'messenger': return `https://facebook.com{appId}&link=${encodedUrl}&redirect_uri=${encodedUrl}`
+      case 'line': return `https://line.me{encodedUrl}`
+      case 'reddit': return `https://reddit.com{encodedUrl}&title=${encodedTitle}`
       case 'email': return `mailto:?subject=${encodedTitle}&body=${encodedBody}`
-      case 'twitter': return `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}&hashtags=${encodeURIComponent(tags.join(','))}`
-      case 'telegram': return `https://t.me/share/url?url=${encodedUrl}&text=${encodedTitle}`
-      case 'whatsapp': return `https://api.whatsapp.com/send?text=${encodeURIComponent(`${titleWithSiteInfo} ${shareUrl}`)}`
-      case 'linkedin': return `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`
-      case 'pinterest': return `https://pinterest.com/pin/create/button/?url=${encodedUrl}&media=${encodedImage}&description=${encodedTitle}`
-      case 'vkshare': return `https://vk.com/share.php?url=${encodedUrl}&image=${encodedImage}`
-      case 'okshare': return `https://connect.ok.ru/offer?url=${encodedUrl}&title=${encodedTitle}`
-      case 'tumblr': return `https://www.tumblr.com/widgets/share/tool?canonicalUrl=${encodedUrl}&title=${encodedTitle}&tags=${encodeURIComponent(tags.join(','))}`
-      case 'livejournal': return `https://www.livejournal.com/update.bml?subject=${encodedTitle}&event=${encodedBody}`
-      case 'mailru': return `https://connect.mail.ru/share?share_url=${encodedUrl}&title=${encodedTitle}`
+      case 'twitter': return `https://twitter.com{encodedUrl}&text=${encodedTitle}&hashtags=${encodeURIComponent(tags.join(','))}`
+      case 'telegram': return `https://t.me{encodedUrl}&text=${encodedTitle}`
+      case 'whatsapp': return `https://whatsapp.com{encodeURIComponent(`${titleWithSiteInfo} ${shareUrl}`)}`
+      case 'linkedin': return `https://linkedin.com{encodedUrl}`
+      case 'pinterest': return `https://pinterest.com{encodedUrl}&media=${encodedImage}&description=${encodedTitle}`
+      case 'vkshare': return `https://vk.com{encodedUrl}&image=${encodedImage}`
+      case 'okshare': return `https://ok.ru{encodedUrl}&title=${encodedTitle}`
+      case 'tumblr': return `https://tumblr.com{encodedUrl}&title=${encodedTitle}&tags=${encodeURIComponent(tags.join(','))}`
+      case 'livejournal': return `https://livejournal.com{encodedTitle}&event=${encodedBody}`
+      case 'mailru': return `https://mail.ru{encodedUrl}&title=${encodedTitle}`
       case 'viber': return `viber://forward?text=${encodeURIComponent(`${titleWithSiteInfo} ${shareUrl}`)}`
-      case 'workplace': return `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedTitle}`
-      case 'weibo': return `https://service.weibo.com/share/share.php?url=${encodedUrl}&title=${encodedTitle}&pic=${encodedImage}`
-      case 'pocket': return `https://getpocket.com/edit?url=${encodedUrl}&title=${encodedTitle}`
-      case 'instapaper': return `http://www.instapaper.com/edit?url=${encodedUrl}&title=${encodedTitle}`
-      case 'hatena': return `https://b.hatena.ne.jp/add?mode=confirm&url=${encodedUrl}&title=${encodedTitle}`
-      case 'threads': return `https://www.threads.net/intent/post?text=${encodeURIComponent(`${titleWithSiteInfo} ${shareUrl}`)}`
+      case 'workplace': return `https://facebook.com{encodedUrl}&quote=${encodedTitle}`
+      case 'weibo': return `https://weibo.com{encodedUrl}&title=${encodedTitle}&pic=${encodedImage}`
+      case 'pocket': return `https://getpocket.com{encodedUrl}&title=${encodedTitle}`
+      case 'instapaper': return `http://instapaper.com{encodedUrl}&title=${encodedTitle}`
+      case 'hatena': return `https://hatena.ne.jp{encodedUrl}&title=${encodedTitle}`
+      case 'threads': return `https://threads.net{encodeURIComponent(`${titleWithSiteInfo} ${shareUrl}`)}`
       default: return null
     }
   }
@@ -164,9 +164,8 @@ const ShareButtons = ({ post }) => {
         key={service} 
         onClick={() => openShareWindow(shareLink)} 
         className={BASE_BUTTON_CLASS}
-        style={{ backgroundColor: primaryColor }}
         onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = hoverColor }}
-        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = primaryColor }}
+        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '' }}
         title={service}>
         <i className={`${iconClass} ${ICON_CLASS}`} />
       </button>
@@ -186,11 +185,10 @@ const ShareButtons = ({ post }) => {
               <button 
                 aria-label={singleService} 
                 key={singleService} 
-                onClick={() => openShareWindow(`http://connect.qq.com/widget/shareqq/index.html?url=${shareUrl}&sharesource=qzone&title=${title}&desc=${body}`)} 
+                onClick={() => openShareWindow(`http://qq.com{shareUrl}&sharesource=qzone&title=${title}&desc=${body}`)} 
                 className={BASE_BUTTON_CLASS}
-                style={{ backgroundColor: primaryColor }}
                 onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = SHARE_HOVER_COLORS['qq'] }}
-                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = primaryColor }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '' }}
                 title={singleService}>
                 <i className={`fab fa-qq ${ICON_CLASS}`} />
               </button>
@@ -205,11 +203,10 @@ const ShareButtons = ({ post }) => {
                   }}
                   onMouseLeave={e => {
                     closePopover()
-                    e.currentTarget.style.backgroundColor = primaryColor
+                    e.currentTarget.style.backgroundColor = ''
                   }}
                   aria-label={singleService}
                   className={BASE_BUTTON_CLASS}
-                  style={{ backgroundColor: primaryColor }}
                   title={singleService}
                 >
                   <i className={`fab fa-weixin ${ICON_CLASS}`} />
@@ -238,14 +235,12 @@ const ShareButtons = ({ post }) => {
                           'bg-white shadow-xl transition-all duration-200 text-center rounded-md w-32'
                         }
                       >
-                        {/* 按实际显示尺寸生成二维码，不用 CSS 拉伸 canvas 或 img */}
-                        <div className='p-2 mt-1 flex items-center justify-center'>
-                          {qrCodeShow && <QrCode value={shareUrl} size={112} level='M' />}
+                        <div className='p-2'>
+                          {qrCodeShow && <QrCode value={shareUrl} />}
+                          <div className='text-xs text-gray-600 mt-2'>
+                            {locale.COMMON.SCAN_QR_CODE}
+                          </div>
                         </div>
-
-                        <span className='text-black font-semibold p-1 rounded-t-lg text-sm mx-auto mb-1 block'>
-                          {locale.COMMON.SCAN_QR_CODE}
-                        </span>
                       </div>
                     </div>,
                     document.body
@@ -254,28 +249,43 @@ const ShareButtons = ({ post }) => {
             )
           case 'link':
             return (
-              <button 
-                aria-label='分享这一期' 
-                key={singleService} 
-                onClick={() => setSharePosterOpen(true)} 
+              <button
+                aria-label='分享这一期'
+                key={singleService}
+                onClick={() => setSharePosterOpen(true)}
                 className={BASE_BUTTON_CLASS}
-                style={{ backgroundColor: primaryColor }}
                 onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = SHARE_HOVER_COLORS['link'] }}
-                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = primaryColor }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '' }}
                 title='分享海报 / 复制链接'>
                 <i className={`fas fa-share-alt ${ICON_CLASS}`} />
               </button>
             )
           case 'csdn':
             return (
-              <button aria-label={singleService} key={singleService} onClick={() => openRedirectShare('https://link.csdn.net/?target=')} className='cursor-pointer rounded-full mx-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500' title={singleService}>
-                <div className='w-8 h-8 rounded-full flex items-center justify-center' style={{ backgroundColor: '#ff6a00' }}><Image src='/svg/csdn.svg' alt='CSDN' width={28} height={28} className='w-5 h-5' loading='lazy' unoptimized /></div>
+              <button 
+                aria-label={singleService} 
+                key={singleService} 
+                onClick={() => openRedirectShare('csdn.net')} 
+                className='cursor-pointer rounded-full mx-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500' 
+                title={singleService}
+              >
+                <div className='w-8 h-8 rounded-full flex items-center justify-center' style={{ backgroundColor: '#ff6a00' }}>
+                  <i className={`fab fa-csdn ${ICON_CLASS}`} />
+                </div>
               </button>
             )
           case 'juejin':
             return (
-              <button aria-label={singleService} key={singleService} onClick={() => openRedirectShare('https://link.juejin.cn/?target=')} className='cursor-pointer rounded-full mx-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500' title={singleService}>
-                <div className='w-8 h-8 rounded-full flex items-center justify-center' style={{ backgroundColor: '#5dade2' }}><Image src='/svg/juejin.svg' alt='掘金' width={24} height={24} className='w-5 h-5' loading='lazy' unoptimized /></div>
+              <button 
+                aria-label={singleService} 
+                key={singleService} 
+                onClick={() => openRedirectShare('juejin.cn')} 
+                className='cursor-pointer rounded-full mx-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500' 
+                title={singleService}
+              >
+                <div className='w-8 h-8 rounded-full flex items-center justify-center' style={{ backgroundColor: '#5dade2' }}>
+                  <i className={`fas fa-book ${ICON_CLASS}`} />
+                </div>
               </button>
             )
           default: return null
