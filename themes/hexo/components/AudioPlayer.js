@@ -90,7 +90,7 @@ export default function AudioPlayer({ src, title, cover, href }) {
   }
 
   return (
-    <div className='my-4 flex items-center gap-3 rounded-xl px-3 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-white/5'>
+    <div className='my-4 flex items-center gap-3 rounded-xl px-3 py-2.5 border border-stone-300/85 bg-stone-50/70 shadow-[0_1px_3px_rgba(0,0,0,0.03)] dark:border-gray-700 dark:bg-white/5 dark:shadow-none'>
       <audio
         ref={localAudioRef}
         src={src}
@@ -109,7 +109,7 @@ export default function AudioPlayer({ src, title, cover, href }) {
       </button>
 
       <div
-        className={`flex-1 h-1 rounded-full overflow-hidden relative bg-gray-200/60 dark:bg-gray-700/60 backdrop-blur-sm ${
+        className={`flex-1 h-1 rounded-full overflow-hidden relative bg-gray-200/70 dark:bg-gray-700/60 backdrop-blur-sm ${
           isLoading ? 'loading-stripe' : ''
         }`}>
         <div
