@@ -374,6 +374,8 @@ export default function GlobalAudioPlayer() {
   const progress = duration ? (currentTime / duration) * 100 : 0
   const hasAudio = !!audioData?.src
   const shouldRender = visible && !minimized
+  const themeColor = 'var(--theme-color, #C87A38)'
+  const themeHighlight = 'color-mix(in srgb, var(--theme-color, #C87A38) 65%, #ffffff)'
 
   return (
     <div id='global-audio-player-root'>
@@ -407,7 +409,12 @@ export default function GlobalAudioPlayer() {
                   }}
                 />
               ) : (
-                <div className='w-full h-full bg-gradient-to-br from-[#5A6A9A] to-[#3A4A7A]' />
+                <div
+                  className='w-full h-full'
+                  style={{
+                    background: `linear-gradient(135deg, ${themeHighlight} 0%, ${themeColor} 100%)`
+                  }}
+                />
               )}
               {/* 播放/暂停按钮遮罩层 */}
               {hasAudio && (
@@ -434,7 +441,7 @@ export default function GlobalAudioPlayer() {
                 ) : audioData?.href ? (
                   <SmartLink
                     href={audioData.href}
-                    className='hover:text-[#3A4A7A] transition-colors block w-full overflow-hidden'>
+                    className='gap-theme-hover transition-colors block w-full overflow-hidden'>
                     <span
                       ref={titleRef}
                       className={titleOverflow ? 'animate-marquee' : 'truncate block'}>
@@ -469,8 +476,7 @@ export default function GlobalAudioPlayer() {
                       className='h-full rounded-full'
                       style={{
                         width: `${progress}%`,
-                        background:
-                          'linear-gradient(90deg, #8B9BD4 0%, #4A5A8A 50%, #3A4A7A 100%)'
+                        background: `linear-gradient(90deg, ${themeHighlight} 0%, ${themeColor} 100%)`
                       }}
                     />
                   </div>
@@ -483,19 +489,19 @@ export default function GlobalAudioPlayer() {
                   <div className='hidden sm:flex items-center gap-1.5 ml-1'>
                     <button
                       onClick={() => skip(-15)}
-                      className='w-6 h-6 flex items-center justify-center text-gray-500 hover:text-[#3A4A7A] transition-colors'
+                      className='w-6 h-6 flex items-center justify-center text-gray-500 gap-theme-hover transition-colors'
                       title='后退15秒'>
                       <RewindIcon size={18} />
                     </button>
                     <button
                       onClick={() => skip(30)}
-                      className='w-6 h-6 flex items-center justify-center text-gray-500 hover:text-[#3A4A7A] transition-colors'
+                      className='w-6 h-6 flex items-center justify-center text-gray-500 gap-theme-hover transition-colors'
                       title='前进30秒'>
                       <ForwardIcon size={18} />
                     </button>
                     <button
                       onClick={cycleSpeed}
-                      className='w-8 h-6 flex items-center justify-center text-[11px] font-bold text-gray-500 hover:text-[#3A4A7A] transition-colors'
+                      className='w-8 h-6 flex items-center justify-center text-[11px] font-bold text-gray-500 gap-theme-hover transition-colors'
                       title='切换倍速'>
                       {SPEEDS[speedIndex]}x
                     </button>
@@ -504,7 +510,7 @@ export default function GlobalAudioPlayer() {
                   {/* 移动端菜单按钮 */}
                   <button
                     onClick={() => setShowMore((v) => !v)}
-                    className='w-6 h-6 flex items-center justify-center sm:hidden text-gray-500 hover:text-[#3A4A7A] transition-colors'
+                    className='w-6 h-6 flex items-center justify-center sm:hidden text-gray-500 gap-theme-hover transition-colors'
                     title='更多'>
                     <i className='fa-solid fa-ellipsis-vertical text-xs' />
                   </button>
@@ -520,7 +526,7 @@ export default function GlobalAudioPlayer() {
                   onMouseLeave={() => setShowVolume(false)}>
                   <button
                     onClick={toggleMute}
-                    className='w-8 h-8 flex items-center justify-center text-gray-500 hover:text-[#3A4A7A] transition-colors'
+                    className='w-8 h-8 flex items-center justify-center text-gray-500 gap-theme-hover transition-colors'
                     title='音量'>
                     <i
                       className={`fa-solid ${
@@ -550,7 +556,7 @@ export default function GlobalAudioPlayer() {
                           }}
                           className='w-20 h-1 cursor-pointer'
                           style={{
-                            accentColor: '#3A4A7A',
+                            accentColor: themeColor,
                             transform: 'rotate(-90deg)',
                             transformOrigin: 'center'
                           }}
@@ -564,8 +570,9 @@ export default function GlobalAudioPlayer() {
               <button
                 onClick={() => setLocked((v) => !v)}
                 className={`w-8 h-8 flex items-center justify-center transition-colors flex-shrink-0 ${
-                  locked ? 'text-[#3A4A7A]' : 'text-gray-400 hover:text-[#3A4A7A]'
+                  locked ? '' : 'text-gray-400 gap-theme-hover'
                 }`}
+                style={locked ? { color: themeColor } : undefined}
                 title={locked ? '已固定，点击解锁' : '点击固定播放器，滑动页面不隐藏'}>
                 <i className={`fa-solid ${locked ? 'fa-lock' : 'fa-lock-open'} text-xs`} />
               </button>
@@ -573,7 +580,7 @@ export default function GlobalAudioPlayer() {
               {!locked && (
                 <button
                   onClick={() => setMinimized(true)}
-                  className='w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#3A4A7A] transition-colors flex-shrink-0'
+                  className='w-8 h-8 flex items-center justify-center text-gray-400 gap-theme-hover transition-colors flex-shrink-0'
                   title='收起播放器'>
                   <i className='fa-solid fa-chevron-right text-xs' />
                 </button>
@@ -586,33 +593,39 @@ export default function GlobalAudioPlayer() {
                 <div className='bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-2xl shadow-xl border border-white/40 dark:border-gray-700/40 px-4 py-2.5 flex items-center gap-5'>
                   <button
                     onClick={() => skip(-15)}
-                    className='flex flex-col items-center gap-1 text-gray-600 hover:text-[#3A4A7A] transition-colors'
+                    className='flex flex-col items-center gap-1 text-gray-600 gap-theme-hover transition-colors'
                     title='后退15秒'>
                     <RewindIcon size={18} />
                     <span className='text-[10px]'>退15s</span>
                   </button>
+                  
                   <button
                     onClick={() => skip(30)}
-                    className='flex flex-col items-center gap-1 text-gray-600 hover:text-[#3A4A7A] transition-colors'
+                    className='flex flex-col items-center gap-1 text-gray-600 gap-theme-hover transition-colors'
                     title='前进30秒'>
                     <ForwardIcon size={18} />
                     <span className='text-[10px]'>进30s</span>
                   </button>
+                  
                   <button
                     onClick={cycleSpeed}
-                    className='flex flex-col items-center gap-0.5 text-gray-600 hover:text-[#3A4A7A] transition-colors'
+                    className='flex flex-col items-center gap-1 text-gray-600 gap-theme-hover transition-colors'
                     title='切换倍速'>
-                    <span className='text-xs font-bold'>{SPEEDS[speedIndex]}x</span>
-                    <span className='text-[10px]'>倍速</span>
+                    <i className='fa-solid fa-gauge-high text-sm' />
+                    <span className='text-[10px]'>{SPEEDS[speedIndex]}x 倍速</span>
                   </button>
                 </div>
               </div>
             )}
+
           </div>
         </div>
       </div>
 
-      <style jsx global>{`
+      <style jsx>{`
+        .gap-theme-hover:hover {
+          color: var(--theme-color, #C87A38) !important;
+        }
         @keyframes marquee {
           0% { transform: translateX(0); }
           100% { transform: translateX(-100%); }
