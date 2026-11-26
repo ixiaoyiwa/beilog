@@ -125,7 +125,6 @@ const ShareButtons = ({ post }) => {
     const encodedImage = encodeURIComponent(image || '')
     const encodedHashTags = encodeURIComponent(hashTags)
     const appId = siteConfig('FACEBOOK_APP_ID') || ''
-    
     switch (service) {
       case 'facebook': return `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&hashtag=${encodedHashTags}`
       case 'messenger': return `https://www.facebook.com/dialog/send?app_id=${appId}&link=${encodedUrl}&redirect_uri=${encodedUrl}`
@@ -237,7 +236,7 @@ const ShareButtons = ({ post }) => {
                         }
                       >
                         <div className='p-2'>
-                          {qrCodeShow && <QrCode value={shareUrl} />}
+                          {qrCodeShow && <QrCode value={shareUrl} size={112} level='M' />}
                           <div className='text-xs text-gray-600 mt-2'>
                             {locale.COMMON.SCAN_QR_CODE}
                           </div>
