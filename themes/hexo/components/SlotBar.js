@@ -24,8 +24,6 @@ export default function SlotBar(props) {
     'Talks': '把生活里的琐碎，慢慢聊出点滋味。要是有一句，说到你心里，就够了。'
   }
 
-  // 右侧栏使用的 categories[].count 是真实栏目数量。
-  // 优先复用同一份数据；categoryOptions 仅作为页面提供该字段时的备用来源。
   const categoryCountSource = Array.isArray(categories) && categories.length > 0
     ? categories
     : Array.isArray(categoryOptions)
@@ -74,7 +72,7 @@ export default function SlotBar(props) {
     const title = friendData?.title
     const titleColor = colorMap[friendData?.color] || colorMap.default
     return (
-      <div className="cursor-pointer px-3 py-2 mb-2 font-light hover:text-indigo-700 dark:hover:text-indigo-400 transform dark:text-white">
+      <div className="cursor-pointer px-3 py-2 mb-2 font-light hover:text-[#C87A38] dark:hover:text-[#D68744] transform dark:text-white">
         <SmartLink
           key={tag}
           href={`/tag/${encodeURIComponent(tag)}`}
@@ -94,25 +92,37 @@ export default function SlotBar(props) {
   } else if (category) {
     const introText = introMap[category]
     return (
-      // 保留现有的左右对齐和栏目简介布局
       <div className={`px-4 py-1 ${introText ? 'mb-6' : 'mb-2'}`}>
-        {/* 分类切换 Tab 栏 */}
-        <div className="flex flex-wrap gap-3 mb-5">
+        {/* 分类切换 Tab 栏：#C87A38 焦糖暖琥珀 + 首页同款 3D 立体微拟物按键质感 */}
+        <div className="flex flex-wrap gap-3 mb-4">
           {categoryTabs.map(tab => {
             const isActive = category === tab.id || category === tab.name
             return (
               <SmartLink
                 key={tab.id}
                 href={`/category/${tab.id}`}
-                className={`flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg transition-all duration-300 cursor-pointer whitespace-nowrap shadow-sm
+                className={`flex items-center gap-1.5 px-4 py-2 text-sm rounded-xl transition-all duration-300 cursor-pointer whitespace-nowrap hover:-translate-y-0.5
                   ${isActive
-                    ? 'bg-[#3A4A7A] text-white shadow-md font-medium'
-                    : 'bg-white text-gray-600 dark:bg-gray-800 dark:text-gray-300 hover:bg-[#3A4A7A] hover:text-white hover:shadow-md'
+                    ? 'text-white font-medium'
+                    : 'text-gray-700 dark:text-gray-200 bg-white dark:bg-white/[0.08] border border-black/[0.08] dark:border-white/15 hover:border-[#C87A38]/50 hover:text-[#C87A38] dark:hover:text-[#E09250]'
                   }`}
+                style={
+                  isActive
+                    ? {
+                        background: 'linear-gradient(180deg, #D68744 0%, #B86828 100%)',
+                        border: '1px solid rgba(110, 48, 12, 0.45)',
+                        boxShadow:
+                          'inset 0 1px 0 rgba(255, 255, 255, 0.34), inset 0 -1px 0 rgba(0, 0, 0, 0.22), 0 8px 20px -6px rgba(200, 122, 56, 0.45)'
+                      }
+                    : {
+                        boxShadow:
+                          'inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 2px 6px -1px rgba(0, 0, 0, 0.05)'
+                      }
+                }
               >
                 <i className={`${isActive ? 'far fa-folder-open' : 'far fa-folder'} text-xs`} />
                 <span>{tab.name}</span>
-                <span className={`text-[10px] ${isActive ? 'opacity-80' : 'opacity-60'}`}>
+                <span className={`text-[11px] ${isActive ? 'opacity-85' : 'opacity-60'}`}>
                   ({tab.count})
                 </span>
               </SmartLink>
