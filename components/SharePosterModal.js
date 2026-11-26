@@ -1,13 +1,55 @@
 import { useEffect, useRef, useState } from 'react'
+import { siteConfig } from '@/lib/config'
 
-const THEME = {
-  primary: '#465982',
-  primaryDeep: '#293957',
-  ink: '#253047',
-  muted: '#6E7788',
-  paper: '#FBF8F2',
-  paperShade: '#EEF0F6',
-  border: 'rgba(70, 89, 130, 0.28)'
+function parseHexToRgb(hex) {
+  const clean = String(hex || '').trim().replace(/^#/, '')
+  if (/^[0-9a-fA-F]{3}$/.test(clean)) {
+    return {
+      r: parseInt(clean[0] + clean[0], 16),
+      g: parseInt(clean[1] + clean[1], 16),
+      b: parseInt(clean[2] + clean[2], 16)
+    }
+  }
+  if (/^[0-9a-fA-F]{6}$/.test(clean)) {
+    return {
+      r: parseInt(clean.slice(0, 2), 16),
+      g: parseInt(clean.slice(2, 4), 16),
+      b: parseInt(clean.slice(4, 6), 16)
+    }
+  }
+  return null
+}
+
+function getDynamicTheme() {
+  let primary = siteConfig('HEXO_COLOR_PRIMARY', '#C87A38') || '#C87A38'
+  if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+    const cssVar = window.getComputedStyle(document.documentElement).getPropertyValue('--theme-color').trim()
+    if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(cssVar)) {
+      primary = cssVar
+    }
+  }
+  const rgb = parseHexToRgb(primary) || { r: 200, g: 122, b: 56 }
+  const rgba = (alpha) => `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`
+  // 与浅纸底混出极淡的主题色柔雾底色
+  const mixPaper = (weight) => {
+    const r = Math.round(251 * (1 - weight) + rgb.r * weight)
+    const g = Math.round(248 * (1 - weight) + rgb.g * weight)
+    const b = Math.round(242 * (1 - weight) + rgb.b * weight)
+    return `rgb(${r}, ${g}, ${b})`
+  }
+
+  return {
+    primary,
+    rgba,
+    ink: '#26211D',
+    muted: '#6E665F',
+    paper: '#FBF8F2',
+    paperTint: mixPaper(0.08),
+    border: rgba(0.32),
+    innerBorder: rgba(0.10),
+    glowStart: rgba(0.13),
+    glowEnd: rgba(0)
+  }
 }
 
 function getPosterFont() {
@@ -34,13 +76,13 @@ const POSTER_SIZE = {
   landscape: { width: 1200, height: 620 }
 }
 
-const DEFAULT_COVER = 'https://up.885111.xyz/file/img/1789746781222_2027LOGO.webp'
+const DEFAULT_COVER = 'https://885111.xyz'
 
 const QR_CDN_CANDIDATES = [
   process.env.NEXT_PUBLIC_QR_CODE_CDN,
-  'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js',
-  'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js',
-  'https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js'
+  'https://cloudflare.com',
+  'https://jsdelivr.net',
+  'https://unpkg.com'
 ].filter((value, index, list) => value && list.indexOf(value) === index)
 
 const qrScriptPromises = new Map()
@@ -147,7 +189,7 @@ function expandImageUrl(rawValue) {
   const values = []
 
   try {
-    const parsed = new URL(raw, typeof window !== 'undefined' ? window.location.href : 'https://na.885111.xyz/')
+    const parsed = new URL(raw, typeof window !== 'undefined' ? window.location.href : 'https://885111.xyz')
     const imageIndex = parsed.pathname.indexOf('/image/')
     if (imageIndex >= 0) {
       const encodedSource = parsed.pathname.slice(imageIndex + '/image/'.length)
@@ -272,30 +314,26 @@ function getProxyUrls(source) {
       urls.push(`${SAME_ORIGIN_COVER_PROXY}${encoded}`)
     }
   } catch (error) {}
-  urls.push(`https://images.weserv.nl/?url=${encoded}`, `https://wsrv.nl/?url=${encoded}`)
+  urls.push(`https://weserv.nl{encoded}`, `https://wsrv.nl{encoded}`)
   return urls
 }
 
-// ✨ 核心修复：如果是跨域图，绝对不请求原图，强制只走代理
 async function tryCandidate(source, deadline) {
   let attempts = []
   try {
     const parsed = new URL(source, window.location.href)
     if (parsed.origin === window.location.origin) {
-      attempts = [source] // 同源图片直接请求
+      attempts = [source]
     } else {
-      attempts = getProxyUrls(source) // 跨域图片，全部走代理
+      attempts = getProxyUrls(source)
     }
   } catch {
     attempts = [source]
   }
-
   attempts = [...new Set(attempts)]
   if (attempts.length === 0) attempts = [source]
-
   const remaining = deadline - Date.now()
   if (remaining <= 0) throw new Error('封面加载总时限已到')
-
   const timeoutMs = Math.max(700, Math.min(4200, remaining))
   try {
     return await Promise.any(attempts.map(url => loadImage(url, timeoutMs)))
@@ -306,14 +344,11 @@ async function tryCandidate(source, deadline) {
 
 async function loadCoverImage(post) {
   let candidates = getCoverCandidates(post)
-  
   if (!candidates.includes(DEFAULT_COVER)) {
     candidates.push(DEFAULT_COVER)
   }
-
   const key = candidates.join('|')
   if (coverImagePromises.has(key)) return coverImagePromises.get(key)
-
   const promise = (async () => {
     const deadline = Date.now() + 15000
     const prioritized = candidates.slice(0, 10)
@@ -327,7 +362,6 @@ async function loadCoverImage(post) {
     }
     return null
   })()
-
   coverImagePromises.set(key, promise)
   const result = await promise
   if (!result) coverImagePromises.delete(key)
@@ -339,7 +373,6 @@ function cropSquare(ctx, image, x, y, size, radius) {
   const naturalWidth = image.naturalWidth || image.width
   const naturalHeight = image.naturalHeight || image.height
   if (!naturalWidth || !naturalHeight) return false
-
   ctx.save()
   roundRect(ctx, x, y, size, size, radius)
   ctx.clip()
@@ -351,22 +384,20 @@ function cropSquare(ctx, image, x, y, size, radius) {
   return true
 }
 
-function drawBackground(ctx, width, height) {
+function drawBackground(ctx, width, height, theme) {
   const gradient = ctx.createLinearGradient(0, 0, width * 0.92, height)
   gradient.addColorStop(0, '#FFFCF7')
-  gradient.addColorStop(0.58, '#F7F5F1')
-  gradient.addColorStop(1, '#E9EDF6')
+  gradient.addColorStop(0.58, '#F8F5F0')
+  gradient.addColorStop(1, theme.paperTint)
   ctx.fillStyle = gradient
   ctx.fillRect(0, 0, width, height)
-
   const glow = ctx.createRadialGradient(width * 0.88, height * 0.12, 8, width * 0.88, height * 0.12, width * 0.65)
-  glow.addColorStop(0, 'rgba(112, 132, 174, 0.10)')
-  glow.addColorStop(1, 'rgba(112, 132, 174, 0)')
+  glow.addColorStop(0, theme.glowStart)
+  glow.addColorStop(1, theme.glowEnd)
   ctx.fillStyle = glow
   ctx.fillRect(0, 0, width, height)
-
-  strokeRoundRect(ctx, 24, 24, width - 48, height - 48, 15, THEME.border, 2)
-  strokeRoundRect(ctx, 34, 34, width - 68, height - 68, 10, 'rgba(70, 89, 130, 0.08)', 1)
+  strokeRoundRect(ctx, 24, 24, width - 48, height - 48, 15, theme.border, 2)
+  strokeRoundRect(ctx, 34, 34, width - 68, height - 68, 10, theme.innerBorder, 1)
 }
 
 function splitLines(ctx, text, maxWidth, maxLines) {
@@ -374,7 +405,6 @@ function splitLines(ctx, text, maxWidth, maxLines) {
   if (!characters.length) return []
   const lines = []
   let line = ''
-
   characters.forEach(character => {
     const candidate = line + character
     if (line && ctx.measureText(candidate).width > maxWidth) {
@@ -385,7 +415,6 @@ function splitLines(ctx, text, maxWidth, maxLines) {
     }
   })
   if (line) lines.push(line)
-
   if (lines.length > maxLines) {
     const visible = lines.slice(0, maxLines)
     let last = visible[visible.length - 1] || ''
@@ -409,7 +438,6 @@ function drawDurationPill(ctx, x, y, duration) {
   ctx.font = `500 20px ${getPosterFont()}`
   const textWidth = Math.ceil(ctx.measureText(duration).width)
   const pillWidth = 18 + 16 + 10 + textWidth + 17
-
   ctx.save()
   try {
     const glass = document.createElement('canvas')
@@ -430,7 +458,6 @@ function drawDurationPill(ctx, x, y, duration) {
   roundRect(ctx, x, y, pillWidth, height, height / 2)
   ctx.fillStyle = 'rgba(255, 255, 255, 0.17)'
   ctx.fill()
-
   ctx.shadowColor = 'rgba(15, 20, 30, 0.48)'
   ctx.shadowBlur = 4
   ctx.shadowOffsetY = 1
@@ -449,76 +476,66 @@ function drawDurationPill(ctx, x, y, duration) {
   return pillWidth
 }
 
-function drawBrandAndQr(ctx, qrCanvas, width, height, layout) {
+function drawBrandAndQr(ctx, qrCanvas, width, height, layout, theme) {
   const { edge, brandY, qrSize } = layout
-
   ctx.textAlign = 'left'
   ctx.textBaseline = 'top'
-  ctx.fillStyle = THEME.ink
+  ctx.fillStyle = theme.ink
   ctx.font = `600 ${layout.brandFont}px ${getPosterFont()}`
   ctx.fillText('念安酒馆', edge + 2, brandY)
-
-  ctx.fillStyle = THEME.primary
+  ctx.fillStyle = theme.primary
   ctx.font = `400 ${layout.subFont}px ${getPosterFont()}`
   ctx.fillText('扫码收听本期', edge + 3, brandY + layout.subOffset)
-
   const qrShiftLeft = layout.qrShiftLeft ?? 8
   const qrX = width - edge - qrSize - qrShiftLeft
   const textBottom = brandY + layout.subOffset + layout.subFont
   const qrY = Math.round(textBottom - qrSize - 7)
-
   if (qrCanvas) {
     fillRoundRect(ctx, qrX - 7, qrY - 7, qrSize + 14, qrSize + 14, 8, '#FFFFFF')
     ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize)
-    strokeRoundRect(ctx, qrX - 7, qrY - 7, qrSize + 14, qrSize + 14, 8, 'rgba(70, 89, 130, 0.14)', 1)
+    strokeRoundRect(ctx, qrX - 7, qrY - 7, qrSize + 14, qrSize + 14, 8, theme.rgba(0.18), 1)
   } else {
     fillRoundRect(ctx, qrX - 7, qrY - 7, qrSize + 14, qrSize + 14, 8, 'rgba(255,255,255,0.62)')
   }
 }
 
 function drawPoster(canvas, { post, orientation, duration }, coverImage, qrCanvas) {
+  const theme = getDynamicTheme()
   const { width, height } = POSTER_SIZE[orientation]
   if (canvas.width !== width) canvas.width = width
   if (canvas.height !== height) canvas.height = height
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('Canvas 初始化失败')
-
-  drawBackground(ctx, width, height)
+  drawBackground(ctx, width, height, theme)
   const title = cleanText(post?.title) || '这一期，等你来听'
   const summary = cleanText(post?.summary || post?.description || post?.excerpt || '')
   const meta = getMetaText(post)
-
+  
   if (orientation === 'portrait') {
     const contentWidth = 700
     const contentX = Math.round((width - contentWidth) / 2)
-    
     const coverY = 50
     const coverSize = 700
     const coverX = contentX
-
     cropSquare(ctx, coverImage, coverX, coverY, coverSize, 12)
     if (duration && coverImage) drawDurationPill(ctx, coverX + 18, coverY + coverSize - 59, duration)
-
     let currentY = coverY + coverSize + 40
-    ctx.fillStyle = THEME.ink
+    ctx.fillStyle = theme.ink
     ctx.font = `650 41px ${getPosterFont()}`
     const titleLines = splitLines(ctx, title, contentWidth, 2)
     currentY = drawLines(ctx, titleLines, contentX, currentY, 52) + 15
-
     if (meta) {
-      ctx.fillStyle = THEME.primary
+      ctx.fillStyle = theme.primary
       ctx.font = `400 21px ${getPosterFont()}`
       const metaLines = splitLines(ctx, meta, contentWidth, 2)
       currentY = drawLines(ctx, metaLines, contentX, currentY, 30) + 15
     }
-
     if (summary) {
-      ctx.fillStyle = THEME.muted
+      ctx.fillStyle = theme.muted
       ctx.font = `400 24px ${getPosterFont()}`
       const summaryLines = splitLines(ctx, summary, contentWidth, 3)
       drawLines(ctx, summaryLines, contentX, currentY, 36)
     }
-
     drawBrandAndQr(ctx, qrCanvas, width, height, {
       edge: contentX,
       brandY: 1150,
@@ -527,52 +544,42 @@ function drawPoster(canvas, { post, orientation, duration }, coverImage, qrCanva
       subFont: 21,
       subOffset: 41,
       qrShiftLeft: 0
-    })
+    }, theme)
   } else {
     const edge = 44
     const coverSize = 360
     const coverX = 70
     const coverY = 70
-    
     cropSquare(ctx, coverImage, coverX, coverY, coverSize, 12)
     if (duration && coverImage) drawDurationPill(ctx, coverX + 16, coverY + coverSize - 58, duration)
-
     const contentX = 480
     const contentWidth = width - contentX - edge - 2
-
     ctx.font = `650 40px ${getPosterFont()}`
     const titleLines = splitLines(ctx, title, contentWidth, 2)
     ctx.font = `400 20px ${getPosterFont()}`
     const metaLines = meta ? splitLines(ctx, meta, contentWidth, 2) : []
     ctx.font = `400 23px ${getPosterFont()}`
-    
     const summaryLines = summary ? splitLines(ctx, summary, contentWidth, 5) : []
-    
     const blockHeight =
       titleLines.length * 50 +
       (metaLines.length ? 13 + metaLines.length * 29 : 0) +
       (summaryLines.length ? 14 + summaryLines.length * 33 : 0)
-      
     let currentY = coverY + Math.max(0, Math.floor((coverSize - blockHeight) / 2))
-
-    ctx.fillStyle = THEME.ink
+    ctx.fillStyle = theme.ink
     ctx.font = `650 40px ${getPosterFont()}`
     currentY = drawLines(ctx, titleLines, contentX, currentY, 50)
-
     if (metaLines.length) {
       currentY += 13
-      ctx.fillStyle = THEME.primary
+      ctx.fillStyle = theme.primary
       ctx.font = `400 20px ${getPosterFont()}`
       currentY = drawLines(ctx, metaLines, contentX, currentY, 29)
     }
-
     if (summaryLines.length) {
       currentY += 14
-      ctx.fillStyle = THEME.muted
+      ctx.fillStyle = theme.muted
       ctx.font = `400 23px ${getPosterFont()}`
       drawLines(ctx, summaryLines, contentX, currentY, 33)
     }
-
     drawBrandAndQr(ctx, qrCanvas, width, height, {
       edge: coverX,
       brandY: 500,
@@ -581,7 +588,7 @@ function drawPoster(canvas, { post, orientation, duration }, coverImage, qrCanva
       subFont: 20,
       subOffset: 39,
       qrShiftLeft: 0
-    })
+    }, theme)
   }
 }
 
@@ -668,7 +675,7 @@ async function createQrCanvas(value) {
       text: value,
       width: 256,
       height: 256,
-      colorDark: '#1E293B',
+      colorDark: '#26211D',
       colorLight: '#FFFFFF',
       correctLevel: QRCodeConstructor.CorrectLevel?.H ?? 2
     })
@@ -716,6 +723,7 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
   const [copied, setCopied] = useState(false)
 
   const size = POSTER_SIZE[orientation]
+  const dynamicTheme = getDynamicTheme()
 
   useEffect(() => {
     if (!open) return undefined
@@ -912,9 +920,10 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
       >
         <header className='sn-share-header'>
           <h2 id='sn-share-title'>分享这一期</h2>
-          <button type='button' className='sn-share-close' aria-label='关闭' onClick={onClose}>×</button>
+          <button type='button' className='sn-share-close' onClick={onClose} aria-label='关闭'>
+            ×
+          </button>
         </header>
-
         <div className={`sn-share-body ${orientation}`}>
           <div className={`sn-share-preview ${orientation}`}>
             <canvas
@@ -931,32 +940,35 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
               title={orientation === 'portrait' ? '切换横版' : '切换竖版'}
               onClick={() => setOrientation(current => current === 'portrait' ? 'landscape' : 'portrait')}
             >
-              <svg viewBox='0 0 24 24' aria-hidden='true' fill='none' stroke='currentColor' strokeWidth='1.7' strokeLinecap='round' strokeLinejoin='round'>
-                {orientation === 'portrait'
-                  ? <><rect x='7' y='3' width='10' height='18' rx='1.5' /><path d='M10 17h4' /></>
-                  : <><rect x='3' y='7' width='18' height='10' rx='1.5' /><path d='M7 12h10' /></>}
-              </svg>
+              {orientation === 'portrait' ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="7" width="20" height="10" rx="2" ry="2"></rect>
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="7" y="2" width="10" height="20" rx="2" ry="2"></rect>
+                </svg>
+              )}
             </button>
           </div>
-
           <div className='sn-share-actions'>
             <button type='button' className='sn-action-btn' onClick={downloadPoster} disabled={!ready}>
-              <svg viewBox='0 0 24 24' aria-hidden='true' fill='none' stroke='currentColor' strokeWidth='1.8' strokeLinecap='round' strokeLinejoin='round'>
-                <path d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4' />
-                <polyline points='7 10 12 15 17 10' />
-                <line x1='12' y1='15' x2='12' y2='3' />
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
               </svg>
               <span>下载海报</span>
             </button>
             <button type='button' className='sn-action-btn' onClick={copyLink}>
               {copied ? (
-                <svg viewBox='0 0 24 24' aria-hidden='true' fill='none' stroke='currentColor' strokeWidth='1.8' strokeLinecap='round' strokeLinejoin='round'>
-                  <polyline points='20 6 9 17 4 12' />
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
                 </svg>
               ) : (
-                <svg viewBox='0 0 24 24' aria-hidden='true' fill='none' stroke='currentColor' strokeWidth='1.8' strokeLinecap='round' strokeLinejoin='round'>
-                  <path d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71' />
-                  <path d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71' />
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                 </svg>
               )}
               <span>{copied ? '已复制' : '复制链接'}</span>
@@ -974,7 +986,7 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
           align-items: center;
           justify-content: center;
           padding: 10px;
-          background: rgba(22, 28, 43, 0.58);
+          background: rgba(24, 20, 17, 0.58);
           backdrop-filter: blur(5px);
         }
         .sn-share-dialog {
@@ -983,14 +995,18 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
           display: flex;
           flex-direction: column;
           overflow: hidden;
-          border: 1px solid rgba(70, 89, 130, 0.15);
+          border: 1px solid ${dynamicTheme.rgba(0.18)};
           border-radius: 14px;
           background: #FBFAF7;
-          box-shadow: 0 18px 54px rgba(20, 26, 43, 0.24);
+          box-shadow: 0 18px 54px rgba(24, 20, 17, 0.24);
           transition: width 160ms ease;
         }
-        .sn-share-dialog.portrait { width: min(94vw, 430px); }
-        .sn-share-dialog.landscape { width: min(96vw, 790px); }
+        .sn-share-dialog.portrait {
+          width: min(94vw, 430px);
+        }
+        .sn-share-dialog.landscape {
+          width: min(96vw, 790px);
+        }
         .sn-share-header {
           flex: 0 0 auto;
           min-height: 46px;
@@ -998,11 +1014,11 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          border-bottom: 1px solid rgba(70, 89, 130, 0.09);
+          border-bottom: 1px solid ${dynamicTheme.rgba(0.10)};
         }
         .sn-share-header h2 {
           margin: 0;
-          color: ${THEME.ink};
+          color: ${dynamicTheme.ink};
           font-size: 14px;
           font-weight: 600;
           letter-spacing: 0.01em;
@@ -1013,12 +1029,15 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
           border: 0;
           border-radius: 50%;
           background: transparent;
-          color: #66718A;
+          color: #6E665F;
           font-size: 24px;
           line-height: 1;
           cursor: pointer;
         }
-        .sn-share-close:hover { background: rgba(70, 89, 130, 0.07); }
+        .sn-share-close:hover {
+          background: ${dynamicTheme.rgba(0.08)};
+          color: ${dynamicTheme.primary};
+        }
         .sn-share-body {
           min-height: 0;
           padding: 12px 14px 9px;
@@ -1046,8 +1065,8 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
           max-width: 100%;
           max-height: min(68dvh, 680px);
           border-radius: 3px;
-          background: ${THEME.paper};
-          box-shadow: 0 3px 13px rgba(28, 36, 57, 0.13);
+          background: ${dynamicTheme.paper};
+          box-shadow: 0 3px 13px rgba(28, 22, 17, 0.13);
         }
         .sn-share-canvas.portrait {
           max-width: min(100%, 320px);
@@ -1067,17 +1086,23 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          border: 1px solid rgba(255,255,255,0.72);
+          border: 1px solid rgba(255, 255, 255, 0.72);
           border-radius: 50%;
-          background: rgba(27, 37, 56, 0.73);
+          background: rgba(34, 26, 20, 0.76);
           color: #FFFFFF;
-          box-shadow: 0 2px 8px rgba(20, 26, 43, 0.18);
+          box-shadow: 0 2px 8px rgba(24, 20, 17, 0.18);
           backdrop-filter: blur(6px);
           cursor: pointer;
           transition: background 0.15s ease, transform 0.15s ease;
         }
-        .sn-share-orientation-float:hover { background: rgba(27, 37, 56, 0.9); transform: scale(1.04); }
-        .sn-share-orientation-float svg { width: 17px; height: 17px; }
+        .sn-share-orientation-float:hover {
+          background: ${dynamicTheme.primary};
+          transform: scale(1.04);
+        }
+        .sn-share-orientation-float svg {
+          width: 17px;
+          height: 17px;
+        }
         .sn-share-actions {
           flex: 0 0 auto;
           display: flex;
@@ -1105,32 +1130,91 @@ export default function SharePosterModal({ open, onClose, post, shareUrl }) {
           cursor: pointer;
           transition: color 0.15s ease, opacity 0.15s ease;
         }
-        .sn-action-btn:hover:not(:disabled) { color: #000000; }
-        .sn-action-btn svg { width: 15px; height: 15px; flex: 0 0 auto; }
-        .sn-action-btn:disabled { color: #333333; opacity: 0.78; cursor: wait; }
-        .sn-action-btn:focus-visible, .sn-share-orientation-float:focus-visible, .sn-share-close:focus-visible {
-          outline: 2px solid ${THEME.primary};
+        .sn-action-btn:hover:not(:disabled) {
+          color: ${dynamicTheme.primary};
+        }
+        .sn-action-btn svg {
+          width: 15px;
+          height: 15px;
+          flex: 0 0 auto;
+        }
+        .sn-action-btn:disabled {
+          color: #333333;
+          opacity: 0.78;
+          cursor: wait;
+        }
+        .sn-action-btn:focus-visible,
+        .sn-share-orientation-float:focus-visible,
+        .sn-share-close:focus-visible {
+          outline: 2px solid ${dynamicTheme.primary};
           outline-offset: 3px;
         }
         @media (max-width: 600px) {
-          .sn-share-overlay { padding: 6px; }
-          .sn-share-dialog { max-width: calc(100vw - 12px); max-height: calc(100dvh - 12px); border-radius: 12px; }
-          .sn-share-dialog.portrait { width: min(calc(100vw - 12px), 390px); }
-          .sn-share-dialog.landscape { width: calc(100vw - 12px); }
-          .sn-share-header { min-height: 42px; padding: 6px 9px 6px 13px; }
-          .sn-share-body { padding: 8px 7px 7px; gap: 5px; }
-          .sn-share-canvas.portrait { max-width: min(100%, 286px); max-height: 62dvh; }
-          .sn-share-canvas.landscape { max-width: 100%; max-height: 52dvh; }
-          .sn-share-orientation-float { width: 30px; height: 30px; right: 6px; bottom: 6px; }
-          .sn-share-actions { gap: 20px; min-height: 28px; }
-          .sn-action-btn { min-height: 27px; font-size: 12px; font-weight: 600; }
-          .sn-action-btn svg { width: 14px; height: 14px; }
+          .sn-share-overlay {
+            padding: 6px;
+          }
+          .sn-share-dialog {
+            max-width: calc(100vw - 12px);
+            max-height: calc(100dvh - 12px);
+            border-radius: 12px;
+          }
+          .sn-share-dialog.portrait {
+            width: min(calc(100vw - 12px), 390px);
+          }
+          .sn-share-dialog.landscape {
+            width: calc(100vw - 12px);
+          }
+          .sn-share-header {
+            min-height: 42px;
+            padding: 6px 9px 6px 13px;
+          }
+          .sn-share-body {
+            padding: 8px 7px 7px;
+            gap: 5px;
+          }
+          .sn-share-canvas.portrait {
+            max-width: min(100%, 286px);
+            max-height: 62dvh;
+          }
+          .sn-share-canvas.landscape {
+            max-width: 100%;
+            max-height: 52dvh;
+          }
+          .sn-share-orientation-float {
+            width: 30px;
+            height: 30px;
+            right: 6px;
+            bottom: 6px;
+          }
+          .sn-share-actions {
+            gap: 20px;
+            min-height: 28px;
+          }
+          .sn-action-btn {
+            min-height: 27px;
+            font-size: 12px;
+            font-weight: 600;
+          }
+          .sn-action-btn svg {
+            width: 14px;
+            height: 14px;
+          }
         }
         @media (max-height: 700px) {
-          .sn-share-body { padding-top: 6px; padding-bottom: 5px; gap: 4px; }
-          .sn-share-canvas.portrait { max-height: 61dvh; }
-          .sn-share-canvas.landscape { max-height: 55dvh; }
-          .sn-share-actions { min-height: 26px; }
+          .sn-share-body {
+            padding-top: 6px;
+            padding-bottom: 5px;
+            gap: 4px;
+          }
+          .sn-share-canvas.portrait {
+            max-height: 61dvh;
+          }
+          .sn-share-canvas.landscape {
+            max-height: 55dvh;
+          }
+          .sn-share-actions {
+            min-height: 26px;
+          }
         }
       `}</style>
     </div>
