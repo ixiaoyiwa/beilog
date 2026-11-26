@@ -99,16 +99,14 @@ export default function RightFloatArea({ floatSlot }) {
     <div
       className={
         (showFloatButton ? 'opacity-100 ' : 'invisible opacity-0') +
-        ' duration-300 transition-all bottom-12 right-1 fixed z-20 text-white bg-[#3A4A7A] dark:bg-hexo-black-gray rounded-sm'
+        ' duration-300 transition-all bottom-12 right-1 fixed z-20 text-white bg-[var(--theme-color)] dark:bg-hexo-black-gray rounded-sm shadow-md'
       }>
       <div className='justify-center flex flex-col items-center cursor-pointer'>
         {hasAudio && !locked && (
           <div
             onClick={handleClick}
-            // ✨ 动效升级：transition-all + hover:scale-110
             className='flex justify-center items-center w-7 h-7 hover:bg-black/20 transition-all duration-200 hover:scale-110'
             title='展开/收起播放器'>
-            {/* ✨ 尺寸放大：从 14 调整为 16 */}
             {loading ? (
               <LoadingIcon size={16} />
             ) : isPlaying ? (
