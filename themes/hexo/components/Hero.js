@@ -80,7 +80,7 @@ const renderHighlightedSlogan = (text) => {
           key={idx}
           style={{
             color: '#C87A38',
-            textShadow: '0 2px 16px rgba(200, 122, 56, 0.38)'
+            textShadow: '0 2px 18px rgba(200, 122, 56, 0.32)'
           }}
         >
           {char}
@@ -93,7 +93,9 @@ const renderHighlightedSlogan = (text) => {
 
 /**
  * 首页顶部聚光灯播客 Hero
- * 完全照猫画虎单期页的“向下延伸 -bottom-56 + 15% 起 7 段超长慢渐变消散”公式，白天与黑夜模式均自然消融
+ * 1. 光晕中心精准锁定在大字标题背后（at 50% 44%）
+ * 2. 白天模式采用温润暖琥珀浅光晕自然融入暖米白底色（彻底消除灰色脏雾）；暗黑模式采用深邃黑底聚光灯
+ * 3. 点击「播放最新节目」同步触发全局播放并跳转到最新一期文章页阅读
  */
 const Hero = props => {
   const { siteInfo, posts = [], latestPosts = [] } = props
@@ -129,9 +131,9 @@ const Hero = props => {
   const latestPost = getTrueLatestEpisode(posts, latestPosts)
   const latestAudioUrl = latestPost?.audio || parseExt(latestPost?.ext)
 
-  const handlePlayLatest = (e) => {
+  // 触发全局播放器起播，同时不调用 e.preventDefault()，让 SmartLink 正常跳转进入最新一期文章页
+  const handlePlayLatest = () => {
     if (!latestAudioUrl) return
-    e.preventDefault()
     window.dispatchEvent(
       new CustomEvent('toggle-global-audio', {
         detail: {
@@ -150,47 +152,44 @@ const Hero = props => {
       style={{ zIndex: 10, '--theme-primary': primaryColor }}
       className='w-full pt-28 pb-10 sm:pt-32 sm:pb-12 lg:pt-36 lg:pb-14 relative flex items-center justify-center'
     >
-      {/* 背景层：1:1 复制单期页（PostHero）的超长 7 段慢渐变消散公式（-bottom-56 + 15% 起渐隐），彻底消灭白天模式灰白脏雾 */}
-      <div
-        className='absolute inset-x-0 top-0 -bottom-56 pointer-events-none select-none overflow-hidden'
-        style={{
-          WebkitMaskImage:
-            'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.92) 15%, rgba(0,0,0,0.74) 36%, rgba(0,0,0,0.5) 56%, rgba(0,0,0,0.26) 74%, rgba(0,0,0,0.08) 89%, rgba(0,0,0,0) 100%)',
-          maskImage:
-            'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.92) 15%, rgba(0,0,0,0.74) 36%, rgba(0,0,0,0.5) 56%, rgba(0,0,0,0.26) 74%, rgba(0,0,0,0.08) 89%, rgba(0,0,0,0) 100%)'
-        }}
-      >
-        {/* 1. 暖调深咖底色（白天略通透不发死黑，夜间深邃纯黑） */}
+      {/* 背景层：双模式独立渲染，彻底杜绝白天模式发灰 */}
+      <div className='absolute inset-x-0 top-0 -bottom-32 pointer-events-none select-none overflow-hidden'>
+        {/* ===== 1. 白天模式背景：零黑底，采用温润暖琥珀浅光自然融入网页暖米白底色 ===== */}
         <div
-          className='absolute inset-0 opacity-95 dark:opacity-100'
+          className='dark:hidden absolute inset-0'
           style={{
-            background: 'linear-gradient(180deg, #16110E 0%, #0D0B0A 100%)'
+            background:
+              'linear-gradient(180deg, rgba(226, 198, 168, 0.55) 0%, rgba(238, 224, 206, 0.35) 52%, rgba(245, 244, 240, 0) 100%)'
+          }}
+        />
+        <div
+          className='dark:hidden absolute inset-0'
+          style={{
+            background:
+              'radial-gradient(ellipse 62% 56% at 50% 42%, rgba(200, 122, 56, 0.24) 0%, rgba(200, 122, 56, 0.09) 48%, rgba(245, 244, 240, 0) 82%)'
           }}
         />
 
-        {/* 2. 酒馆封面柔和弥散光晕 */}
-        {siteInfo?.pageCover && (
-          <LazyImage
-            priority
-            src={siteInfo.pageCover}
-            alt={siteInfo?.title}
-            className='w-full h-full object-cover object-center absolute inset-0 opacity-15 dark:opacity-20 blur-3xl scale-125 mix-blend-soft-light'
-          />
-        )}
-
-        {/* 3. 顶部中央 #C87A38 焦糖暖琥珀聚光灯晕 */}
+        {/* ===== 2. 暗黑模式背景：深邃纯黑底 + 集中在大字标题背后的暖琥珀聚光灯 ===== */}
         <div
-          className='absolute inset-0'
+          className='hidden dark:block absolute inset-0'
+          style={{
+            background: 'linear-gradient(180deg, #0D0B0A 0%, #080706 72%, rgba(8, 7, 6, 0) 100%)'
+          }}
+        />
+        <div
+          className='hidden dark:block absolute inset-0'
           style={{
             background:
-              'radial-gradient(ellipse 66% 68% at 50% 0%, rgba(200, 122, 56, 0.38) 0%, rgba(200, 122, 56, 0.14) 46%, rgba(13, 11, 10, 0) 82%)'
+              'radial-gradient(ellipse 60% 54% at 50% 44%, rgba(200, 122, 56, 0.36) 0%, rgba(200, 122, 56, 0.14) 46%, rgba(8, 7, 6, 0) 80%)'
           }}
         />
       </div>
 
-      {/* 前景内容区 */}
-      <div className='relative z-10 text-white flex flex-col items-center justify-center w-full max-w-2xl mx-auto px-5 text-center'>
-        <h1 className='min-h-[68px] sm:min-h-[56px] md:min-h-[64px] flex items-center justify-center font-bold text-[22px] sm:text-3xl md:text-[42px] tracking-wide sm:tracking-wider text-white mb-4 leading-snug break-words'>
+      {/* 前景内容区：白天深胡桃墨色字、暗黑纯白字，清晰高级 */}
+      <div className='relative z-10 flex flex-col items-center justify-center w-full max-w-2xl mx-auto px-5 text-center'>
+        {/* 大字标题（光晕正对此处背后） */}
+        <h1 className='min-h-[68px] sm:min-h-[56px] md:min-h-[64px] flex items-center justify-center font-bold text-[22px] sm:text-3xl md:text-[42px] tracking-wide sm:tracking-wider text-[#261E18] dark:text-white mb-4 leading-snug break-words'>
           <span
             className={`inline-block transition-all duration-700 ease-in-out ${
               visible ? 'opacity-100 translate-y-0 blur-0' : 'opacity-0 translate-y-1.5 blur-[2px]'
@@ -200,7 +199,8 @@ const Hero = props => {
           </span>
         </h1>
 
-        <p className='font-light tracking-wide text-white/80 text-sm sm:text-base leading-relaxed max-w-xl mb-7'>
+        {/* 精简版电台简介 */}
+        <p className='font-normal dark:font-light tracking-wide text-[#5C4E42] dark:text-white/75 text-sm sm:text-base leading-relaxed max-w-xl mb-7'>
           这里是「念安酒馆」，一档深夜陪伴播客。有时郑重展开一封来信，有时一个人碎碎念；有人来了，就坐下慢慢聊。
         </p>
 
@@ -209,7 +209,7 @@ const Hero = props => {
           {latestPost && (
             <SmartLink
               href={latestPost.href || '/episodes'}
-              onClick={latestAudioUrl ? handlePlayLatest : undefined}
+              onClick={handlePlayLatest}
               className='inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium text-white transition-all duration-300 hover:-translate-y-0.5 hover:brightness-105'
               style={{
                 background: 'linear-gradient(180deg, #D68744 0%, #B86828 100%)',
@@ -227,11 +227,9 @@ const Hero = props => {
 
           <SmartLink
             href='/episodes'
-            className='inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-medium text-white/95 backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/15'
+            className='inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-medium text-[#2E241C] dark:text-white/95 bg-white/80 hover:bg-white dark:bg-white/[0.08] dark:hover:bg-white/[0.14] border border-[#C87A38]/25 dark:border-white/20 backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5'
             style={{
-              background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.11) 0%, rgba(255, 255, 255, 0.05) 100%)',
-              border: '1px solid rgba(255, 255, 255, 0.22)',
-              boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 6px 16px -4px rgba(0, 0, 0, 0.25)'
+              boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 6px 16px -4px rgba(0, 0, 0, 0.08)'
             }}
           >
             <span>浏览全部节目</span>
