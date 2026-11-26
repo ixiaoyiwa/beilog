@@ -93,7 +93,7 @@ export default function SlotBar(props) {
     const introText = introMap[category]
     return (
       <div className={`px-4 py-1 ${introText ? 'mb-6' : 'mb-2'}`}>
-        {/* 分类切换 Tab 栏：选中态为 #C87A38 立体暖琥珀；未选中态 1:1 复刻首页「浏览全部节目」立体微光玻璃框 */}
+        {/* 分类切换 Tab 栏：选中态为 #C87A38 立体暖琥珀；未选中态 1:1 严格还原图一红框「浏览全部节目」半透明磨砂玻璃按钮 */}
         <div className="flex flex-wrap gap-3 mb-4">
           {categoryTabs.map(tab => {
             const isActive = category === tab.id || category === tab.name
@@ -102,7 +102,7 @@ export default function SlotBar(props) {
                 key={tab.id}
                 href={`/category/${tab.id}`}
                 className={`flex items-center gap-1.5 px-4 py-2 text-sm rounded-xl backdrop-blur-md transition-all duration-300 cursor-pointer whitespace-nowrap hover:-translate-y-0.5 text-white/95 ${
-                  isActive ? 'font-medium hover:brightness-105' : 'hover:brightness-110'
+                  isActive ? 'font-medium hover:brightness-105' : 'hover:bg-white/15'
                 }`}
                 style={
                   isActive
@@ -113,7 +113,7 @@ export default function SlotBar(props) {
                           'inset 0 1px 0 rgba(255, 255, 255, 0.34), inset 0 -1px 0 rgba(0, 0, 0, 0.22), 0 8px 20px -6px rgba(200, 122, 56, 0.45)'
                       }
                     : {
-                        background: 'linear-gradient(180deg, rgba(38, 32, 28, 0.78) 0%, rgba(24, 20, 18, 0.88) 100%)',
+                        background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.11) 0%, rgba(255, 255, 255, 0.05) 100%)',
                         border: '1px solid rgba(255, 255, 255, 0.22)',
                         boxShadow:
                           'inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 6px 16px -4px rgba(0, 0, 0, 0.25)'
@@ -122,7 +122,7 @@ export default function SlotBar(props) {
               >
                 <i className={`${isActive ? 'far fa-folder-open' : 'far fa-folder'} text-xs`} />
                 <span>{tab.name}</span>
-                <span className={`text-[11px] ${isActive ? 'opacity-85' : 'opacity-70'}`}>
+                <span className={`text-[11px] ${isActive ? 'opacity-85' : 'opacity-75'}`}>
                   ({tab.count})
                 </span>
               </SmartLink>
