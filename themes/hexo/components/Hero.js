@@ -92,7 +92,8 @@ const renderHighlightedSlogan = (text) => {
 }
 
 /**
- * 首页顶部聚光灯播客 Hero（1:1 复刻 Velixa Podcast 深邃夜幕 + 中央琥珀聚光灯晕）
+ * 首页顶部聚光灯播客 Hero
+ * 完全照猫画虎单期页的“向下延伸 -bottom-56 + 15% 起 7 段超长慢渐变消散”公式，白天与黑夜模式均自然消融
  */
 const Hero = props => {
   const { siteInfo, posts = [], latestPosts = [] } = props
@@ -149,40 +150,40 @@ const Hero = props => {
       style={{ zIndex: 10, '--theme-primary': primaryColor }}
       className='w-full pt-28 pb-10 sm:pt-32 sm:pb-12 lg:pt-36 lg:pb-14 relative flex items-center justify-center'
     >
-      {/* 背景层：1:1 复刻图三深邃纯黑底 + 顶部中央 #C87A38 暖琥珀聚光灯晕，向下延伸 140px 铺进卡片背后 */}
+      {/* 背景层：1:1 复制单期页（PostHero）的超长 7 段慢渐变消散公式（-bottom-56 + 15% 起渐隐），彻底消灭白天模式灰白脏雾 */}
       <div
-        className='absolute inset-x-0 top-0 -bottom-36 pointer-events-none select-none overflow-hidden'
+        className='absolute inset-x-0 top-0 -bottom-56 pointer-events-none select-none overflow-hidden'
         style={{
           WebkitMaskImage:
-            'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 58%, rgba(0,0,0,0.88) 74%, rgba(0,0,0,0.48) 88%, rgba(0,0,0,0) 100%)',
+            'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.92) 15%, rgba(0,0,0,0.74) 36%, rgba(0,0,0,0.5) 56%, rgba(0,0,0,0.26) 74%, rgba(0,0,0,0.08) 89%, rgba(0,0,0,0) 100%)',
           maskImage:
-            'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 58%, rgba(0,0,0,0.88) 74%, rgba(0,0,0,0.48) 88%, rgba(0,0,0,0) 100%)'
+            'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.92) 15%, rgba(0,0,0,0.74) 36%, rgba(0,0,0,0.5) 56%, rgba(0,0,0,0.26) 74%, rgba(0,0,0,0.08) 89%, rgba(0,0,0,0) 100%)'
         }}
       >
-        {/* 1. 与图三完全一致的深邃暖黑基底（白天/夜间均保持高级暗调聚光质感） */}
+        {/* 1. 暖调深咖底色（白天略通透不发死黑，夜间深邃纯黑） */}
         <div
-          className='absolute inset-0'
+          className='absolute inset-0 opacity-95 dark:opacity-100'
           style={{
-            background: 'linear-gradient(180deg, #0D0B0A 0%, #090807 100%)'
+            background: 'linear-gradient(180deg, #16110E 0%, #0D0B0A 100%)'
           }}
         />
 
-        {/* 2. 极淡酒馆插画肌理 */}
+        {/* 2. 酒馆封面柔和弥散光晕 */}
         {siteInfo?.pageCover && (
           <LazyImage
             priority
             src={siteInfo.pageCover}
             alt={siteInfo?.title}
-            className='w-full h-full object-cover object-center absolute inset-0 opacity-10 blur-2xl scale-110'
+            className='w-full h-full object-cover object-center absolute inset-0 opacity-15 dark:opacity-20 blur-3xl scale-125 mix-blend-soft-light'
           />
         )}
 
-        {/* 3. 核心灵魂：图三同款顶部中央暖琥珀聚光灯晕 */}
+        {/* 3. 顶部中央 #C87A38 焦糖暖琥珀聚光灯晕 */}
         <div
           className='absolute inset-0'
           style={{
             background:
-              'radial-gradient(ellipse 64% 68% at 50% 0%, rgba(200, 122, 56, 0.36) 0%, rgba(200, 122, 56, 0.14) 46%, rgba(13, 11, 10, 0) 82%)'
+              'radial-gradient(ellipse 66% 68% at 50% 0%, rgba(200, 122, 56, 0.38) 0%, rgba(200, 122, 56, 0.14) 46%, rgba(13, 11, 10, 0) 82%)'
           }}
         />
       </div>
@@ -199,11 +200,11 @@ const Hero = props => {
           </span>
         </h1>
 
-        <p className='font-light tracking-wide text-white/75 text-sm sm:text-base leading-relaxed max-w-xl mb-7'>
+        <p className='font-light tracking-wide text-white/80 text-sm sm:text-base leading-relaxed max-w-xl mb-7'>
           这里是「念安酒馆」，一档深夜陪伴播客。有时郑重展开一封来信，有时一个人碎碎念；有人来了，就坐下慢慢聊。
         </p>
 
-        {/* 双行动按钮：1:1 复刻图三立体微拟物按键 */}
+        {/* 双行动按钮 */}
         <div className='flex flex-wrap items-center justify-center gap-3.5'>
           {latestPost && (
             <SmartLink
