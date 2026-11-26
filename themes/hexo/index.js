@@ -54,6 +54,7 @@ const LayoutBase = props => {
 
   const isArticleSlugPage = router.pathname === '/[prefix]/[slug]'
   const isEpisodesPage = router.route === '/episodes' || router.route === '/episodes/page/[page]'
+  const isCategoryPage = router.pathname === '/category/[category]' || router.pathname === '/category/[category]/page/[page]'
 
   const hexoArticleRouteLoading = siteConfig('HEXO_ARTICLE_ROUTE_LOADING', true, CONFIG)
   const showArticleSwitchPlaceholder = hexoArticleRouteLoading && isArticleSlugPage && onLoading
@@ -83,6 +84,15 @@ const LayoutBase = props => {
       }
     : null
 
+  const categoryHeroPost = isCategoryPage
+    ? {
+        type: 'Page',
+        title: '栏目',
+        pageCover: props?.siteInfo?.pageCover,
+        pageIcon: null
+      }
+    : null
+
   const headerSlot =
     post?.type === 'Post' ? (
       <PostHero {...props} />
@@ -90,6 +100,8 @@ const LayoutBase = props => {
       <PageHero post={post} siteInfo={props.siteInfo} />
     ) : episodesHeroPost ? (
       <PageHero post={episodesHeroPost} siteInfo={props.siteInfo} />
+    ) : categoryHeroPost ? (
+      <PageHero post={categoryHeroPost} siteInfo={props.siteInfo} />
     ) : router.route === '/' && siteConfig('HEXO_HOME_BANNER_ENABLE', null, CONFIG) ? (
       <Hero {...props} />
     ) : null
@@ -110,7 +122,7 @@ const LayoutBase = props => {
   )
 
   const searchModal = useRef(null)
-  const hasPageHero = !!post || isEpisodesPage
+  const hasPageHero = !!post || isEpisodesPage || isCategoryPage
   const mainTopPadding = hasPageHero ? 'pt-0' : isHomeWithHero ? 'pt-8' : 'pt-24'
 
   return (
