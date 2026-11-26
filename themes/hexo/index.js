@@ -117,7 +117,7 @@ const LayoutBase = props => {
           <TocDrawerButton onClick={() => drawerRight?.current?.handleSwitchVisible()} />
         </div>
       )}
-      {post && <ButtonJumpToComment />}
+      {post?.type === 'Post' && <ButtonJumpToComment />}
     </>
   )
 
