@@ -4,7 +4,7 @@ import { siteConfig } from '@/lib/config'
 
 /**
  * 普通页面 / 节目页 / 栏目页 Hero
- * 收紧底部多余留白（约收一行高度），保持紧凑比例与底部柔和微羽化
+ * 收紧至 220px 紧凑黄金高度 + 双模式无缝融底（彻底消除半透明黑叠加产生的灰白脏雾）
  */
 export default function PageHero({ post, siteInfo }) {
   if (!post) {
@@ -18,28 +18,38 @@ export default function PageHero({ post, siteInfo }) {
   return (
     <div
       id='header'
-      className='w-full h-44 md:h-[30vh] md:min-h-[260px] relative md:flex-shrink-0 z-10 mb-4'>
-      {/* 背景层：轻微向下延伸 96px 铺到正文卡片背后，内联多段透明羽化（零白边、零延迟） */}
-      <div
-        className='absolute inset-x-0 top-0 -bottom-24 pointer-events-none select-none overflow-hidden'
-        style={{
-          WebkitMaskImage:
-            'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 55%, rgba(0,0,0,0.8) 70%, rgba(0,0,0,0.42) 84%, rgba(0,0,0,0.12) 93%, rgba(0,0,0,0) 100%)',
-          maskImage:
-            'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 55%, rgba(0,0,0,0.8) 70%, rgba(0,0,0,0.42) 84%, rgba(0,0,0,0.12) 93%, rgba(0,0,0,0) 100%)'
-        }}>
+      className='w-full h-40 md:h-[220px] relative md:flex-shrink-0 z-10 mb-2 overflow-hidden'>
+      {/* 背景层：酒馆插画 + 双模式底色平滑融底，绝不产生灰白脏雾带 */}
+      <div className='absolute inset-0 pointer-events-none select-none overflow-hidden'>
         <LazyImage
           priority={true}
           src={headerImage}
           className='w-full h-full object-cover object-center absolute top-0'
         />
-        <div className='bg-black bg-opacity-65 absolute inset-0' />
+        {/* 暗调文字保护遮罩 */}
+        <div className='bg-black/55 dark:bg-black/65 absolute inset-0' />
+
+        {/* 底部平滑融底：白天直接融进网页暖米色底，夜间直接融进纯黑底 */}
+        <div
+          className='dark:hidden absolute inset-x-0 bottom-0 h-16'
+          style={{
+            background:
+              'linear-gradient(to bottom, rgba(245, 244, 240, 0) 0%, rgba(245, 244, 240, 0.65) 60%, rgba(245, 244, 240, 1) 100%)'
+          }}
+        />
+        <div
+          className='hidden dark:block absolute inset-x-0 bottom-0 h-16'
+          style={{
+            background:
+              'linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.65) 60%, rgba(0, 0, 0, 1) 100%)'
+          }}
+        />
       </div>
 
-      {/* 前景内容层：保持左对齐排版，微调顶部内边距使标题在导航栏下方视觉居中 */}
+      {/* 前景内容层：保持左对齐排版，与下方主内容栏严格对齐 */}
       <header
         id='article-header-cover'
-        className='relative z-10 w-full h-full flex items-center pt-6 md:pt-8'>
+        className='relative z-10 w-full h-full flex items-center pt-8 md:pt-10'>
         <div className='w-full px-4 md:px-8 lg:px-24'>
           <div className='w-full mx-auto lg:flex lg:space-x-4 justify-center'>
             <div className='w-full max-w-4xl md:pl-5'>
