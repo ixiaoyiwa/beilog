@@ -85,10 +85,7 @@ const formatDuration = (seconds) => {
 }
 
 const Waveform = ({ isPlaying, progress }) => {
-  const bars = [
-    28, 45, 72, 90, 62, 38, 82, 95, 55, 40, 76, 88, 50, 32, 68, 92, 74, 42,
-    60, 85, 96, 58, 36, 78, 86, 48, 30, 64, 80, 52, 35, 70, 84, 46, 30
-  ]
+  const bars = [35, 65, 45, 80, 55, 90, 40, 70, 50, 85, 60, 45, 75, 95, 55, 40, 70, 85, 50, 65, 45, 80, 60, 50, 75, 40, 65, 55, 45, 35]
 
   return (
     <div className='flex items-center gap-[2px] h-5 px-1'>
@@ -261,28 +258,15 @@ export default function PostHero({ post, siteInfo }) {
         />
       )}
 
-      {/* 1:1 复刻图一双栏网格：左栏(max-w-4xl)对齐正文文字 1、2 号线；右栏(lg:w-80)居中放置封面图对齐侧边栏 10、11 号线 */}
+      {/* 与下方主体双栏 100% 同序同宽同内边距（左栏 max-w-4xl + lg:px-12 对齐正文 1、2 号线；右栏 lg:w-80 居中对齐侧边栏） */}
       <header
         id='article-header-cover'
         className='relative z-10 w-full px-4 md:px-8 lg:px-24'>
-        <div className='w-full mx-auto flex flex-col lg:flex-row lg:space-x-4 justify-center items-center gap-6 lg:gap-0'>
-          {/* 右栏：封面图（移动端在上方；桌面端严格落在右侧边栏 lg:w-80 列宽正中，两侧留出 10、11 边距） */}
-          {hasGradientTheme && headerImage && (
-            <div className='order-1 lg:order-2 w-full lg:w-80 flex-shrink-0 flex justify-center'>
-              <div className='w-44 h-44 sm:w-52 sm:h-52 lg:w-56 lg:h-56 rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.45)] ring-1 ring-white/20 bg-white/5'>
-                <LazyImage
-                  priority={true}
-                  src={headerImage}
-                  alt={post.title}
-                  className='w-full h-full object-cover object-center'
-                />
-              </div>
-            </div>
-          )}
-
-          {/* 左栏：标题、元数据与播放器（严格对齐下方 max-w-4xl 卡片内正文文字左右 1、2 号线） */}
-          <div className='order-2 lg:order-1 w-full max-w-4xl'>
-            <div className='w-full max-w-[92%] mx-auto md:max-w-none md:mx-0 lg:pl-8 lg:pr-12 text-left'>
+        <div className='w-full mx-auto flex flex-col-reverse lg:flex-row lg:space-x-4 justify-center items-center gap-6 lg:gap-0'>
+          
+          {/* 左栏：标题、元数据与播放器 */}
+          <div className='w-full max-w-4xl'>
+            <div className='w-full max-w-[92%] mx-auto md:max-w-none md:mx-0 lg:px-12 text-left'>
               <div className='leading-snug font-bold text-2xl sm:text-3xl md:text-4xl md:leading-snug shadow-text-md text-white text-left'>
                 {siteConfig('POST_TITLE_ICON') &&
                   post.pageIcon && (
@@ -294,8 +278,8 @@ export default function PostHero({ post, siteInfo }) {
                 {post.title}
               </div>
 
-              {/* 元数据行 */}
-              <div className='mt-3 flex flex-wrap items-center justify-start gap-x-2 gap-y-1 text-xs sm:text-sm text-white/80 font-light tracking-wide'>
+              {/* 元数据行：纯空格分隔，无多余圆点 */}
+              <div className='mt-3 flex flex-wrap items-center justify-start gap-x-2 gap-y-1 text-xs sm:text-sm text-white/85 font-light tracking-wide'>
                 {episodeNumber && (
                   <>
                     <span className='font-medium text-white'>E{episodeNumber}</span>
@@ -322,21 +306,17 @@ export default function PostHero({ post, siteInfo }) {
                     {post?.tagItems?.length > 0 && <span className='opacity-40'>/</span>}
                   </>
                 )}
-                {post?.tagItems?.map((tag, index) => (
-                  <span key={tag.name} className='inline-flex items-center'>
-                    <SmartLink
-                      href={`/tag/${encodeURIComponent(tag.name)}`}
-                      passHref
-                      onMouseEnter={handleMetaEnter}
-                      onMouseLeave={handleMetaLeave}>
-                      <span className='cursor-pointer transition-colors duration-200'>
-                        {tag.name}
-                      </span>
-                    </SmartLink>
-                    {index < post.tagItems.length - 1 && (
-                      <span className='mx-1.5 opacity-40'>·</span>
-                    )}
-                  </span>
+                {post?.tagItems?.map(tag => (
+                  <SmartLink
+                    key={tag.name}
+                    href={`/tag/${encodeURIComponent(tag.name)}`}
+                    passHref
+                    onMouseEnter={handleMetaEnter}
+                    onMouseLeave={handleMetaLeave}>
+                    <span className='cursor-pointer transition-colors duration-200'>
+                      {tag.name}
+                    </span>
+                  </SmartLink>
                 ))}
               </div>
 
@@ -387,6 +367,21 @@ export default function PostHero({ post, siteInfo }) {
               )}
             </div>
           </div>
+
+          {/* 右栏：封面图 */}
+          {hasGradientTheme && headerImage && (
+            <div className='w-full lg:w-80 flex-shrink-0 flex justify-center'>
+              <div className='w-44 h-44 sm:w-52 sm:h-52 lg:w-56 lg:h-56 rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.45)] ring-1 ring-white/20 bg-white/5'>
+                <LazyImage
+                  priority={true}
+                  src={headerImage}
+                  alt={post.title}
+                  className='w-full h-full object-cover object-center'
+                />
+              </div>
+            </div>
+          )}
+          
         </div>
       </header>
     </div>
