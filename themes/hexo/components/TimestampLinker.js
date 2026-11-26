@@ -381,6 +381,14 @@ export default function TimestampLinker({ post }) {
 
 
 
-  return null
+  return (
+    <style jsx global>{`
+      .hexo-timestamp-btn:hover {
+        color: var(--theme-color, #C87A38) !important;
+        border-color: var(--theme-color, #C87A38) !important;
+        background-color: color-mix(in srgb, var(--theme-color, #C87A38) 12%, transparent) !important;
+      }
+    `}</style>
+  )
 
 }
