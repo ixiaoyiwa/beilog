@@ -93,7 +93,7 @@ export default function SlotBar(props) {
     const introText = introMap[category]
     return (
       <div className={`px-4 py-1 ${introText ? 'mb-6' : 'mb-2'}`}>
-        {/* 分类切换 Tab 栏：#C87A38 焦糖暖琥珀 + 首页同款 3D 立体微拟物按键质感 */}
+        {/* 分类切换 Tab 栏：选中态为 #C87A38 立体暖琥珀；未选中态 1:1 复刻首页「浏览全部节目」立体微光玻璃框 */}
         <div className="flex flex-wrap gap-3 mb-4">
           {categoryTabs.map(tab => {
             const isActive = category === tab.id || category === tab.name
@@ -101,11 +101,9 @@ export default function SlotBar(props) {
               <SmartLink
                 key={tab.id}
                 href={`/category/${tab.id}`}
-                className={`flex items-center gap-1.5 px-4 py-2 text-sm rounded-xl transition-all duration-300 cursor-pointer whitespace-nowrap hover:-translate-y-0.5
-                  ${isActive
-                    ? 'text-white font-medium'
-                    : 'text-gray-700 dark:text-gray-200 bg-white dark:bg-white/[0.08] border border-black/[0.08] dark:border-white/15 hover:border-[#C87A38]/50 hover:text-[#C87A38] dark:hover:text-[#E09250]'
-                  }`}
+                className={`flex items-center gap-1.5 px-4 py-2 text-sm rounded-xl backdrop-blur-md transition-all duration-300 cursor-pointer whitespace-nowrap hover:-translate-y-0.5 text-white/95 ${
+                  isActive ? 'font-medium hover:brightness-105' : 'hover:brightness-110'
+                }`}
                 style={
                   isActive
                     ? {
@@ -115,14 +113,16 @@ export default function SlotBar(props) {
                           'inset 0 1px 0 rgba(255, 255, 255, 0.34), inset 0 -1px 0 rgba(0, 0, 0, 0.22), 0 8px 20px -6px rgba(200, 122, 56, 0.45)'
                       }
                     : {
+                        background: 'linear-gradient(180deg, rgba(38, 32, 28, 0.78) 0%, rgba(24, 20, 18, 0.88) 100%)',
+                        border: '1px solid rgba(255, 255, 255, 0.22)',
                         boxShadow:
-                          'inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 2px 6px -1px rgba(0, 0, 0, 0.05)'
+                          'inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 6px 16px -4px rgba(0, 0, 0, 0.25)'
                       }
                 }
               >
                 <i className={`${isActive ? 'far fa-folder-open' : 'far fa-folder'} text-xs`} />
                 <span>{tab.name}</span>
-                <span className={`text-[11px] ${isActive ? 'opacity-85' : 'opacity-60'}`}>
+                <span className={`text-[11px] ${isActive ? 'opacity-85' : 'opacity-70'}`}>
                   ({tab.count})
                 </span>
               </SmartLink>
