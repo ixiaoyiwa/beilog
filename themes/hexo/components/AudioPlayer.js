@@ -73,16 +73,19 @@ export default function AudioPlayer({ src, title, cover, href }) {
   }
 
   const active = isCurrentSrc && isPlaying
-  // 未播放/暂停：纯主题色；播放中：主题色渐变
+  const themeColor = 'var(--theme-color, #C87A38)'
+  const themeHighlight = 'color-mix(in srgb, var(--theme-color, #C87A38) 68%, #ffffff)'
+
+  // 未播放/暂停：纯全局主题色；播放中：主题色自适应高光渐变
   const buttonStyle = {
     background: active
-      ? 'linear-gradient(135deg, #7B8BC4 0%, #3A4A7A 100%)'
-      : '#3A4A7A'
+      ? `linear-gradient(135deg, ${themeHighlight} 0%, ${themeColor} 100%)`
+      : themeColor
   }
   const playedBarStyle = {
     width: `${progress}%`,
     background: progress > 0
-      ? 'linear-gradient(90deg, #8B9BD4 0%, #4A5A8A 50%, #3A4A7A 100%)'
+      ? `linear-gradient(90deg, ${themeHighlight} 0%, ${themeColor} 100%)`
       : 'transparent'
   }
 
@@ -127,10 +130,10 @@ export default function AudioPlayer({ src, title, cover, href }) {
         .loading-stripe {
           background: repeating-linear-gradient(
             -45deg,
-            rgba(58, 74, 122, 0.25) 0px,
-            rgba(58, 74, 122, 0.25) 8px,
-            rgba(58, 74, 122, 0.05) 8px,
-            rgba(58, 74, 122, 0.05) 16px
+            color-mix(in srgb, var(--theme-color, #C87A38) 25%, transparent) 0px,
+            color-mix(in srgb, var(--theme-color, #C87A38) 25%, transparent) 8px,
+            color-mix(in srgb, var(--theme-color, #C87A38) 6%, transparent) 8px,
+            color-mix(in srgb, var(--theme-color, #C87A38) 6%, transparent) 16px
           );
           background-size: 32px 100%;
           animation: stripe-move 0.8s linear infinite;
