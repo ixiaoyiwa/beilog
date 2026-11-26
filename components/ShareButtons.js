@@ -30,18 +30,18 @@ const SHARE_ICON_CLASS = {
   viber: 'fab fa-viber',
   workplace: 'fas fa-briefcase',
   weibo: 'fab fa-weibo',
-  pocket: 'fas fa-bookmark',
-  instapaper: 'fas fa-newspaper',
-  hatena: 'fas fa-h',
-  threads: 'fas fa-at'
+  pocket: 'fab fa-get-pocket',
+  instapaper: 'fas fa-italic',
+  hatena: 'fab fa-hatena',
+  threads: 'fab fa-threads'
 }
 
 const SHARE_HOVER_COLORS = {
   facebook: '#1877F2',
-  messenger: '#00B2FF',
+  messenger: '#0084FF',
   line: '#00C300',
   reddit: '#FF4500',
-  email: '#0078D4',
+  email: '#D44638',
   twitter: '#000000',
   telegram: '#26A5E4',
   whatsapp: '#25D366',
