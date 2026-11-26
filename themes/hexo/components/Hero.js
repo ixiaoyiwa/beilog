@@ -79,8 +79,8 @@ const renderHighlightedSlogan = (text) => {
         <span
           key={idx}
           style={{
-            color: '#C87A38',
-            textShadow: '0 2px 18px rgba(200, 122, 56, 0.32)'
+            color: '#DF883E',
+            textShadow: '0 2px 18px rgba(200, 122, 56, 0.45)'
           }}
         >
           {char}
@@ -91,12 +91,6 @@ const renderHighlightedSlogan = (text) => {
   })
 }
 
-/**
- * 首页顶部聚光灯播客 Hero
- * 1. 光晕中心精准锁定在大字标题背后（at 50% 44%）
- * 2. 白天模式采用温润暖琥珀浅光晕自然融入暖米白底色（彻底消除灰色脏雾）；暗黑模式采用深邃黑底聚光灯
- * 3. 点击「播放最新节目」同步触发全局播放并跳转到最新一期文章页阅读
- */
 const Hero = props => {
   const { siteInfo, posts = [], latestPosts = [] } = props
 
@@ -131,7 +125,6 @@ const Hero = props => {
   const latestPost = getTrueLatestEpisode(posts, latestPosts)
   const latestAudioUrl = latestPost?.audio || parseExt(latestPost?.ext)
 
-  // 触发全局播放器起播，同时不调用 e.preventDefault()，让 SmartLink 正常跳转进入最新一期文章页
   const handlePlayLatest = () => {
     if (!latestAudioUrl) return
     window.dispatchEvent(
@@ -152,25 +145,34 @@ const Hero = props => {
       style={{ zIndex: 10, '--theme-primary': primaryColor }}
       className='w-full pt-28 pb-10 sm:pt-32 sm:pb-12 lg:pt-36 lg:pb-14 relative flex items-center justify-center'
     >
-      {/* 背景层：双模式独立渲染，彻底杜绝白天模式发灰 */}
-      <div className='absolute inset-x-0 top-0 -bottom-32 pointer-events-none select-none overflow-hidden'>
-        {/* ===== 1. 白天模式背景：零黑底，采用温润暖琥珀浅光自然融入网页暖米白底色 ===== */}
+      {/* 背景层：保留你满意的暗黑聚光灯，同时让白天模式也拥有浓郁暖胡桃夜幕 + 中央焦糖琥珀聚光灯晕 + 清晰顶部导航 */}
+      <div className='absolute inset-x-0 top-0 -bottom-44 pointer-events-none select-none overflow-hidden'>
+        {/* ===== 1. 白天模式背景：深暖胡桃夜幕托底（保证顶部导航栏白字清晰）+ 中央浓郁暖琥珀聚光灯晕 + 顺滑融入暖米白 ===== */}
         <div
           className='dark:hidden absolute inset-0'
           style={{
-            background:
-              'linear-gradient(180deg, rgba(226, 198, 168, 0.55) 0%, rgba(238, 224, 206, 0.35) 52%, rgba(245, 244, 240, 0) 100%)'
+            WebkitMaskImage:
+              'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.96) 28%, rgba(0,0,0,0.82) 52%, rgba(0,0,0,0.48) 74%, rgba(0,0,0,0.14) 90%, rgba(0,0,0,0) 100%)',
+            maskImage:
+              'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.96) 28%, rgba(0,0,0,0.82) 52%, rgba(0,0,0,0.48) 74%, rgba(0,0,0,0.14) 90%, rgba(0,0,0,0) 100%)'
           }}
-        />
-        <div
-          className='dark:hidden absolute inset-0'
-          style={{
-            background:
-              'radial-gradient(ellipse 62% 56% at 50% 42%, rgba(200, 122, 56, 0.24) 0%, rgba(200, 122, 56, 0.09) 48%, rgba(245, 244, 240, 0) 82%)'
-          }}
-        />
+        >
+          <div
+            className='absolute inset-0'
+            style={{
+              background: 'linear-gradient(180deg, #211710 0%, #2C1E14 65%, #382619 100%)'
+            }}
+          />
+          <div
+            className='absolute inset-0'
+            style={{
+              background:
+                'radial-gradient(ellipse 62% 56% at 50% 44%, rgba(216, 132, 60, 0.46) 0%, rgba(200, 122, 56, 0.20) 48%, rgba(33, 23, 16, 0) 82%)'
+            }}
+          />
+        </div>
 
-        {/* ===== 2. 暗黑模式背景：深邃纯黑底 + 集中在大字标题背后的暖琥珀聚光灯 ===== */}
+        {/* ===== 2. 暗黑模式背景（完全保留你满意的当前效果） ===== */}
         <div
           className='hidden dark:block absolute inset-0'
           style={{
@@ -186,10 +188,10 @@ const Hero = props => {
         />
       </div>
 
-      {/* 前景内容区：白天深胡桃墨色字、暗黑纯白字，清晰高级 */}
-      <div className='relative z-10 flex flex-col items-center justify-center w-full max-w-2xl mx-auto px-5 text-center'>
-        {/* 大字标题（光晕正对此处背后） */}
-        <h1 className='min-h-[68px] sm:min-h-[56px] md:min-h-[64px] flex items-center justify-center font-bold text-[22px] sm:text-3xl md:text-[42px] tracking-wide sm:tracking-wider text-[#261E18] dark:text-white mb-4 leading-snug break-words'>
+      {/* 前景内容区：白天与暗黑模式均采用温润白字，对比清晰、聚光质感十足 */}
+      <div className='relative z-10 text-white flex flex-col items-center justify-center w-full max-w-2xl mx-auto px-5 text-center'>
+        {/* 大字标题 */}
+        <h1 className='min-h-[68px] sm:min-h-[56px] md:min-h-[64px] flex items-center justify-center font-bold text-[22px] sm:text-3xl md:text-[42px] tracking-wide sm:tracking-wider text-white mb-4 leading-snug break-words'>
           <span
             className={`inline-block transition-all duration-700 ease-in-out ${
               visible ? 'opacity-100 translate-y-0 blur-0' : 'opacity-0 translate-y-1.5 blur-[2px]'
@@ -200,11 +202,11 @@ const Hero = props => {
         </h1>
 
         {/* 精简版电台简介 */}
-        <p className='font-normal dark:font-light tracking-wide text-[#5C4E42] dark:text-white/75 text-sm sm:text-base leading-relaxed max-w-xl mb-7'>
+        <p className='font-light tracking-wide text-white/80 text-sm sm:text-base leading-relaxed max-w-xl mb-7'>
           这里是「念安酒馆」，一档深夜陪伴播客。有时郑重展开一封来信，有时一个人碎碎念；有人来了，就坐下慢慢聊。
         </p>
 
-        {/* 双行动按钮 */}
+        {/* 双行动按钮：彻底去掉「浏览全部节目」周围多余的外线框，恢复原版纯净微透玻璃质感 */}
         <div className='flex flex-wrap items-center justify-center gap-3.5'>
           {latestPost && (
             <SmartLink
@@ -227,9 +229,9 @@ const Hero = props => {
 
           <SmartLink
             href='/episodes'
-            className='inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-medium text-[#2E241C] dark:text-white/95 bg-white/80 hover:bg-white dark:bg-white/[0.08] dark:hover:bg-white/[0.14] border border-[#C87A38]/25 dark:border-white/20 backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5'
+            className='inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-medium text-white/95 bg-white/[0.08] hover:bg-white/[0.15] backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5'
             style={{
-              boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 6px 16px -4px rgba(0, 0, 0, 0.08)'
+              boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 6px 16px -4px rgba(0, 0, 0, 0.25)'
             }}
           >
             <span>浏览全部节目</span>
