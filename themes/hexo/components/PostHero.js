@@ -24,20 +24,20 @@ const getEpisodeNumber = (post) => {
   return match ? match.at(1) : null
 }
 
-const PlayIcon = ({ size = 16 }) => (
+const PlayIcon = ({ size = 15 }) => (
   <svg viewBox='0 0 24 24' width={size} height={size} fill='currentColor' style={{ marginLeft: '2px' }}>
     <path d='M8 5v14l11-7z' />
   </svg>
 )
 
-const PauseIcon = ({ size = 16 }) => (
+const PauseIcon = ({ size = 15 }) => (
   <svg viewBox='0 0 24 24' width={size} height={size} fill='currentColor'>
     <rect x='6' y='5' width='4' height='14' rx='1' />
     <rect x='14' y='5' width='4' height='14' rx='1' />
   </svg>
 )
 
-const LoadingIcon = ({ size = 16 }) => {
+const LoadingIcon = ({ size = 15 }) => {
   const dots = 8
   const radius = 9
   const dotR = 1.6
@@ -84,11 +84,12 @@ const formatDuration = (seconds) => {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
+// 恢复为最初精致短小的 24 根波形条，不再过长
 const Waveform = ({ isPlaying, progress }) => {
-  const bars = [35, 65, 45, 80, 55, 90, 40, 70, 50, 85, 60, 45, 75, 95, 55, 40, 70, 85, 50, 65, 45, 80, 60, 50, 75, 40, 65, 55, 45, 35]
+  const bars = [35, 65, 45, 85, 55, 95, 40, 75, 60, 90, 50, 80, 45, 70, 95, 55, 80, 40, 65, 85, 50, 70, 45, 35]
 
   return (
-    <div className='flex items-center gap-[2px] h-5 px-1'>
+    <div className='flex items-center gap-[2px] h-4 px-0.5'>
       {bars.map((height, i) => {
         const barPercent = ((i + 1) / bars.length) * 100
         const isPassed = progress >= barPercent
@@ -258,16 +259,15 @@ export default function PostHero({ post, siteInfo }) {
         />
       )}
 
-      {/* 与下方主体双栏 100% 同序同宽同内边距（左栏 max-w-4xl + lg:px-12 对齐正文 1、2 号线；右栏 lg:w-80 居中对齐侧边栏） */}
       <header
         id='article-header-cover'
         className='relative z-10 w-full px-4 md:px-8 lg:px-24'>
         <div className='w-full mx-auto flex flex-col-reverse lg:flex-row lg:space-x-4 justify-center items-center gap-6 lg:gap-0'>
           
-          {/* 左栏：标题、元数据与播放器 */}
+          {/* 左栏：手机端全部居中；电脑端严谨左对齐（lg:pl-12 lg:pr-6） */}
           <div className='w-full max-w-4xl'>
-            <div className='w-full max-w-[92%] mx-auto md:max-w-none md:mx-0 lg:px-12 text-left'>
-              <div className='leading-snug font-bold text-2xl sm:text-3xl md:text-4xl md:leading-snug shadow-text-md text-white text-left'>
+            <div className='w-full max-w-[92%] mx-auto md:max-w-none md:mx-0 lg:pl-12 lg:pr-6 text-center lg:text-left'>
+              <div className='leading-snug font-bold text-2xl sm:text-3xl md:text-4xl md:leading-snug shadow-text-md text-white text-center lg:text-left'>
                 {siteConfig('POST_TITLE_ICON') &&
                   post.pageIcon && (
                     <NotionIcon
@@ -278,8 +278,8 @@ export default function PostHero({ post, siteInfo }) {
                 {post.title}
               </div>
 
-              {/* 元数据行：纯空格分隔，无多余圆点 */}
-              <div className='mt-3 flex flex-wrap items-center justify-start gap-x-2 gap-y-1 text-xs sm:text-sm text-white/85 font-light tracking-wide'>
+              {/* 元数据行：手机端居中，电脑端左对齐 */}
+              <div className='mt-3 flex flex-wrap items-center justify-center lg:justify-start gap-x-2 gap-y-1 text-xs sm:text-sm text-white/85 font-light tracking-wide'>
                 {episodeNumber && (
                   <>
                     <span className='font-medium text-white'>E{episodeNumber}</span>
@@ -290,10 +290,11 @@ export default function PostHero({ post, siteInfo }) {
                   <>
                     <SmartLink
                       href={getCategoryUrl(post.category, NOTION_CONFIG)}
-                      passHref
-                      onMouseEnter={handleMetaEnter}
-                      onMouseLeave={handleMetaLeave}>
-                      <span className='cursor-pointer transition-colors duration-200'>
+                      passHref>
+                      <span
+                        onMouseEnter={handleMetaEnter}
+                        onMouseLeave={handleMetaLeave}
+                        className='cursor-pointer transition-colors duration-200'>
                         {post.category}
                       </span>
                     </SmartLink>
@@ -310,50 +311,49 @@ export default function PostHero({ post, siteInfo }) {
                   <SmartLink
                     key={tag.name}
                     href={`/tag/${encodeURIComponent(tag.name)}`}
-                    passHref
-                    onMouseEnter={handleMetaEnter}
-                    onMouseLeave={handleMetaLeave}>
-                    <span className='cursor-pointer transition-colors duration-200'>
+                    passHref>
+                    <span
+                      onMouseEnter={handleMetaEnter}
+                      onMouseLeave={handleMetaLeave}
+                      className='cursor-pointer transition-colors duration-200'>
                       {tag.name}
                     </span>
                   </SmartLink>
                 ))}
               </div>
 
-              {/* 播放器胶囊 */}
+              {/* 播放器胶囊：恢复为最初的无外框纯净半透明白玻璃（与卡片右下角播控同款），手机端居中、电脑端左对齐 */}
               {audioUrl && (
-                <div className='mt-6'>
+                <div className='mt-6 flex justify-center lg:justify-start'>
                   <button
                     type='button'
                     onClick={handlePlayClick}
-                    className='relative inline-flex items-center gap-3 px-4 py-2 rounded-full text-white transition-all duration-300 shadow-lg cursor-pointer overflow-hidden'
+                    className='relative inline-flex items-center gap-2.5 px-3.5 py-2 rounded-full text-white transition-all duration-300 shadow-md hover:bg-white/25 cursor-pointer overflow-hidden'
                     style={{
-                      backgroundColor: 'rgba(20, 18, 16, 0.28)',
-                      border: '1px solid rgba(255, 255, 255, 0.18)',
+                      backgroundColor: 'rgba(255, 255, 255, 0.16)',
                       backdropFilter: 'blur(12px)',
                       WebkitBackdropFilter: 'blur(12px)',
-                      boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 8px 20px -4px rgba(0, 0, 0, 0.25)',
                       transform: 'translateZ(0)'
                     }}>
                     {progress > 0 && (
                       <div
                         className='absolute inset-0 pointer-events-none'
                         style={{
-                          background: `linear-gradient(90deg, color-mix(in srgb, var(--theme-color, #C87A38) 88%, #ffffff) 0%, var(--theme-color, #C87A38) 65%, color-mix(in srgb, var(--theme-color, #C87A38) 75%, transparent) 100%)`,
-                          WebkitMaskImage: isFilled ? 'none' : `linear-gradient(to right, #000 calc(${progress}% - 36px), transparent ${progress}%)`,
-                          maskImage: isFilled ? 'none' : `linear-gradient(to right, #000 calc(${progress}% - 36px), transparent ${progress}%)`,
-                          opacity: isFilled ? 0.92 : isPlaying ? 0.85 : 0.55,
+                          background: `linear-gradient(90deg, rgba(255, 255, 255, 0.32) 0%, var(--theme-color, #C87A38) 100%)`,
+                          WebkitMaskImage: isFilled ? 'none' : `linear-gradient(to right, #000 calc(${progress}% - 24px), transparent ${progress}%)`,
+                          maskImage: isFilled ? 'none' : `linear-gradient(to right, #000 calc(${progress}% - 24px), transparent ${progress}%)`,
+                          opacity: isFilled ? 0.9 : isPlaying ? 0.85 : 0.5,
                           transition: 'opacity 0.3s ease'
                         }}
                       />
                     )}
-                    <div className='relative z-10 flex-shrink-0 flex items-center justify-center w-6 h-6'>
+                    <div className='relative z-10 flex-shrink-0 flex items-center justify-center w-5 h-5'>
                       {isLoading ? (
-                        <LoadingIcon size={16} />
+                        <LoadingIcon size={15} />
                       ) : isPlaying ? (
-                        <PauseIcon size={16} />
+                        <PauseIcon size={15} />
                       ) : (
-                        <PlayIcon size={16} />
+                        <PlayIcon size={15} />
                       )}
                     </div>
                     <div className='relative z-10'>
