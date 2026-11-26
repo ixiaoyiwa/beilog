@@ -145,9 +145,9 @@ const Hero = props => {
       style={{ zIndex: 10, '--theme-primary': primaryColor }}
       className='w-full pt-28 pb-10 sm:pt-32 sm:pb-12 lg:pt-36 lg:pb-14 relative flex items-center justify-center'
     >
-      {/* 背景层：保留你满意的暗黑聚光灯，同时让白天模式也拥有浓郁暖胡桃夜幕 + 中央焦糖琥珀聚光灯晕 + 清晰顶部导航 */}
+      {/* 背景层 */}
       <div className='absolute inset-x-0 top-0 -bottom-44 pointer-events-none select-none overflow-hidden'>
-        {/* ===== 1. 白天模式背景：深暖胡桃夜幕托底（保证顶部导航栏白字清晰）+ 中央浓郁暖琥珀聚光灯晕 + 顺滑融入暖米白 ===== */}
+        {/* 1. 白天模式背景 */}
         <div
           className='dark:hidden absolute inset-0'
           style={{
@@ -172,7 +172,7 @@ const Hero = props => {
           />
         </div>
 
-        {/* ===== 2. 暗黑模式背景（完全保留你满意的当前效果） ===== */}
+        {/* 2. 暗黑模式背景 */}
         <div
           className='hidden dark:block absolute inset-0'
           style={{
@@ -188,7 +188,7 @@ const Hero = props => {
         />
       </div>
 
-      {/* 前景内容区：白天与暗黑模式均采用温润白字，对比清晰、聚光质感十足 */}
+      {/* 前景内容区 */}
       <div className='relative z-10 text-white flex flex-col items-center justify-center w-full max-w-2xl mx-auto px-5 text-center'>
         {/* 大字标题 */}
         <h1 className='min-h-[68px] sm:min-h-[56px] md:min-h-[64px] flex items-center justify-center font-bold text-[22px] sm:text-3xl md:text-[42px] tracking-wide sm:tracking-wider text-white mb-4 leading-snug break-words'>
@@ -206,7 +206,7 @@ const Hero = props => {
           这里是「念安酒馆」，一档深夜陪伴播客。有时郑重展开一封来信，有时一个人碎碎念；有人来了，就坐下慢慢聊。
         </p>
 
-        {/* 双行动按钮：彻底去掉「浏览全部节目」周围多余的外线框，恢复原版纯净微透玻璃质感 */}
+        {/* 双行动按钮：次按钮采用与主按钮同色系的 1px 主题色暖琥珀细边框 */}
         <div className='flex flex-wrap items-center justify-center gap-3.5'>
           {latestPost && (
             <SmartLink
@@ -229,8 +229,9 @@ const Hero = props => {
 
           <SmartLink
             href='/episodes'
-            className='inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-medium text-white/95 bg-white/[0.08] hover:bg-white/[0.15] backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5'
+            className='inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-medium text-white/95 bg-white/[0.06] hover:bg-[#C87A38]/20 backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5'
             style={{
+              border: '1px solid rgba(200, 122, 56, 0.48)',
               boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 6px 16px -4px rgba(0, 0, 0, 0.25)'
             }}
           >
