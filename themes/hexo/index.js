@@ -187,9 +187,12 @@ const LayoutPostList = props => {
         <div className='mt-8 mb-4 text-center md:text-right md:px-2'>
           <SmartLink
             href='/episodes'
-            className='inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium rounded-xl transition-all duration-300 hover:-translate-y-0.5 text-[#A85F24] hover:text-white bg-[#C87A38]/10 hover:bg-[#C87A38] border border-[#C87A38]/35 dark:text-white/95 dark:bg-white/[0.08] dark:hover:bg-[#C87A38] dark:border-white/20 dark:hover:border-[#C87A38]'
+            className='inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium text-white rounded-xl transition-all duration-300 hover:-translate-y-0.5 hover:brightness-105'
             style={{
-              boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 4px 12px -2px rgba(0, 0, 0, 0.12)'
+              background: 'linear-gradient(180deg, #D68744 0%, #B86828 100%)',
+              border: '1px solid rgba(110, 48, 12, 0.45)',
+              boxShadow:
+                'inset 0 1px 0 rgba(255, 255, 255, 0.34), inset 0 -1px 0 rgba(0, 0, 0, 0.22), 0 8px 20px -6px rgba(200, 122, 56, 0.45)'
             }}
           >
             <span>浏览全部节目</span>
