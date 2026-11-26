@@ -471,12 +471,14 @@ export default function GlobalAudioPlayer() {
                       e.preventDefault()
                       seekFromEvent(e)
                     }}
-                    className='flex-1 h-1 bg-gray-200/80 dark:bg-gray-700/80 rounded-full cursor-pointer relative min-w-[50px]'>
+                    style={{ transform: 'translateZ(0)' }}
+                    className='flex-1 h-[5px] bg-gray-200/80 dark:bg-gray-700/80 rounded-full overflow-hidden cursor-pointer relative min-w-[50px]'>
                     <div
-                      className='h-full rounded-full'
+                      className='h-full rounded-full transition-[width] duration-150 ease-linear'
                       style={{
                         width: `${progress}%`,
-                        background: `linear-gradient(90deg, ${themeHighlight} 0%, ${themeColor} 100%)`
+                        backgroundColor: themeColor,
+                        willChange: 'width'
                       }}
                     />
                   </div>
