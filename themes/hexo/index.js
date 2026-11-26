@@ -146,3 +146,200 @@ const LayoutBase = props => {
 }
 
 const LayoutIndex = props => <LayoutPostList {...props} />
+
+const LayoutPostList = props => {
+  const router = useRouter()
+  const isHomePage = router.route === '/'
+  const { posts = [], siteInfo } = props
+
+  const showSummary = siteConfig('HEXO_POST_LIST_SUMMARY', null, CONFIG)
+
+  // 首页选文、优先级、数量限制和“最新”标记已统一由 pages/index.js 完成
+  // 此处仅负责渲染，不再二次分类或截断
+  if (isHomePage) {
+    return (
+      <div>
+        <SlotBar {...props} />
+        <div className='space-y-6 px-2'>
+          {posts.map((post, index) => (
+            <BlogPostCard
+              key={post.id || post.slug || index}
+              post={post}
+              index={index}
+              showSummary={showSummary}
+              siteInfo={siteInfo}
+              featuredType={post.featuredType || null}
+            />
+          ))}
+        </div>
+        <div className='mt-8 mb-4 text-center md:text-right md:px-2'>
+          <SmartLink href='/episodes' className='inline-block px-6 py-2 text-sm font-semibold rounded-lg border-2 transition-colors border-[var(--theme-color)] text-[var(--theme-color)] hover:bg-[var(--theme-color)] hover:text-white'>
+            查看更多节目 ···
+          </SmartLink>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <SlotBar {...props} />
+      {siteConfig('POST_LIST_STYLE') === 'page' ? <BlogPostListPage {...props} /> : <BlogPostListScroll {...props} />}
+    </div>
+  )
+}
+
+const LayoutSearch = props => {
+  const { keyword } = props
+  const router = useRouter()
+  const currentSearch = keyword || router?.query?.s
+  useEffect(() => {
+    if (currentSearch) {
+      replaceSearchResult({ doms: document.getElementsByClassName('replace'), search: keyword, target: { element: 'span', className: 'text-red-500 border-b border-dashed' } })
+    }
+  })
+  return (
+    <div>
+      {!currentSearch ? <SearchNav {...props} /> : (
+        <div id='posts-wrapper'>
+          {siteConfig('POST_LIST_STYLE') === 'page' ? <BlogPostListPage {...props} /> : <BlogPostListScroll {...props} />}
+        </div>
+      )}
+    </div>
+  )
+}
+
+const LayoutArchive = props => {
+  const { archivePosts } = props
+  return (
+    <div>
+      <Card className='w-full'>
+        <div className='mb-10 pb-20 bg-white md:p-12 p-3 min-h-full dark:bg-hexo-black-gray'>
+          {Object.keys(archivePosts).map(archiveTitle => (
+            <BlogPostArchive key={archiveTitle} posts={archivePosts[archiveTitle]} archiveTitle={archiveTitle} />
+          ))}
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+const LayoutEpisodes = props => <EpisodesPage {...props} />
+const LayoutFriends = props => <FriendsPage {...props} />
+
+const LayoutSlug = props => {
+  const { post, lock, validPassword } = props
+  const router = useRouter()
+  const waiting404 = siteConfig('POST_WAITING_TIME_FOR_404') * 1000
+  useEffect(() => {
+    if (!post) {
+      setTimeout(() => {
+          if (isBrowser) {
+            const article = document.querySelector('#article-wrapper #notion-article')
+            if (!article) router.push('/404').then(() => { console.warn('找不到页面', router.asPath) })
+          }
+        }, waiting404)
+    }
+  }, [post])
+
+  let hasAudioField = !!post?.audio
+  if (!hasAudioField && post?.ext) {
+    const raw = typeof post.ext === 'string' ? post.ext.trim() : ''
+    if (raw && raw.startsWith('http')) hasAudioField = true
+  }
+
+  const isRegularPage = post?.type === 'Page'
+  const articleBorderClass = isRegularPage ? 'lg:border-x lg:border-t' : 'lg:border'
+
+  return (
+    <div style={isRegularPage ? { borderBottom: 'none', borderBottomWidth: 0, boxShadow: 'none' } : undefined} className={`w-full ${isRegularPage ? '' : 'lg:hover:shadow'} ${articleBorderClass} rounded-t-xl lg:rounded-xl lg:px-2 lg:py-4 bg-white dark:bg-hexo-black-gray dark:border-black article`}>
+      {lock && <ArticleLock validPassword={validPassword} />}
+      {!lock && post && (
+        <div className='overflow-x-auto flex-grow mx-auto md:w-full md:px-5 '>
+          <article id='article-wrapper' className='subpixel-antialiased overflow-y-hidden'>
+            <section className='px-5 justify-center mx-auto max-w-2xl lg:max-w-full'>
+              {!hasAudioField && <NotionAudioEnhancer post={post} />}
+              {post && (post.markdownHtml ? <MarkdownArticle html={post.markdownHtml} /> : <NotionPage post={post} />)}
+              {post && <TimestampLinker post={post} />}
+            </section>
+            <div className={post?.type === 'Post' ? 'mt-8' : ''}><ShareBar post={post} /></div>
+            {post?.type === 'Post' && (
+              <><ArticleCopyright {...props} /><ArticleRecommend {...props} /><ArticleAdjacent {...props} /></>
+            )}
+          </article>
+          {post?.type === 'Post' && (
+            <>
+              <div className='pt-4 border-dashed' />
+              <div id='post-comment-wrapper' className='duration-200 overflow-x-auto bg-white dark:bg-hexo-black-gray px-3'>
+                <Comment frontMatter={post} />
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+const Layout404 = props => {
+  const router = useRouter()
+  const { locale } = useGlobal()
+  useEffect(() => {
+    setTimeout(() => {
+      if (isBrowser) {
+        const article = document.querySelector('#article-wrapper #notion-article')
+        if (!article) router.push('/').then(() => {})
+      }
+    }, 3000)
+  })
+  return (
+    <div className='text-black w-full h-screen text-center justify-center content-center items-center flex flex-col'>
+      <div className='dark:text-gray-200'>
+        <h2 className='inline-block border-r-2 border-gray-600 mr-2 px-3 py-2 align-top'>404</h2>
+        <div className='inline-block text-left h-32 leading-10 items-center'><h2 className='m-0 p-0'>{locale.COMMON.NOT_FOUND}</h2></div>
+      </div>
+    </div>
+  )
+}
+
+const LayoutCategoryIndex = props => {
+  const { categoryOptions } = props
+  const { locale, NOTION_CONFIG } = useGlobal()
+  return (
+    <div className='mx-2 md:mx-0'>
+      <Card className='w-full'>
+        <div className='dark:text-gray-200 mb-5 mx-3'><i className='mr-4 fa-solid fa-layer-group' /> {locale.COMMON.CATEGORY}:</div>
+        <div id='category-list' className='duration-200 flex flex-wrap mx-8'>
+          {categoryOptions?.map(category => (
+            <SmartLink key={category.name} href={getCategoryUrl(category.name, NOTION_CONFIG)} passHref legacyBehavior>
+              <div className={' duration-300 dark:hover:text-white px-5 cursor-pointer py-2 hover:text-indigo-400'}>
+                <i className='mr-4 fas fa-folder' /> {category.name}({category.count})
+              </div>
+            </SmartLink>
+          ))}
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+const LayoutTagIndex = props => {
+  const { tagOptions } = props
+  const { locale } = useGlobal()
+  return (
+    <div className='mx-2 md:mx-0'>
+      <Card className='w-full'>
+        <div className='dark:text-gray-200 mb-5 ml-4'><i className='mr-4 fas fa-users' /> {locale.COMMON.TAGS}:</div>
+        <div id='tags-list' className='duration-200 flex flex-wrap ml-8'>
+          {tagOptions.map(tag => (<div key={tag.name} className='p-2'><TagItemMini key={tag.name} tag={tag} /></div>))}
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+export {
+  Layout404, LayoutArchive, LayoutBase, LayoutCategoryIndex,
+  LayoutIndex, LayoutPostList, LayoutSearch, LayoutSlug,
+  LayoutTagIndex, LayoutEpisodes, LayoutFriends, CONFIG as THEME_CONFIG
+}
